@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { GeneratedFile } from '../../types';
-import { GitHubExportResult } from '../../services/fullkonk.github';
+import { GitHubExportResult, normalizeGitHubExportResult } from '../../services/fullkonk.github';
 
 interface Props {
   files:   GeneratedFile[];
@@ -11,7 +11,9 @@ interface Props {
 }
 
 export default function GitHubExportModal({ files, onClose }: Props) {
-  const [token,   setToken]   = useState('');
+  // No token state: the Konkred Gateway owns the GitHub credential server-side.
+  // The browser never collects, stores or transmits a GitHub Personal Access
+  // Token; the Vercel proxy strips any token field before forwarding.
   const [owner,   setOwner]   = useState('');
   const [repo,    setRepo]    = useState('');
   const [branch,  setBranch]  = useState('fullkonk-output');
@@ -21,13 +23,13 @@ export default function GitHubExportModal({ files, onClose }: Props) {
   const [error,   setError]   = useState('');
 
   const closeSecurely = () => {
-    setToken('');
     onClose();
   };
 
   const handleExport = async () => {
-    if (!token.trim() || !owner.trim() || !repo.trim()) {
-      setError('Token, owner, and repo are required.');
+    if (loading) return; // prevent duplicate submissions
+    if (!owner.trim() || !repo.trim()) {
+      setError('Owner and repository are required.');
       return;
     }
     setLoading(true);
@@ -38,11 +40,16 @@ export default function GitHubExportModal({ files, onClose }: Props) {
       const res = await fetch('/api/fullkonk/github/export', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files, token, owner, repo, branch, message }),
+        body: JSON.stringify({ files, owner: owner.trim(), repo: repo.trim(), branch: branch.trim(), message }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Export failed');
-      setResult(data);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = typeof data?.error === 'string' ? data.error
+          : data?.error && typeof data.error === 'object' ? (data.error.message ?? 'Export failed')
+          : `Export failed (${res.status}).`;
+        throw new Error(detail);
+      }
+      setResult(normalizeGitHubExportResult(data));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed');
     } finally {
@@ -134,19 +141,11 @@ export default function GitHubExportModal({ files, onClose }: Props) {
             </div>
           </div>
 
-          {/* GitHub Personal Access Token */}
-          <div>
-            <label style={labelStyle}>GitHub Token (repo scope)</label>
-            <input
-              type="password"
-              value={token}
-              onChange={e => setToken(e.target.value)}
-              placeholder="ghp_..."
-              style={inputStyle}
-            />
-            <div style={{ fontSize: 8, color: '#2a2a2a', marginTop: 4 }}>
-              Token is sent to your server — never stored on konkred.xyz
-            </div>
+          {/* Credential notice: the gateway owns the GitHub token */}
+          <div style={{ fontSize: 9, color: '#00FF88', padding: '8px 10px', border: '1px solid #00351c', background: '#03110a', lineHeight: 1.5 }}>
+            // SECURE EXPORT — no token required in your browser.
+            <br />
+            The Konkred Gateway holds the server-managed GitHub credential and opens the pull request on your behalf.
           </div>
 
           {/* Owner + Repo */}

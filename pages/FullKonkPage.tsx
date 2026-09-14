@@ -12,6 +12,8 @@ import SessionSidebar from '../components/fullkonk/SessionSidebar';
 import { createSession, FKSession, generateSessionTitle, updateSession } from '../services/fullkonk.sessions';
 import { logUsage } from '../services/fullkonk.analytics';
 import { saveProject } from '../services/fullkonk.projects';
+import { SSEParser, parseStreamChunk } from '../lib/sse';
+import { GatewayError, readGatewayError } from '../lib/gateway-client';
 import { AttachedCodeFile, BuildMode, FKMessage, FKProject, GeneratedFile, PipelineStage, StreamChunk } from '../types';
 
 const MODES: { id: BuildMode; label: string }[] = [
@@ -148,6 +150,7 @@ export default function FullKonkPage() {
   const [providersLoaded, setProvidersLoaded] = useState(false);
   const [retryable, setRetryable] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
   const startTimeRef = useRef(0);
   const generationTextRef = useRef('');
   const baseFilesRef = useRef<GeneratedFile[]>([]);
@@ -176,7 +179,14 @@ export default function FullKonkPage() {
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/fullkonk/providers', { signal: controller.signal })
-      .then(response => response.json() as Promise<{ providers?: ProviderOption[] }>)
+      .then(async response => {
+        if (!response.ok) {
+          // Configuration/availability problem — never masquerade as "no providers".
+          setProvidersLoaded(true);
+          return { providers: [] as ProviderOption[] };
+        }
+        return (await response.json().catch(() => ({}))) as { providers?: ProviderOption[] };
+      })
       .then(data => {
         setAllProviders(data.providers || []);
         setProvidersLoaded(true);
@@ -198,7 +208,7 @@ export default function FullKonkPage() {
       .catch(() => undefined);
     return () => controller.abort();
   }, []);
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => { mountedRef.current = false; abortRef.current?.abort(); }, []);
   useEffect(() => {
     if (!streaming) return;
     const timer = window.setInterval(() => setMetrics(value => ({ ...value, elapsedMs: Date.now() - startTimeRef.current })), 100);
@@ -256,24 +266,25 @@ export default function FullKonkPage() {
         body: JSON.stringify({ prompt, mode, provider, model, temperature, maxTokens, systemPrompt: systemPrompt || undefined, projectId: activeProject?.id, attachedFiles: attachments }),
         signal: controller.signal,
       });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({ error: 'Generation request failed.' })) as { error?: string };
-        throw new Error(payload.error || 'Generation request failed.');
-      }
-      if (!response.body) throw new Error('Generation stream was empty.');
+      // Non-stream HTTP errors carry a normalized envelope from the proxy (400/401/403/413/429/5xx).
+      if (!response.ok) throw await readGatewayError(response);
+      if (!response.body) throw new RetryablePipelineError('Generation stream was empty.');
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let pending = '';
-      while (true) {
+      const parser = new SSEParser();
+      let readerDone = false;
+      while (!readerDone) {
         const result = await reader.read();
-        pending += decoder.decode(result.value || new Uint8Array(), { stream: !result.done });
-        const events = pending.split('\n\n');
-        pending = events.pop() || '';
-        for (const event of events) {
-          const raw = event.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n');
-          if (!raw) continue;
-          let parsed: unknown;
-          try { parsed = JSON.parse(raw); } catch { continue; }
+        const feed = parser.feed(decoder.decode(result.value || new Uint8Array(), { stream: !result.done }));
+        if (result.done) feed.push(...parser.flush());
+        for (const item of feed) {
+          // Explicit SSE completion sentinel (some gateway builds emit it).
+          if (item.kind === 'done') { completed = true; readerDone = true; break; }
+          // Malformed/partial frames are skipped; they never crash the pipeline.
+          if (item.kind === 'malformed') continue;
+          const parsedResult = parseStreamChunk(item.message.data);
+          if (!parsedResult.ok) continue;
+          const parsed = parsedResult.value;
           if (!isStreamChunk(parsed)) continue;
           switch (parsed.type) {
             case 'stage': activeStage = parsed.stage; setStage(parsed.stage); setStageText(parsed.content || parsed.stage.toUpperCase()); break;
@@ -316,7 +327,7 @@ export default function FullKonkPage() {
               : new RetryablePipelineError(parsed.error);
           }
         }
-        if (result.done) break;
+        if (result.done) readerDone = true;
       }
       if (!completed) throw new RetryablePipelineError('Generation stream closed before completion.');
       const finalFiles = mergeFiles(baseFilesRef.current, extractFiles(generationTextRef.current));
@@ -327,17 +338,21 @@ export default function FullKonkPage() {
       setSidebarRefresh(value => value + 1);
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        setStage('idle'); setStageText('');
-      } else {
-        const message = error instanceof Error ? error.message : 'Unknown pipeline error';
-        // Exhausted failover and network faults are recoverable; only a real
-        // server-side configuration fault is reported as terminal.
-        setRetryable(error instanceof RetryablePipelineError || error instanceof TypeError);
+        // User STOP or unmount: leave no error banner behind.
+        if (mountedRef.current) { setStage('idle'); setStageText(''); }
+      } else if (mountedRef.current) {
+        const message = error instanceof Error && error.message ? error.message : 'Unknown pipeline error';
+        // Exhausted failover, capacity (429/5xx) and network faults are
+        // recoverable; validation/configuration faults are terminal.
+        const retryable = error instanceof RetryablePipelineError
+          || error instanceof TypeError
+          || (error instanceof GatewayError && error.retryable);
+        setRetryable(retryable);
         setStage('error'); setStageText(message); addMessage({ role: 'assistant', stage: 'error', content: `ERROR: ${message}` });
         if (userId) void logUsage({ userId, provider, model, mode, stage: 'error', tokens: metricsRef.current.totalTokens, durationMs: Date.now() - startTimeRef.current, success: false });
       }
     } finally {
-      setStreaming(false);
+      if (mountedRef.current) setStreaming(false);
       abortRef.current = null;
     }
   }, [activeProject, activeSession, addMessage, appendToLast, attachments, files, maxTokens, mode, model, provider, streaming, systemPrompt, temperature, userId]);
