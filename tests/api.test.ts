@@ -97,4 +97,26 @@ describe('API', () => {
     const res = await fetch(`${baseUrl}/api/fullkonk/health`);
     expect(res.status).toBe(200);
   });
+
+  it('legacy (local dev) fullKONK providers route returns the registry shape', async () => {
+    const res = await fetch(`${baseUrl}/api/fullkonk/providers`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.providers)).toBe(true);
+    expect(typeof body.configured).toBe('boolean');
+  });
+
+  it('GitHub export without a browser token is a safe 503 when the server has no token', async () => {
+    if (process.env.GITHUB_TOKEN) return; // CI/dev with a server token skips this guard
+    const res = await fetch(`${baseUrl}/api/fullkonk/github/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner: 'octocat', repo: 'r', files: [{ path: 'a.ts', content: 'x' }] }),
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/);
+    // Never hint that a token should be sent from the browser.
+    expect(JSON.stringify(body)).not.toMatch(/gh[pousr]_/);
+  });
 });
