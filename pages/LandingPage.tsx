@@ -1,162 +1,78 @@
-/**
- * KONKRED home — B (Kinetic Slabs) × A (typewriter).
- * Dark by default, paper-light toggle. Tilted slabs, marquee, magnetic feel.
- */
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { ArrowDown, ArrowUpRight, Box, Eye, FileCheck2, Newspaper, Wrench } from 'lucide-react';
 import type { PageView } from '../types.ts';
-import { ENTRIES } from '../content/catalogue/portfolio.ts';
-import { Typewriter } from '../components/brand/Typewriter.tsx';
-import { track } from '../utils/analytics.ts';
-import { ArrowRight } from 'lucide-react';
+import { Beam, Flood, Frame, GhostNum, KeyCap, LiveClock, Panel, SectionHead } from '../components/chalk/ChalkUI.tsx';
 
-interface Props {
-  onNavigate: (page: PageView, slug?: string) => void;
-}
+interface Props { onNavigate: (page: PageView, slug?: string) => void; }
 
-const useTheme = () => {
-  const [light, setLight] = useState(() => {
-    try { return localStorage.getItem('konkred-theme') === 'light'; } catch { return false; }
-  });
-  useEffect(() => {
-    document.documentElement.classList.toggle('theme-light', light);
-    try { localStorage.setItem('konkred-theme', light ? 'light' : 'dark'); } catch { /* ignore */ }
-  }, [light]);
-  return { light, toggle: () => setLight((v) => !v) };
-};
+const Ticker: React.FC<{ text: string; reverse?: boolean }> = ({ text, reverse }) => <div className="ticker-wrap" aria-hidden="true"><div className={`ticker-track ${reverse ? 'ticker-reverse' : ''}`}>{[0, 1].map(copy => <span key={copy}>{text} <b>◆</b> {text} <b>◆</b> {text} <b>◆</b></span>)}</div></div>;
 
-const Slab: React.FC<{
-  onClick: () => void; n: string; title: string; desc: string; cta: string;
-  color: string; tilt: number; wide?: boolean; delay: number; testId?: string; btnText?: string;
-}> = ({ onClick, n, title, desc, cta, color, tilt, wide, delay, testId, btnText }) => (
-  <button
-    onClick={onClick}
-    data-testid={testId}
-    className={`k-slab brutal-rise text-left p-6 flex flex-col gap-3 cursor-pointer ${wide ? 'sm:col-span-2' : ''}`}
-    style={{ ['--slab-c' as string]: color, transform: `rotate(${tilt}deg)`, animationDelay: `${delay}s` }}
-  >
-    <span className="font-black text-4xl sm:text-5xl leading-none" style={{ WebkitTextStroke: `2.5px ${color}`, color: 'transparent' }}>{n}</span>
-    <span className="text-[9px] font-bold tracking-[0.28em] border-2 inline-block self-start px-2.5 py-1 border-[var(--k-ink)]">{cta}</span>
-    <h3 className="font-black uppercase leading-[1.02] text-xl sm:text-2xl tracking-tight" style={{ fontFamily: "'Archivo Black',ui-monospace,monospace" }}>{title}</h3>
-    <p className="text-[13px] leading-relaxed opacity-75">{desc}</p>
-    <span className="mt-auto pt-3 font-bold text-xs tracking-[0.2em] flex items-center gap-2">
-      {btnText ?? 'ENTER'} <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-    </span>
-  </button>
+const LandingHeader: React.FC<Props> = ({ onNavigate }) => (
+  <>
+    <div className="hazard" aria-hidden="true" />
+    <header className="landing-header">
+      <button type="button" className="wordmark konk-item" onClick={() => onNavigate('landing')}><span>◆</span> KONKRED</button>
+      <p className="machine-label header-product">CONTROLLED ENTERPRISE WORKFLOW PRODUCTS</p>
+      <nav className="landing-nav" aria-label="Primary navigation"><button type="button" className="konk-item" onClick={() => onNavigate('catalogue')}>FLOOR</button><button type="button" className="konk-item" onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}>PRODUCTS</button><button type="button" className="konk-item" onClick={() => onNavigate('validation')}>RECORD</button></nav>
+      <div className="system-readout"><span><i className="live-dot" />SYS: ONLINE</span><span className="desktop-only">FLOOR: 36/36</span><LiveClock /></div>
+    </header>
+  </>
 );
 
-const LandingPage: React.FC<Props> = ({ onNavigate }) => {
-  const { light, toggle } = useTheme();
-  useEffect(() => { track('catalogue_view', 'landing'); }, []);
+const productCards = [
+  { n: '01', product: 'fullkonk_>', console: 'ASSEMBLY BENCH', text: 'Turn a controlled brief into a runnable system shape.', icon: Wrench },
+  { n: '02', product: 'AUDITOR', console: 'X-RAY PLATE', text: 'Inspect the evidence and surface reviewable findings.', icon: Eye },
+  { n: '03', product: 'REDAEYE', console: 'ATTACK BENCH', text: 'Probe an approved surface inside a controlled range.', icon: Box },
+  { n: '04', product: 'konknews', console: 'PRESS DESK', text: 'Move an owner-reviewed draft through a visible press lane.', icon: Newspaper },
+  { n: '05', product: 'ARTIFACTORY', console: 'PRINTING PRESS', text: 'Forge a document package with a traceable source trail.', icon: FileCheck2 },
+];
 
-  const marquee = ['36 CONTROLLED WORKFLOWS', '///', '21 SUITES', '///', '15 READY-TO-RUN TOOLS', '///', 'EVIDENCE-LINKED', '///', 'ZERO FAKE CLAIMS', '///', 'HUMAN-SUPERVISED', '///'];
+const LandingPage: React.FC<Props> = ({ onNavigate }) => (
+  <div className="landing-root chalk-smudge">
+    <LandingHeader onNavigate={onNavigate} />
+    <Ticker text="CONTROLLED INPUTS · REVIEWED OUTPUTS · HUMAN-SUPERVISED · TRACEABLE HANDOFFS" />
+    <Ticker reverse text="FULLKONK_> · AUDITOR · REDAEYE · KONKNEWS · ARTIFACTORY · FLOOR OPS" />
 
-  return (
-    <div className="min-h-screen w-full overflow-x-hidden" style={{ background: 'var(--k-bg)', color: 'var(--k-ink)' }} data-testid="landing-b">
-      {/* top bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between px-5 sm:px-10 py-3" style={{ background: 'var(--k-panel)', borderBottom: '4px solid var(--k-edge)' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 grid place-items-center font-black text-lg rotate-[-4deg] transition-transform duration-300 hover:rotate-[6deg] hover:scale-110" style={{ background: 'var(--k-amber)', color: 'var(--k-on-acc)' }}>K</div>
-          <b className="tracking-[0.25em] text-sm" style={{ fontFamily: "'Archivo Black',ui-monospace,monospace" }}>KONKRED</b>
+    <main>
+      <section className="landing-hero scanlines">
+        <GhostNum n="36" className="hero-ghost" />
+        <div className="landing-hero-copy">
+          <p className="machine-label hero-label"><i className="signal-diamond" /> FACTORY FLOOR / CONTROLLED CATALOGUE</p>
+          <h1 className="landing-headline">MAKE<br /><span className="hollow">WORK</span><br />PROVE<span className="red-glow">.</span></h1>
+          <p className="tw-copy landing-prose">Enterprise AI workflows with a visible intake, a mechanical rail, and a stamped output. No autonomous employees. No invented certainty.</p>
+          <div className="landing-hero-actions"><button type="button" className="hero-action konk-item" onClick={() => onNavigate('catalogue')}>WALK THE FLOOR <ArrowUpRight size={17} /></button><button type="button" className="hero-text-link konk-item" onClick={() => document.getElementById('method')?.scrollIntoView({ behavior: 'smooth' })}>SEE THE METHOD <ArrowDown size={15} /></button></div>
         </div>
-        <nav className="flex items-center gap-2 sm:gap-3 text-[10px] font-bold tracking-[0.2em]">
-          <button onClick={() => onNavigate('catalogue')} className="hidden sm:inline-block px-3 py-2 cursor-pointer hover:underline">CATALOGUE</button>
-          <button onClick={() => onNavigate('validation')} className="hidden sm:inline-block px-3 py-2 cursor-pointer hover:underline">VALIDATION</button>
-          <button onClick={() => onNavigate('pricing')} className="hidden sm:inline-block px-3 py-2 cursor-pointer hover:underline">PRICING</button>
-          <button onClick={toggle} className="px-3 py-2 border-2 cursor-pointer border-[var(--k-ink)]" aria-label="Toggle light or dark theme">{light ? '☀ LIGHT' : '◐ DARK'}</button>
-        </nav>
-      </header>
+        <Frame className="hero-specimen chalk-soft" innerClass="hero-specimen-inner">
+          <div className="machine-label specimen-label">FLOOR TELEMETRY / LIVE</div>
+          <div className="specimen-number">36</div>
+          <div className="specimen-rule" /><div className="specimen-stats"><span>06 ZONES</span><span>05 PRODUCTS</span><span>01 OWNER</span></div>
+          <div className="specimen-bars" aria-hidden="true">{[28, 53, 37, 68, 47, 78, 58, 33, 72, 48, 88, 61].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}</div>
+          <p className="tw-copy">Every output arrives with an explicit handoff for the human who owns the decision.</p>
+        </Frame>
+      </section>
 
-      {/* marquee */}
-      <div className="overflow-hidden whitespace-nowrap" style={{ background: 'var(--k-amber)', borderBottom: '4px solid var(--k-edge)' }} aria-hidden="true">
-        <div className="brutal-marquee py-1.5">
-          {[0, 1].map((k) => (
-            <span key={k} className="flex shrink-0 font-black uppercase tracking-[0.25em] text-[11px] py-1" style={{ color: 'var(--k-on-acc)', fontFamily: "'Archivo Black',ui-monospace,monospace" }}>
-              {marquee.map((w, i) => <span key={i} className="mx-4">{w}</span>)}
-            </span>
-          ))}
-        </div>
-      </div>
+      <section className="landing-telemetry" aria-label="Konkred platform scale"><div><b>05</b><span>FLAGSHIP PRODUCTS</span></div><div><b>36</b><span>CONTROLLED WORKFLOWS</span></div><div><b>06</b><span>FACTORY ZONES</span></div><div><b>01</b><span>REQUIRED OWNER</span></div></section>
 
-      {/* hero + typewriter */}
-      <section className="px-5 sm:px-10 pt-12 sm:pt-20 pb-8 max-w-6xl mx-auto">
-        <span className="k-badge inline-block rotate-[-1.5deg] mb-8">
-          EVIDENCE-LINKED WORKFLOW PRODUCTS
-        </span>
-        <Typewriter
-          as="h1"
-          text="WORK THAT PROVES ITSELF."
-          speed={38}
-          className="font-black uppercase leading-[0.92] tracking-[-0.02em] text-[13vw] sm:text-7xl lg:text-8xl min-h-[2.2em]"
-        />
-        <p className="mt-6 max-w-xl text-[15px] leading-relaxed" style={{ color: 'var(--k-mut)' }}>
-          36 enterprise workflow products — 21 suites, 15 ready-to-run tools. Every claim sourced,
-          every output human-reviewed. No fake numbers, no autonomous employees.
-        </p>
-        <div className="flex flex-wrap gap-8 sm:gap-12 mt-10">
-          {[['36', 'PRODUCTS', 'var(--k-amber)'], ['21', 'SUITES', 'var(--k-violet)'], ['15', 'TOOLS', 'var(--k-cyan)']].map(([n, l, c]) => (
-            <div key={l}>
-              <b className="font-black text-4xl sm:text-5xl block" style={{ color: c, fontFamily: "'Archivo Black',ui-monospace,monospace" }}>{n}</b>
-              <span className="text-[10px] font-bold tracking-[0.3em]">{l}</span>
-            </div>
-          ))}
+      <section id="products" className="product-section content-width">
+        <SectionHead index="01" kicker="SIGNAL HARDWARE" title={<>FIVE <span className="hollow">PRODUCTS</span>.<br />ONE CONTROLLED FLOOR.</>} hint="Different machines. The same contract: clear material in, observable steps through, a human-owned output out." />
+        <div className="landing-products">{productCards.map(({ n, product, console, text, icon: Icon }) => <article key={product} className="landing-product group box-brutal"><Beam /><Flood /><div className="product-card-head"><span className="machine-label">{n} / {product}</span><Icon className="konk-item" size={25} strokeWidth={1.7} /></div><h3 className="konk-item">{console}</h3><p className="tw-copy">{text}</p><button type="button" className="product-open konk-item" onClick={() => onNavigate('catalogue')}>OPEN FLOOR <ArrowUpRight size={13} /></button></article>)}</div>
+      </section>
+
+      <section id="method" className="method-section content-width">
+        <SectionHead index="02" kicker="THE FLOOR CONTRACT" title={<>NOT MAGIC.<br /><span className="hollow">MATERIAL</span> CONTROL.</>} hint="The work stays legible from first handoff to final review." />
+        <div className="method-grid">
+          <Panel label="01 / INTAKE" right={<KeyCap>DEFINE</KeyCap>}><div className="method-card"><span className="method-index">01</span><h3>Feed the bench</h3><p className="tw-copy">State the source material and the constraint. A bench starts with enough context to make its boundary clear.</p><div className="method-code">IN: [CONTROLLED MATERIAL]</div></div></Panel>
+          <Panel label="02 / RAIL" right={<KeyCap>OBSERVE</KeyCap>}><div className="method-card"><span className="method-index">02</span><h3>Watch the rail</h3><p className="tw-copy">The machine shows its operating stages rather than hiding a jump from prompt to claim.</p><div className="method-code">[..] → [&gt;&gt;] → [ok]</div></div></Panel>
+          <Panel label="03 / OUTPUT" right={<KeyCap>OWN</KeyCap>}><div className="method-card"><span className="method-index">03</span><h3>Take the stamp</h3><p className="tw-copy">A stamped result is a reviewable draft, finding, or package. A person remains responsible for action.</p><div className="method-code">OUT: [REVIEWED RESULT]</div></div></Panel>
         </div>
       </section>
 
-      {/* the four doors — tilted slabs */}
-      <section className="px-5 sm:px-10 pb-24 max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
-        <Slab
-          testId="landing-slab-catalogue"
-          onClick={() => onNavigate('catalogue')}
-          n="01" tilt={-1.2} delay={0.05} wide
-          color="var(--k-amber)"
-          cta="36 WORKFLOWS · ZOOMABLE FLOOR"
-          title="The Workflow Floor"
-          desc="Every suite and tool as a station on an infinite floor — wires pulse suite → tool. Pan, zoom, open a station, run the tool."
-          btnText="WALK THE FLOOR"
-        />
-        <Slab
-          testId="landing-slab-auditor"
-          onClick={() => onNavigate('forge_audit')}
-          n="02" tilt={1.1} delay={0.12}
-          color="var(--k-violet)"
-          cta="AUDITOR"
-          title="Neural Audit"
-          desc="Read any file like a machine: vulnerabilities, exposed keys, deceptive patterns — with evidence."
-          btnText="Open AUDITOR"
-        />
-        <Slab
-          testId="landing-slab-fullkonk"
-          onClick={() => onNavigate('fullkonk')}
-          n="03" tilt={-0.9} delay={0.19}
-          color="var(--k-cyan)"
-          cta="fullKONK_&gt;"
-          title="Autonomous Build Pipeline"
-          desc="Describe the system. Watch it get architected, built, verified and reviewed — end to end."
-          btnText="Open fullKONK_&gt;"
-        />
-        <Slab
-          testId="landing-slab-redaeye"
-          onClick={() => onNavigate('redaeye')}
-          n="04" tilt={1.3} delay={0.26} wide
-          color="var(--k-lime)"
-          cta="REDAEYE · ON AIR"
-          title="REDAEYE Television"
-          desc="367 techniques, 18 core detection families — broadcast on the KONKRED channel, old-TV style."
-          btnText="TUNE IN"
-        />
-      </section>
+      <section className="landing-band blueprint scanlines"><div className="content-width band-inner"><p className="machine-label">WORK ORDER / 36-01</p><h2 className="display-title">PICK A BENCH.<br />FEED THE <span className="hollow-red">SIGNAL</span>.</h2><p className="tw-copy">The workflow floor groups all 36 benches by their operating zone and gives every one of them a single, consistent run contract.</p><button type="button" className="hero-action konk-item" onClick={() => onNavigate('catalogue')}>OPEN THE WORKFLOW FLOOR <ArrowUpRight size={17} /></button></div></section>
 
-      {/* footer strip */}
-      <footer className="px-5 sm:px-10 py-8 flex flex-wrap items-center justify-between gap-4 text-[10px] font-bold tracking-[0.25em]" style={{ borderTop: '4px solid var(--k-edge)', color: 'var(--k-mut)' }}>
-        <span>KONKRED.XYZ — {ENTRIES.length} CONTROLLED WORKFLOW PRODUCTS</span>
-        <div className="flex gap-5">
-          <button onClick={() => onNavigate('validation')} className="cursor-pointer hover:underline">VALIDATION RECORD</button>
-          <button onClick={() => onNavigate('partners')} className="cursor-pointer hover:underline">PARTNERS</button>
-          <button onClick={() => onNavigate('enterprise')} className="cursor-pointer hover:underline">ENTERPRISE</button>
-        </div>
-      </footer>
-    </div>
-  );
-};
+      <section className="truth-section content-width"><div className="truth-copy"><p className="machine-label"><i className="signal-diamond" /> SYSTEM BOUNDARY</p><h2 className="display-title">THE MACHINE<br />STOPS <span className="hollow">HERE</span>.</h2><p className="tw-copy">Konkred workflows help structure, test, and prepare work. They do not send, sign, approve, publish, hire, fire, trade, or decide in place of their owners.</p></div><div className="truth-list">{['evidence is named', 'assumptions stay marked', 'outputs are reviewable', 'actions remain human-owned'].map((item, index) => <div key={item}><b>0{index + 1}</b><span>{item}</span><i>→</i></div>)}</div></section>
+    </main>
+    <footer className="chalk-footer"><div className="footer-marquee hollow" aria-hidden="true">KONKRED · KONKRED · KONKRED ·</div><div className="content-width footer-row"><span className="machine-label">KONKRED.XYZ / CONTROLLED ENTERPRISE WORKFLOW PRODUCTS</span><div><button type="button" className="konk-item" onClick={() => onNavigate('catalogue')}>WORKFLOW FLOOR</button><button type="button" className="konk-item" onClick={() => onNavigate('validation')}>VALIDATION RECORD</button><button type="button" className="konk-item" onClick={() => onNavigate('contact')}>CONTACT</button></div></div></footer>
+  </div>
+);
 
 export default LandingPage;
