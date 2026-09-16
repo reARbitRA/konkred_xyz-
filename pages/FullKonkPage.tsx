@@ -12,7 +12,14 @@ import SessionSidebar from '../components/fullkonk/SessionSidebar';
 import { createSession, FKSession, generateSessionTitle, updateSession } from '../services/fullkonk.sessions';
 import { logUsage } from '../services/fullkonk.analytics';
 import { saveProject } from '../services/fullkonk.projects';
-import { AttachedCodeFile, BuildMode, FKMessage, FKProject, GeneratedFile, PipelineStage, StreamChunk } from '../types';
+import { AttachedCodeFile, BuildMode, FKMessage, FKProject, GeneratedFile, PipelineStage } from '../types';
+// Shared, framework-free helpers (also exercised by the test-suite).
+import { extractFiles, mergeFiles } from '../utils/codeFiles';
+import { SseParser, decodeStreamChunk } from '../utils/sse';
+import { createStreamState, reduceStreamChunk, StreamMessageOp, StreamState } from '../utils/streamState';
+
+// Kept exported for backwards compatibility; implementation lives in utils/codeFiles.ts.
+export { extractFiles } from '../utils/codeFiles';
 
 const MODES: { id: BuildMode; label: string }[] = [
   { id: 'fullstack', label: 'FULL-STACK' }, { id: 'frontend', label: 'FRONTEND' }, { id: 'backend', label: 'BACKEND' }, { id: 'review', label: 'REVIEW' },
@@ -23,7 +30,6 @@ const PROVIDER_SIGNUP: Record<string, string> = {
   huggingface: 'https://huggingface.co/settings/tokens', mistral: 'https://console.mistral.ai/api-keys/', nvidia: 'https://build.nvidia.com/',
   fireworks: 'https://fireworks.ai/account/api-keys', cloudflare: 'https://dash.cloudflare.com/',
 };
-const EXTENSIONS: Record<string, string> = { ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx', html: 'html', css: 'css', json: 'json', prisma: 'prisma', sql: 'sql', yaml: 'yaml', yml: 'yaml', sh: 'bash', bash: 'bash' };
 interface ProviderOption { id: string; name: string; hasKey: boolean; models: { id: string; label: string }[] }
 
 /** A pipeline failure that the user may retry, as opposed to a real misconfiguration. */
@@ -32,77 +38,6 @@ class RetryablePipelineError extends Error {
     super(message);
     this.name = 'RetryablePipelineError';
   }
-}
-
-function normalizeLanguage(value: string, path: string): string {
-  const raw = value.toLowerCase().trim();
-  if (raw && raw !== 'text' && raw !== 'plaintext') return EXTENSIONS[raw] || raw;
-  const extension = path.split('.').pop()?.toLowerCase() || 'text';
-  return EXTENSIONS[extension] || extension;
-}
-
-function cleanPath(value: string): string {
-  return value.trim().replace(/^['"`]|['"`]$/g, '').replace(/^\.\//, '').replace(/\\/g, '/').replace(/^\/+/, '');
-}
-
-export function extractFiles(content: string): GeneratedFile[] {
-  const lines = content.split(/\r?\n/);
-  const files = new Map<string, GeneratedFile>();
-  let inFence = false;
-  let marker = '```';
-  let language = '';
-  let buffer: string[] = [];
-  let precedingPath = '';
-  let unnamed = 0;
-  const pathPattern = /(?:file(?:name)?\s*:\s*|^#{1,6}\s*|^\/\/\s*|^<!--\s*)([\w@+.,()\[\] -]+\/[\w@+.,()\[\]/ -]+|[\w@+(),\[\] -]+\.(?:tsx?|jsx?|css|html?|json|prisma|sql|ya?ml|sh))(?:\s*-->)?\s*$/i;
-
-  for (const line of lines) {
-    if (!inFence) {
-      const pathMatch = line.trim().match(pathPattern);
-      if (pathMatch) precedingPath = cleanPath(pathMatch[1]);
-      const opening = line.match(/^\s*(`{3,}|~{3,})([^\s`]*)\s*(.*)$/);
-      if (!opening) continue;
-      inFence = true;
-      marker = opening[1];
-      language = opening[2] || '';
-      const inlinePath = opening[3].match(/^(?:\/\/\s*|file:\s*)?([^\s]+\.[\w]+)\s*$/i);
-      if (inlinePath) precedingPath = cleanPath(inlinePath[1]);
-      buffer = [];
-      continue;
-    }
-    if (line.trim() === marker || new RegExp(`^${marker[0]}{${marker.length},}$`).test(line.trim())) {
-      inFence = false;
-      const firstLinePath = buffer[0]?.match(/^\s*(?:\/\/|#|<!--)\s*(?:file(?:name)?\s*:\s*)?([^\s].*?\.[a-z0-9]+)\s*(?:-->)?\s*$/i);
-      let path = firstLinePath ? cleanPath(firstLinePath[1]) : precedingPath;
-      if (firstLinePath) buffer.shift();
-      const code = buffer.join('\n').trim();
-      if (code) {
-        if (!path) {
-          unnamed += 1;
-          const ext = language.toLowerCase() || 'txt';
-          path = `generated/output-${unnamed}.${ext === 'typescript' ? 'ts' : ext === 'javascript' ? 'js' : ext}`;
-        }
-        const normalizedLanguage = normalizeLanguage(language, path);
-        files.set(path, { path, content: code, language: normalizedLanguage, isTest: /(?:^|\/)(?:__tests__\/|.*\.(?:test|spec)\.[jt]sx?$)/i.test(path) });
-      }
-      precedingPath = '';
-      buffer = [];
-      continue;
-    }
-    buffer.push(line);
-  }
-  return [...files.values()];
-}
-
-function mergeFiles(base: GeneratedFile[], generated: GeneratedFile[]): GeneratedFile[] {
-  const merged = new Map(base.map(file => [file.path, file]));
-  generated.forEach(file => merged.set(file.path, file));
-  return [...merged.values()];
-}
-
-function isStreamChunk(value: unknown): value is StreamChunk {
-  if (!value || typeof value !== 'object') return false;
-  return typeof (value as { type?: unknown }).type === 'string';
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -148,6 +83,8 @@ export default function FullKonkPage() {
   const [providersLoaded, setProvidersLoaded] = useState(false);
   const [retryable, setRetryable] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const streamRef = useRef<StreamState | null>(null);
+  const mountedRef = useRef(true);
   const startTimeRef = useRef(0);
   const generationTextRef = useRef('');
   const baseFilesRef = useRef<GeneratedFile[]>([]);
@@ -198,7 +135,12 @@ export default function FullKonkPage() {
       .catch(() => undefined);
     return () => controller.abort();
   }, []);
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => {
+    // Cancellation + unmount safety: abort the in-flight build and refuse any
+    // later state update from a request that can no longer be rendered.
+    mountedRef.current = false;
+    abortRef.current?.abort();
+  }, []);
   useEffect(() => {
     if (!streaming) return;
     const timer = window.setInterval(() => setMetrics(value => ({ ...value, elapsedMs: Date.now() - startTimeRef.current })), 100);
@@ -216,15 +158,43 @@ export default function FullKonkPage() {
     });
   }, []);
 
+  /** Mirror the pure stream state into the console UI. */
+  const applyStreamState = useCallback((next: StreamState, ops: StreamMessageOp[]) => {
+    if (!mountedRef.current) return;
+    generationTextRef.current = next.text;
+    setStage(next.stage);
+    setStageText(next.stageText);
+    metricsRef.current = { ...metricsRef.current, ...next.metrics };
+    setMetrics(value => ({ ...value, ...next.metrics }));
+    setFiles(next.files);
+    for (const op of ops) {
+      if (op.type === 'append') {
+        appendToLast(op.content, op.stage);
+        continue;
+      }
+      // Backspace the tail of the current stage's assistant message (provider
+      // retry / context reset): the pipeline rewinds that many characters.
+      setMessages(previous => {
+        const last = previous.at(-1);
+        if (!last || last.role !== 'assistant' || last.stage !== op.stage) return previous;
+        const content = last.content.slice(0, Math.max(0, last.content.length - op.characters));
+        return content ? [...previous.slice(0, -1), { ...last, content }] : previous.slice(0, -1);
+      });
+    }
+  }, [appendToLast]);
+
   const handleSend = useCallback(async (rawPrompt: string) => {
     const prompt = rawPrompt.trim();
-    if (!prompt || streaming) return;
+    // One build at a time: `streaming` state alone can lag a fast double-click,
+    // so the live AbortController is the authoritative guard.
+    if (!prompt || streaming || abortRef.current) return;
     const controller = new AbortController();
     abortRef.current = controller;
     startTimeRef.current = Date.now();
     latestPromptRef.current = prompt;
     generationTextRef.current = '';
     baseFilesRef.current = activeProject?.files || files;
+    streamRef.current = createStreamState({ mode, baseFiles: baseFilesRef.current });
     setPreviousFiles(baseFilesRef.current);
     setStreaming(true);
     setRetryable(false);
@@ -246,7 +216,6 @@ export default function FullKonkPage() {
     }
 
     let completed = false;
-    let activeStage: PipelineStage = mode === 'review' ? 'review' : 'architect';
     try {
       const headers = await authHeaders();
       const byok = byokKeys[provider] ? { 'x-provider-key': byokKeys[provider] } : {};
@@ -257,90 +226,75 @@ export default function FullKonkPage() {
         signal: controller.signal,
       });
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({ error: 'Generation request failed.' })) as { error?: string };
-        throw new Error(payload.error || 'Generation request failed.');
+        // Non-stream failure (405/413/429/5xx/config). Retry-After is surfaced
+        // so the user knows when the gateway quota window reopens.
+        const payload = await response.json().catch(() => ({ error: 'Generation request failed.' })) as { error?: string; code?: string; retryAfter?: number };
+        const headerRetry = Number(response.headers.get('retry-after'));
+        const retryAfter = Number.isFinite(headerRetry) && headerRetry > 0 ? headerRetry : Number(payload.retryAfter);
+        const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? ` Retry in ${Math.ceil(retryAfter)}s.` : '';
+        throw new Error(`${payload.error || 'Generation request failed.'}${wait}`);
       }
       if (!response.body) throw new Error('Generation stream was empty.');
+
+      // Robust SSE consumption: network reads never equal events, chunks may
+      // split JSON payloads, several events may share one read, and CRLF/LF are
+      // both valid. Malformed events are skipped instead of crashing the build.
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let pending = '';
+      const parser = new SseParser();
+      let stream = streamRef.current ?? createStreamState({ mode, baseFiles: baseFilesRef.current });
       while (true) {
         const result = await reader.read();
-        pending += decoder.decode(result.value || new Uint8Array(), { stream: !result.done });
-        const events = pending.split('\n\n');
-        pending = events.pop() || '';
+        const text = decoder.decode(result.value || new Uint8Array(), { stream: !result.done });
+        const events = parser.push(text);
+        if (result.done) events.push(...parser.flush());
         for (const event of events) {
-          const raw = event.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n');
-          if (!raw) continue;
-          let parsed: unknown;
-          try { parsed = JSON.parse(raw); } catch { continue; }
-          if (!isStreamChunk(parsed)) continue;
-          switch (parsed.type) {
-            case 'stage': activeStage = parsed.stage; setStage(parsed.stage); setStageText(parsed.content || parsed.stage.toUpperCase()); break;
-            case 'provider':
-              metricsRef.current = { ...metricsRef.current, provider: parsed.provider };
-              setMetrics(value => ({ ...value, provider: parsed.provider }));
-              setStageText(`${parsed.provider} / ${parsed.model}`);
-              break;
-            case 'failover':
-              metricsRef.current = { ...metricsRef.current, transition: `${parsed.from} → ${parsed.to || 'NEXT PROVIDER'}` };
-              setMetrics(value => ({ ...value, transition: metricsRef.current.transition }));
-              break;
-            case 'metrics':
-              metricsRef.current = { ...metricsRef.current, ...parsed.data };
-              setMetrics(value => ({ ...value, ...parsed.data }));
-              break;
-            case 'reset':
-              if (activeStage !== 'architect') {
-                generationTextRef.current = generationTextRef.current.slice(0, Math.max(0, generationTextRef.current.length - parsed.characters));
-              }
-              setMessages(previous => {
-                const last = previous.at(-1);
-                if (!last || last.role !== 'assistant' || last.stage !== activeStage) return previous;
-                const content = last.content.slice(0, Math.max(0, last.content.length - parsed.characters));
-                return content ? [...previous.slice(0, -1), { ...last, content }] : previous.slice(0, -1);
-              });
-              setFiles(mergeFiles(baseFilesRef.current, extractFiles(generationTextRef.current)));
-              break;
-            case 'delta':
-              if (activeStage !== 'architect') generationTextRef.current += parsed.content;
-              appendToLast(parsed.content, activeStage);
-              if (activeStage !== 'architect') setFiles(mergeFiles(baseFilesRef.current, extractFiles(generationTextRef.current)));
-              break;
-            case 'file': setFiles(current => mergeFiles(current, [{ ...parsed.file, language: parsed.file.language.toLowerCase() }])); break;
-            case 'done': completed = true; setStage('done'); setStageText('BUILD COMPLETE'); break;
-            // A provider-level failure means the orchestrator already exhausted
-            // every candidate; surface it as retryable rather than terminal.
-            case 'error': throw parsed.kind === 'configuration'
-              ? new Error(parsed.error)
-              : new RetryablePipelineError(parsed.error);
+          const chunk = decodeStreamChunk(event.data);
+          if (!chunk) continue;
+          const reduced = reduceStreamChunk(stream, chunk);
+          stream = reduced.state;
+          streamRef.current = stream;
+          applyStreamState(stream, reduced.ops);
+          if (chunk.type === 'done') completed = true;
+          // A provider-level failure means the orchestrator already exhausted
+          // every candidate; surface it as retryable rather than terminal.
+          if (chunk.type === 'error') {
+            throw chunk.kind === 'configuration'
+              ? new Error(chunk.error)
+              : new RetryablePipelineError(chunk.error);
           }
         }
         if (result.done) break;
       }
+
       if (!completed) throw new RetryablePipelineError('Generation stream closed before completion.');
-      const finalFiles = mergeFiles(baseFilesRef.current, extractFiles(generationTextRef.current));
-      setFiles(finalFiles);
-      setActiveFile(current => current && finalFiles.some(file => file.path === current) ? current : finalFiles[0]?.path || null);
+      const finalFiles = mergeFiles(baseFilesRef.current, extractFiles(streamRef.current?.text ?? generationTextRef.current));
+      if (mountedRef.current) {
+        setFiles(finalFiles);
+        setActiveFile(current => current && finalFiles.some(file => file.path === current) ? current : finalFiles[0]?.path || null);
+        setAttachments([]);
+        setSidebarRefresh(value => value + 1);
+      }
       if (userId) void logUsage({ userId, provider: metricsRef.current.provider || provider, model, mode, stage: 'done', tokens: metricsRef.current.totalTokens, durationMs: Date.now() - startTimeRef.current, success: true });
-      setAttachments([]);
-      setSidebarRefresh(value => value + 1);
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        setStage('idle'); setStageText('');
+        // User pressed STOP (or the page unmounted) — nothing to report.
+        if (mountedRef.current) { setStage('idle'); setStageText(''); }
       } else {
         const message = error instanceof Error ? error.message : 'Unknown pipeline error';
         // Exhausted failover and network faults are recoverable; only a real
         // server-side configuration fault is reported as terminal.
-        setRetryable(error instanceof RetryablePipelineError || error instanceof TypeError);
-        setStage('error'); setStageText(message); addMessage({ role: 'assistant', stage: 'error', content: `ERROR: ${message}` });
+        if (mountedRef.current) {
+          setRetryable(error instanceof RetryablePipelineError || error instanceof TypeError);
+          setStage('error'); setStageText(message); addMessage({ role: 'assistant', stage: 'error', content: `ERROR: ${message}` });
+        }
         if (userId) void logUsage({ userId, provider, model, mode, stage: 'error', tokens: metricsRef.current.totalTokens, durationMs: Date.now() - startTimeRef.current, success: false });
       }
     } finally {
-      setStreaming(false);
+      if (mountedRef.current) setStreaming(false);
       abortRef.current = null;
     }
-  }, [activeProject, activeSession, addMessage, appendToLast, attachments, files, maxTokens, mode, model, provider, streaming, systemPrompt, temperature, userId]);
+  }, [activeProject, activeSession, addMessage, appendToLast, applyStreamState, attachments, files, maxTokens, mode, model, provider, streaming, systemPrompt, temperature, userId]);
 
   /** Re-runs the last prompt after a recoverable failure. */
   const handleRetry = useCallback(() => {
