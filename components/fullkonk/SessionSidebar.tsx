@@ -23,7 +23,7 @@ function timeAgo(ms: number): string {
 }
 
 const MODE_COLORS: Record<string, string> = {
-  fullstack: '#FFD700', frontend: '#0055FF', backend: '#00FF88', review: '#FF003C',
+  fullstack: '#d60019', frontend: '#d60019', backend: '#d60019', review: '#d60019',
 };
 
 export default function SessionSidebar({ userId, activeSessionId, activeProjectId, refreshKey, onSelect, onSelectProject, onNew }: Props) {
@@ -48,32 +48,32 @@ export default function SessionSidebar({ userId, activeSessionId, activeProjectI
   }, [userId, activeSessionId, activeProjectId, refreshKey]);
 
   return (
-    <aside style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#030303', borderRight: '1px solid #1a1a1a', fontFamily: '"JetBrains Mono", monospace', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid #111' }}>
-        <span style={{ fontSize: 9, letterSpacing: 3, color: '#444' }}>// WORKSPACE</span>
-        <button onClick={onNew} style={{ background: '#FFD700', border: 0, color: '#000', fontSize: 9, fontWeight: 700, letterSpacing: 2, padding: '4px 10px', cursor: 'pointer' }}>+ NEW</button>
+    <aside style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0a0908', borderRight: '1px solid #2a2624', fontFamily: '"JetBrains Mono", monospace', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid #171514' }}>
+        <span style={{ fontSize: 9, letterSpacing: 3, color: '#5c5852' }}>// WORKSPACE</span>
+        <button onClick={onNew} style={{ background: '#d60019', border: 0, color: '#0a0908', fontSize: 9, fontWeight: 700, letterSpacing: 2, padding: '4px 10px', cursor: 'pointer' }}>+ NEW</button>
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {loading && <div style={{ padding: 16, fontSize: 9, color: '#444', textAlign: 'center' }}>LOADING...</div>}
-        {error && <div style={{ margin: 10, padding: 8, border: '1px solid #FF003C', color: '#FF003C', fontSize: 8 }}>{error}</div>}
+        {loading && <div style={{ padding: 16, fontSize: 9, color: '#5c5852', textAlign: 'center' }}>LOADING...</div>}
+        {error && <div style={{ margin: 10, padding: 8, border: '1px solid #d60019', color: '#d60019', fontSize: 8 }}>{error}</div>}
         {!loading && <>
-          <div style={{ padding: '10px 12px 6px', color: '#FFD700', fontSize: 8, letterSpacing: 2 }}>PROJECTS</div>
-          {projects.length === 0 && <div style={{ padding: '6px 12px 12px', color: '#292929', fontSize: 9 }}>No saved projects</div>}
+          <div style={{ padding: '10px 12px 6px', color: '#d60019', fontSize: 8, letterSpacing: 2 }}>PROJECTS</div>
+          {projects.length === 0 && <div style={{ padding: '6px 12px 12px', color: '#2a2624', fontSize: 9 }}>No saved projects</div>}
           <AnimatePresence>
             {projects.map(project => (
-              <motion.button key={project.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => onSelectProject(project)} style={{ width: '100%', padding: '9px 12px', textAlign: 'left', background: project.id === activeProjectId ? '#101000' : 'transparent', border: 0, borderBottom: '1px solid #090909', borderRight: project.id === activeProjectId ? '3px solid #FFD700' : '3px solid transparent', cursor: 'pointer' }}>
-                <div style={{ color: project.id === activeProjectId ? '#fff' : '#777', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.name}</div>
-                <div style={{ color: '#333', fontSize: 8, marginTop: 4 }}>{project.files.length} FILES · {timeAgo(project.updatedAt)}</div>
+              <motion.button key={project.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => onSelectProject(project)} style={{ width: '100%', padding: '9px 12px', textAlign: 'left', background: project.id === activeProjectId ? '#100e0d' : 'transparent', border: 0, borderBottom: '1px solid #0a0908', borderRight: project.id === activeProjectId ? '3px solid #d60019' : '3px solid transparent', cursor: 'pointer' }}>
+                <div style={{ color: project.id === activeProjectId ? '#f4f1eb' : '#7a756d', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.name}</div>
+                <div style={{ color: '#3d3835', fontSize: 8, marginTop: 4 }}>{project.files.length} FILES · {timeAgo(project.updatedAt)}</div>
               </motion.button>
             ))}
           </AnimatePresence>
-          <div style={{ padding: '14px 12px 6px', color: '#555', fontSize: 8, letterSpacing: 2 }}>SESSIONS</div>
-          {sessions.length === 0 && <div style={{ padding: '6px 12px', color: '#292929', fontSize: 9 }}>No sessions yet</div>}
+          <div style={{ padding: '14px 12px 6px', color: '#5c5852', fontSize: 8, letterSpacing: 2 }}>SESSIONS</div>
+          {sessions.length === 0 && <div style={{ padding: '6px 12px', color: '#2a2624', fontSize: 9 }}>No sessions yet</div>}
           {sessions.map(session => {
-            const color = MODE_COLORS[session.mode] || '#555';
+            const color = MODE_COLORS[session.mode] || '#5c5852';
             const active = session.id === activeSessionId;
-            return <button key={session.id} onClick={() => onSelect(session)} style={{ width: '100%', padding: '9px 12px', textAlign: 'left', background: active ? '#0a0a0a' : 'transparent', border: 0, borderBottom: '1px solid #080808', borderRight: active ? `3px solid ${color}` : '3px solid transparent', cursor: 'pointer' }}>
-              <div style={{ color: active ? '#fff' : '#666', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title || 'Untitled'}</div>
+            return <button key={session.id} onClick={() => onSelect(session)} style={{ width: '100%', padding: '9px 12px', textAlign: 'left', background: active ? '#0a0908' : 'transparent', border: 0, borderBottom: '1px solid #0a0908', borderRight: active ? `3px solid ${color}` : '3px solid transparent', cursor: 'pointer' }}>
+              <div style={{ color: active ? '#f4f1eb' : '#7a756d', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title || 'Untitled'}</div>
               <div style={{ color, fontSize: 8, marginTop: 4, textTransform: 'uppercase' }}>{session.mode} · {timeAgo(session.updatedAt)} · {session.files.length} files</div>
             </button>;
           })}

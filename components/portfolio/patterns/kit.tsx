@@ -15,9 +15,9 @@ export const Frame: React.FC<{ slug: string; kind: 'suite' | 'workflow'; childre
   <section
     data-testid={`pattern-${slug}`}
     aria-label="interaction pattern"
-    className="border-2 border-black bg-[#0E1319] rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_#000000]"
+    className="border-2 border-black bg-[#171514] rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_#0a0908]"
   >
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black bg-[#181F2A] px-4 py-2.5">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black bg-[#171514] px-4 py-2.5">
       <span className="font-mono font-black uppercase tracking-widest text-[10px] text-white">
         {kind === 'suite' ? 'Suite preview' : 'Workspace'}
       </span>
@@ -34,7 +34,7 @@ export const Cap: React.FC<{ children: React.ReactNode; className?: string }> = 
 );
 
 export const Pane: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className = '' }) => (
-  <div className={`border border-zinc-800 rounded-xl bg-[#0B0F14] overflow-hidden ${className}`}>
+  <div className={`border border-zinc-800 rounded-xl bg-[#0a0908] overflow-hidden ${className}`}>
     <div className="px-3 py-2 border-b border-zinc-800 bg-white/[0.02]">
       <Cap>{title}</Cap>
     </div>

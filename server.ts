@@ -137,16 +137,8 @@ export async function createApp(): Promise<express.Express> {
           email,
           role: "user",
           tier: "free",
-          balance: { fiat: 1000, crypto: 0.1 },
-          stats: {
-            totalPurchases: 0,
-            totalSales: 0,
-            totalEarnings: 0,
-            rating: 5.0,
-            reviewCount: 0,
-          },
-          payoutThreshold: 500,
-          kycStatus: "unverified",
+          // Do not seed marketplace balances, sales, ratings, or KYC state.
+          // KONKRED currently has no wallet or payment product.
           acceptedCopyrightTerms: true,
           canGenerateBlogs: true,
           createdAt: new Date().toISOString(),
@@ -168,8 +160,8 @@ export async function createApp(): Promise<express.Express> {
             <title>KONKRED Handshake Established</title>
             <style>
               body {
-                background: #050505;
-                color: #ffffff;
+                background: #0a0908;
+                color: #f4f1eb;
                 font-family: monospace;
                 display: flex;
                 align-items: center;
@@ -180,17 +172,17 @@ export async function createApp(): Promise<express.Express> {
                 text-transform: uppercase;
               }
               .card {
-                border: 2px solid #00ffd5;
+                border: 2px solid #d60019;
                 padding: 40px;
                 text-align: center;
-                background: #000000;
-                box-shadow: 0 0 30px rgba(0, 255, 213, 0.15);
+                background: #0a0908;
+                box-shadow: 0 0 30px rgba(214, 0, 25, 0.15);
               }
             </style>
           </head>
           <body>
             <div class="card">
-              <h3 style="color: #00ffd5; margin-bottom: 5px;">HANDSHAKE_ESTABLISHED</h3>
+              <h3 style="color: #d60019; margin-bottom: 5px;">HANDSHAKE_ESTABLISHED</h3>
               <p style="font-size: 11px; opacity: 0.7;">TRANSMITTING_CRYPTOGRAPHIC_TOKEN_PROXIES...</p>
               <script>
                 if (window.opener) {
@@ -848,16 +840,9 @@ export async function createApp(): Promise<express.Express> {
     }
   });
 
-  // Serve REDAEYE sales checkout page
-  app.get(["/redaeye", "/redaeye.html"], (req, res) => {
-    const prodFile = path.join(process.cwd(), "dist", "redaeye.html");
-    const devFile = path.join(process.cwd(), "public", "redaeye.html");
-    
-    if (process.env.NODE_ENV === "production") {
-      return res.sendFile(prodFile);
-    }
-    return res.sendFile(devFile);
-  });
+  // REDAEYE is a React product route. It intentionally falls through to the
+  // SPA handler so the controlled diagnostic bench renders everywhere; the
+  // retired static crypto checkout is not served by this application.
 
   return app;
 }

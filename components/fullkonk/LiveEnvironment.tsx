@@ -135,7 +135,7 @@ const HtmlPreview: React.FC<{ files: GeneratedFile[] }> = ({ files }) => {
     iframeRef.current.src = url;
     return () => URL.revokeObjectURL(url);
   }, [files]);
-  return <iframe ref={iframeRef} sandbox="allow-scripts allow-same-origin allow-forms" style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} title="HTML preview" />;
+  return <iframe ref={iframeRef} sandbox="allow-scripts allow-same-origin allow-forms" style={{ width: '100%', height: '100%', border: 'none', background: '#f4f1eb' }} title="HTML preview" />;
 };
 
 const DEVICES: Record<DeviceMode, string> = { desktop: '100%', tablet: '768px', mobile: '375px' };
@@ -179,14 +179,14 @@ export default function LiveEnvironment({ files, streaming }: Props) {
         {streaming ? (
           <>
             <div className="fk-brand" style={{ fontSize: 30, animation: 'spin 2s linear infinite' }}>◎</div>
-            <div style={{ ...mono, fontSize: 10, letterSpacing: 3, color: '#8a8a99' }}>BUILDING ENVIRONMENT…</div>
-            <div style={{ ...mono, fontSize: 9, color: '#555' }}>Preview appears as code is generated</div>
+            <div style={{ ...mono, fontSize: 10, letterSpacing: 3, color: '#8a857d' }}>BUILDING ENVIRONMENT…</div>
+            <div style={{ ...mono, fontSize: 9, color: '#5c5852' }}>Preview appears as code is generated</div>
           </>
         ) : (
           <>
-            <div style={{ fontSize: 34, color: '#333' }}>◈</div>
-            <div style={{ ...mono, fontSize: 10, letterSpacing: 3, color: '#555' }}>NO OUTPUT YET</div>
-            <div style={{ ...mono, fontSize: 9, color: '#444' }}>Describe a product and run the pipeline</div>
+            <div style={{ fontSize: 34, color: '#3d3835' }}>◈</div>
+            <div style={{ ...mono, fontSize: 10, letterSpacing: 3, color: '#5c5852' }}>NO OUTPUT YET</div>
+            <div style={{ ...mono, fontSize: 9, color: '#5c5852' }}>Describe a product and run the pipeline</div>
           </>
         )}
       </div>
@@ -207,16 +207,16 @@ export default function LiveEnvironment({ files, streaming }: Props) {
       </div>
 
       {/* body */}
-      <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', justifyContent: 'center', background: '#0b0d10' }}>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', justifyContent: 'center', background: '#100e0d' }}>
         {streaming && (
-          <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 100, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,.85)', border: '2px solid #000', padding: '4px 10px', ...mono, fontSize: 9, color: '#ffb400', letterSpacing: 2 }}>
-            <span className="fk-led" style={{ background: '#ffb400' }} />
+          <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 100, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,.85)', border: '2px solid #0a0908', padding: '4px 10px', ...mono, fontSize: 9, color: '#d60019', letterSpacing: 2 }}>
+            <span className="fk-led" style={{ background: '#d60019' }} />
             LIVE BUILD
           </div>
         )}
 
         {canPreview ? (
-          <div style={{ width: DEVICES[device], maxWidth: '100%', height: '100%', transition: 'width .2s', borderLeft: '2px solid #000', borderRight: '2px solid #000' }}>
+          <div style={{ width: DEVICES[device], maxWidth: '100%', height: '100%', transition: 'width .2s', borderLeft: '2px solid #0a0908', borderRight: '2px solid #0a0908' }}>
             {hasReact ? (
               <SandpackProvider
                 template="react-ts"
@@ -242,27 +242,27 @@ export default function LiveEnvironment({ files, streaming }: Props) {
         ) : (
           /* honest fallback: no browser-previewable output */
           <div style={{ padding: 22, overflowY: 'auto', width: '100%' }}>
-            <p style={{ ...mono, fontSize: 10, color: '#8a8a99', letterSpacing: 2, marginBottom: 12 }}>OUTPUT NOT PREVIEWABLE IN BROWSER — FILE SUMMARY</p>
+            <p style={{ ...mono, fontSize: 10, color: '#8a857d', letterSpacing: 2, marginBottom: 12 }}>OUTPUT NOT PREVIEWABLE IN BROWSER — FILE SUMMARY</p>
             <ul style={{ listStyle: 'none' }}>
               {files.map((f) => (
-                <li key={f.path} style={{ ...mono, fontSize: 10, color: '#555', padding: '6px 0', borderBottom: '1px solid #1a1c22', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <span style={{ color: '#c8c4ba', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.path}</span>
-                  <span style={{ color: '#ffb400', flexShrink: 0 }}>{f.content.split('\n').length} ln · {f.language}</span>
+                <li key={f.path} style={{ ...mono, fontSize: 10, color: '#5c5852', padding: '6px 0', borderBottom: '1px solid #2a2624', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ color: '#b7b2a9', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.path}</span>
+                  <span style={{ color: '#d60019', flexShrink: 0 }}>{f.content.split('\n').length} ln · {f.language}</span>
                 </li>
               ))}
             </ul>
-            <p style={{ ...mono, fontSize: 9, color: '#555', marginTop: 12 }}>Backend/config output runs outside the browser — export or push to GitHub to execute.</p>
+            <p style={{ ...mono, fontSize: 9, color: '#5c5852', marginTop: 12 }}>Backend/config output runs outside the browser — export or push to GitHub to execute.</p>
           </div>
         )}
       </div>
 
       {/* metrics bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '5px 12px', background: '#0e0f14', borderTop: '2px solid #000', flexShrink: 0, ...mono, fontSize: 9 }}>
-        <span style={{ color: '#555' }}>{metrics.fileCount} files</span>
-        <span style={{ color: '#555' }}>{metrics.linesOfCode.toLocaleString()} lines</span>
-        {metrics.renderTime > 0 && <span style={{ color: '#555' }}>render: {metrics.renderTime}ms</span>}
-        {metrics.hasErrors && <span style={{ color: '#ff4d4d' }}>⚠ errors</span>}
-        <span style={{ marginLeft: 'auto', color: streaming ? '#ffb400' : '#3dff9a' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '5px 12px', background: '#100e0d', borderTop: '2px solid #0a0908', flexShrink: 0, ...mono, fontSize: 9 }}>
+        <span style={{ color: '#5c5852' }}>{metrics.fileCount} files</span>
+        <span style={{ color: '#5c5852' }}>{metrics.linesOfCode.toLocaleString()} lines</span>
+        {metrics.renderTime > 0 && <span style={{ color: '#5c5852' }}>render: {metrics.renderTime}ms</span>}
+        {metrics.hasErrors && <span style={{ color: '#d60019' }}>⚠ errors</span>}
+        <span style={{ marginLeft: 'auto', color: streaming ? '#d60019' : '#d60019' }}>
           {streaming ? '● BUILDING' : '● READY'}
         </span>
       </div>

@@ -81,7 +81,7 @@ export const FinanceCloseReporting: React.FC<PatternProps> = ({ entry }) => {
           <Cap className="mb-1.5">Period checklist · FY-Q3</Cap>
           <div className="space-y-1.5">
             {steps.map((s, i) => (
-              <label key={i} className="flex items-start gap-2.5 px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0B0F14] cursor-pointer">
+              <label key={i} className="flex items-start gap-2.5 px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0a0908] cursor-pointer">
                 <input type="checkbox" checked={done[i]} onChange={() => setDone((d) => d.map((x, j) => (j === i ? !x : x)))} className="mt-0.5 accent-amber-500" />
                 <span className={`text-[11px] leading-snug ${done[i] ? 'text-zinc-500 line-through' : 'text-zinc-300'}`}>{s}</span>
               </label>
@@ -155,7 +155,7 @@ export const FinancePlanningTreasury: React.FC<PatternProps> = ({ entry }) => {
           <Cap className="mb-1.5">Scenario comparison</Cap>
           <div className="space-y-2">
             {[['Base', '—'], ['Plan A (this)', `${cash.toFixed(1)}M`], ['Stress ΔDSO+20', `${(cash - 1.0).toFixed(1)}M`]].map(([n, v], i) => (
-              <div key={n} className={`flex items-center justify-between px-2.5 py-2 rounded-lg border ${i === 1 ? 'border-amber-500/40 bg-amber-500/10' : 'border-zinc-800 bg-[#0B0F14]'}`}>
+              <div key={n} className={`flex items-center justify-between px-2.5 py-2 rounded-lg border ${i === 1 ? 'border-amber-500/40 bg-amber-500/10' : 'border-zinc-800 bg-[#0a0908]'}`}>
                 <span className="text-[10px] text-zinc-300">{n}</span><span className="font-mono text-[10px] text-zinc-400">{v}</span>
               </div>
             ))}
@@ -207,11 +207,11 @@ export const FinanceApArOperations: React.FC<PatternProps> = ({ entry }) => {
         <div className="lg:col-span-3 space-y-2">
           <Cap>Owner / SLA queue</Cap>
           {[['INV-2214', 'AP · 6h'], ['PO-8813', 'receiving · 1d'], ['PO-8815', 'controller · 4h']].map(([id, owner]) => (
-            <div key={id} className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0B0F14]">
+            <div key={id} className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0a0908]">
               <span className="text-[10px] font-mono text-zinc-300">{id}</span><Chip tone="info">{owner}</Chip>
             </div>
           ))}
-          <details className="border border-zinc-800 rounded-lg px-2.5 py-2 bg-[#0B0F14]">
+          <details className="border border-zinc-800 rounded-lg px-2.5 py-2 bg-[#0a0908]">
             <summary className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 cursor-pointer">▸ Unposted adjustments (2)</summary>
             <p className="text-[10px] text-zinc-500 mt-1.5 font-mono">AC-3310 Δ 118.00 — pending controller</p>
           </details>
@@ -270,7 +270,7 @@ export const FinanceTaxRevenueCompliance: React.FC<PatternProps> = ({ entry }) =
           <div className="flex items-center min-w-[520px]">
             {['ASC 606 (2014)', 'effective 2018', 'policy memo v3', 'current position'].map((a, i) => (
               <React.Fragment key={a}>
-                <div className={`shrink-0 px-2.5 py-1.5 rounded-lg border text-[9px] font-mono ${i === 3 ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' : 'border-zinc-800 bg-[#0B0F14] text-zinc-400'}`}>{a}</div>
+                <div className={`shrink-0 px-2.5 py-1.5 rounded-lg border text-[9px] font-mono ${i === 3 ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' : 'border-zinc-800 bg-[#0a0908] text-zinc-400'}`}>{a}</div>
                 {i < 3 && <div className="flex-1 h-px bg-zinc-700 mx-1" />}
               </React.Fragment>
             ))}
@@ -316,7 +316,7 @@ export const InvestmentMaAnalytics: React.FC<PatternProps> = ({ entry }) => {
             <Cap className="mb-1.5">Thesis evidence board — {tab}</Cap>
             <div className="grid grid-cols-2 gap-2">
               {entry.useCases.slice(0, 4).map((u, i) => (
-                <div key={i} className="border border-zinc-800 rounded-lg p-2.5 bg-[#0B0F14] text-[10px] text-zinc-300 leading-snug">
+                <div key={i} className="border border-zinc-800 rounded-lg p-2.5 bg-[#0a0908] text-[10px] text-zinc-300 leading-snug">
                   <Chip tone={i % 2 ? 'ok' : 'info'}>{i % 2 ? 'supported' : 'partial'}</Chip>
                   <p className="mt-1.5">{u}</p>
                 </div>
@@ -366,7 +366,7 @@ export const PricingMonetizationScience: React.FC<PatternProps> = ({ entry }) =>
         </div>
         <div className="lg:col-span-5">
           <Cap className="mb-1.5">Guardrail chart</Cap>
-          <div className="relative h-36 border border-zinc-800 rounded-xl bg-[#0B0F14] p-3">
+          <div className="relative h-36 border border-zinc-800 rounded-xl bg-[#0a0908] p-3">
             <div className="absolute inset-x-3 top-1/2 border-t border-dashed border-rose-500/50" />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[8px] text-rose-400/80 -mt-3">guardrail: churn +2%</span>
             <div className="flex items-end gap-2 h-full">
@@ -460,7 +460,7 @@ export const ClinicalPatientDecisionSupport: React.FC<PatternProps> = ({ entry }
             </div>
           </Pane>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-zinc-800 rounded-xl px-4 py-3 bg-[#0B0F14]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-zinc-800 rounded-xl px-4 py-3 bg-[#0a0908]">
           <p className="text-[10px] text-zinc-500">Clinical decisions rest with the licensed clinician — this desk only organizes evidence.</p>
           <button onClick={() => setSigned(!signed)} className={`px-4 py-2 rounded-lg font-mono font-black uppercase text-[9px] border-2 cursor-pointer ${signed ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'border-zinc-700 text-zinc-400'}`}>
             {signed ? '✓ clinician sign-off recorded' : 'clinician sign-off'}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Send, CheckCircle2, DollarSign, ShieldCheck, Mail, MessageSquare, Landmark, Coins } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle2, ShieldCheck, Mail, MessageSquare, ClipboardCheck } from 'lucide-react';
 import { PageView } from '../types.ts';
 
 import { databaseService } from '../services/database.ts';
@@ -87,34 +87,17 @@ const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Crypto badge and stable fiat network section */}
-            <div className="space-y-6 bg-surface-1 border border-white/5 rounded-3xl p-8" id="payment-badge-section">
+            {/* Honest commercial routing: no payment is taken on this site. */}
+            <div className="space-y-5 bg-surface-1 border border-white/5 rounded-3xl p-8" id="engagement-routing-section">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-accent-emerald/10 text-accent-emerald rounded-lg">
-                  <Coins size={20} />
-                </div>
-                <h3 className="text-base font-bold text-white font-display">
-                  Global Liquidity Routing
-                </h3>
+                <div className="p-2 bg-accent-cyan/10 text-accent-cyan rounded-lg"><ClipboardCheck size={20} /></div>
+                <h3 className="text-base font-bold text-white font-display">Engagement routing</h3>
               </div>
-              <p className="text-sm text-text-secondary">
-                We accept global payments via Crypto (USDT on Tron) and select stable fiat networks. Settlements are automated over decentralized networks.
-              </p>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-                {[
-                  { name: 'USDT', network: 'TRC20' },
-                ].map((token) => (
-                  <div key={token.name} className="bg-surface-2/60 border border-white/5 rounded-xl p-3 text-center">
-                    <span className="block text-xs font-mono font-bold text-white">{token.name}</span>
-                    <span className="text-[9px] text-text-secondary block font-mono mt-1 mt-0.5">{token.network}</span>
-                  </div>
-                ))}
+              <p className="text-sm text-text-secondary">Use this form to scope a workflow kit, validation sprint, managed bench, or enterprise pilot. Payment is not collected on this site; commercial terms are confirmed after a human review.</p>
+              <div className="grid grid-cols-3 gap-3 pt-1">
+                {['scope', 'review', 'proposal'].map((step, index) => <div key={step} className="bg-surface-2/60 border border-white/5 p-3 text-center"><span className="block text-xs font-mono font-bold text-white">0{index + 1}</span><span className="text-[9px] text-text-secondary block font-mono mt-1 uppercase">{step}</span></div>)}
               </div>
-              <div className="flex items-center gap-2 text-xs text-text-secondary pt-1">
-                <ShieldCheck size={14} className="text-accent-emerald" />
-                <span>Fully automated smart escrow architecture.</span>
-              </div>
+              <div className="flex items-center gap-2 text-xs text-text-secondary pt-1"><ShieldCheck size={14} className="text-accent-cyan" /><span>No payment authorization is requested by this form.</span></div>
             </div>
           </div>
 
@@ -133,9 +116,9 @@ const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => {
                   <div className="w-16 h-16 bg-accent-emerald/10 text-accent-emerald rounded-full flex items-center justify-center mx-auto mb-4 border border-accent-emerald/20">
                     <CheckCircle2 size={32} />
                   </div>
-                  <h3 className="text-2xl font-bold text-white font-display">Engagement Protocol Sanitized</h3>
+                  <h3 className="text-2xl font-bold text-white font-display">Inquiry received</h3>
                   <p className="text-text-secondary max-w-md mx-auto">
-                    Your request has been piped directly to our secure enclave. An executive coordinator will establish terminal downlink within 2.5 cycles (approx. 4 hours).
+                    Your request was recorded for the KONKRED team. A human will review it before discussing scope, timing, or commercial terms.
                   </p>
                   <button
                     onClick={() => setIsSubmitted(false)}

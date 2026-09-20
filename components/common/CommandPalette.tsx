@@ -77,7 +77,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, onNavi
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[20vh] px-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       
-      <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 concrete-card">
+      <div className="relative w-full max-w-2xl bg-[#0a0908] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 concrete-card">
         <div className="p-4 border-b border-white/10 flex items-center gap-4">
           <Search className="text-ghost" size={20} />
           <input 

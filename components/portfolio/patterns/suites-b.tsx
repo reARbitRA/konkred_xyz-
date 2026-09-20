@@ -16,13 +16,13 @@ export const HealthcareOperationsCompliance: React.FC<PatternProps> = ({ entry }
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
         <div className="lg:col-span-3">
           <Cap className="mb-1.5">Evidence period</Cap>
-          <select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-full bg-[#070A0E] border-2 border-black rounded-lg p-2 font-mono text-[10px] text-emerald-300 cursor-pointer">
+          <select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-full bg-[#0a0908] border-2 border-black rounded-lg p-2 font-mono text-[10px] text-emerald-300 cursor-pointer">
             {['2026-H1', '2025-H2', '2025-H1'].map((p) => <option key={p}>{p}</option>)}
           </select>
           <Cap className="mt-4 mb-1.5">Owner queue</Cap>
           <div className="space-y-1.5">
             {[['privacy officer', 2], ['security lead', 1], ['compliance mgr', 4]].map(([o, n]) => (
-              <div key={o as string} className="flex justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0B0F14]">
+              <div key={o as string} className="flex justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0a0908]">
                 <span className="text-[10px] text-zinc-400">{o}</span><Chip tone="info">{n} open</Chip>
               </div>
             ))}
@@ -32,7 +32,7 @@ export const HealthcareOperationsCompliance: React.FC<PatternProps> = ({ entry }
           <Cap className="mb-1.5">Control map — {period}</Cap>
           <div className="grid grid-cols-2 gap-2">
             {controls.map((c, i) => (
-              <button key={i} onClick={() => setSel(c)} className={`text-left border rounded-lg p-2.5 bg-[#0B0F14] cursor-pointer transition-colors ${sel === c ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-800'}`}>
+              <button key={i} onClick={() => setSel(c)} className={`text-left border rounded-lg p-2.5 bg-[#0a0908] cursor-pointer transition-colors ${sel === c ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-800'}`}>
                 <Chip tone={i % 3 === 1 ? 'warn' : 'ok'}>{i % 3 === 1 ? 'evidence gap' : 'evidence linked'}</Chip>
                 <p className="text-[10px] text-zinc-300 mt-1.5 leading-snug">{c}</p>
               </button>
@@ -66,15 +66,15 @@ export const FraudIdentityFinancialCrime: React.FC<PatternProps> = ({ entry }) =
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
         <div className="lg:col-span-5">
           <Cap className="mb-1.5">Evidence graph — case FC-1187</Cap>
-          <svg viewBox="0 0 100 108" className="w-full h-52 border border-zinc-800 rounded-xl bg-[#0B0F14]">
+          <svg viewBox="0 0 100 108" className="w-full h-52 border border-zinc-800 rounded-xl bg-[#0a0908]">
             {edges.map(([a, b]) => (
-              <line key={`${a}-${b}`} x1={pos[a].x} y1={pos[a].y} x2={pos[b].x} y2={pos[b].y} stroke="#52525b" strokeWidth="0.7" />
+              <line key={`${a}-${b}`} x1={pos[a].x} y1={pos[a].y} x2={pos[b].x} y2={pos[b].y} stroke="#5c5852" strokeWidth="0.7" />
             ))}
             {nodes.map((n) => (
               <g key={n.id} onClick={() => setNode(n.id)} className="cursor-pointer">
-                <circle cx={n.x} cy={n.y} r="6.5" fill={node === n.id ? '#f59e0b' : '#181f2a'} stroke={node === n.id ? '#fbbf24' : '#3f3f46'} strokeWidth="0.8" />
-                <text x={n.x} y={n.y + 2.4} textAnchor="middle" fontSize="4" fill={node === n.id ? '#000' : '#a1a1aa'}>{n.id.slice(0, 3).toUpperCase()}</text>
-                <text x={n.x} y={n.y + 11} textAnchor="middle" fontSize="3.4" fill="#71717a">{n.id}</text>
+                <circle cx={n.x} cy={n.y} r="6.5" fill={node === n.id ? '#d60019' : '#171514'} stroke={node === n.id ? '#d60019' : '#3d3835'} strokeWidth="0.8" />
+                <text x={n.x} y={n.y + 2.4} textAnchor="middle" fontSize="4" fill={node === n.id ? '#0a0908' : '#8a857d'}>{n.id.slice(0, 3).toUpperCase()}</text>
+                <text x={n.x} y={n.y + 11} textAnchor="middle" fontSize="3.4" fill="#7a756d">{n.id}</text>
               </g>
             ))}
           </svg>
@@ -119,7 +119,7 @@ export const SecurityAccessDataIntegrity: React.FC<PatternProps> = ({ entry }) =
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
         <div className="lg:col-span-6">
           <Cap className="mb-1.5">Code / plan viewer</Cap>
-          <pre className="border border-zinc-800 rounded-xl bg-[#070A0E] p-3 text-[9px] font-mono leading-relaxed text-zinc-400 overflow-x-auto">
+          <pre className="border border-zinc-800 rounded-xl bg-[#0a0908] p-3 text-[9px] font-mono leading-relaxed text-zinc-400 overflow-x-auto">
 {`resource "aws_security_group" "app" {
   ingress {
     from_port   = 0        # ← F-01
@@ -151,7 +151,7 @@ export const SecurityAccessDataIntegrity: React.FC<PatternProps> = ({ entry }) =
             <button onClick={() => setOpen(!open)} className="font-mono text-[9px] text-cyan-400 underline decoration-cyan-500/40 cursor-pointer">{open ? 'hide' : 'read-only verification'}</button>
           </div>
           {open && (
-            <p className="mt-1.5 text-[10px] text-zinc-500 font-mono border border-zinc-800 rounded-lg p-2 bg-[#0B0F14]">
+            <p className="mt-1.5 text-[10px] text-zinc-500 font-mono border border-zinc-800 rounded-lg p-2 bg-[#0a0908]">
               verification runs in a read-only sandbox: no state files, credentials or live systems are touched.
             </p>
           )}
@@ -174,7 +174,7 @@ export const LegalContractTransaction: React.FC<PatternProps> = ({ entry }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
         <div className="lg:col-span-7">
           <Cap className="mb-1.5">Source document (synchronized)</Cap>
-          <div className="border border-zinc-800 rounded-xl bg-[#070A0E] p-4 space-y-3 max-h-60 overflow-y-auto">
+          <div className="border border-zinc-800 rounded-xl bg-[#0a0908] p-4 space-y-3 max-h-60 overflow-y-auto">
             {clauses.map((c) => (
               <p key={c.n} onClick={() => setClause(c.n)} className={`text-[11px] font-mono leading-relaxed cursor-pointer rounded p-2 transition-colors ${clause === c.n ? 'bg-amber-500/15 text-amber-200 border border-amber-500/40' : 'text-zinc-500 border border-transparent hover:text-zinc-300'}`}>
                 §{c.n}. {c.quote}
@@ -220,7 +220,7 @@ export const LegalRegulatoryPrivacyAi: React.FC<PatternProps> = ({ entry }) => {
             <Cap className="mb-1.5">Obligation graph — {jur}</Cap>
             <div className="flex flex-wrap gap-2">
               {obligations.map((o, i) => (
-                <button key={o} onClick={() => setSel(o)} className={`px-3 py-2 rounded-xl border text-[10px] font-mono cursor-pointer ${sel === o ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-200' : i % 2 ? 'border-zinc-800 text-zinc-400 bg-[#0B0F14]' : 'border-zinc-700 text-zinc-300 bg-[#0E1319]'}`}>
+                <button key={o} onClick={() => setSel(o)} className={`px-3 py-2 rounded-xl border text-[10px] font-mono cursor-pointer ${sel === o ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-200' : i % 2 ? 'border-zinc-800 text-zinc-400 bg-[#0a0908]' : 'border-zinc-700 text-zinc-300 bg-[#171514]'}`}>
                   {o}
                   {i % 2 === 0 && <span className="block text-[8px] text-zinc-600 mt-0.5">effective 2026-01</span>}
                   {i % 2 === 1 && <span className="block text-[8px] text-amber-500/70 mt-0.5">org-fact gap</span>}
@@ -302,7 +302,7 @@ export const CommunicationsControl: React.FC<PatternProps> = ({ entry }) => {
         </div>
         <div className="lg:col-span-5">
           <Cap className="mb-1.5">Draft canvas</Cap>
-          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={6} className="w-full bg-[#070A0E] border-2 border-black rounded-xl p-3 text-[11px] font-mono text-zinc-200 resize-none focus:outline-none focus:border-amber-500" />
+          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={6} className="w-full bg-[#0a0908] border-2 border-black rounded-xl p-3 text-[11px] font-mono text-zinc-200 resize-none focus:outline-none focus:border-amber-500" />
           <p className="text-[9px] font-mono text-zinc-600 mt-1">unverifiable statements stay highlighted until a fact is attached</p>
         </div>
         <div className="lg:col-span-4 space-y-2">
@@ -355,7 +355,7 @@ export const MarketingSalesEvidence: React.FC<PatternProps> = ({ entry }) => {
         ) : (
           <div className="grid grid-cols-3 gap-2">
             {['security questionnaire', 'RFP section 4', 'diligence call'].map((r) => (
-              <div key={r} className="border border-zinc-800 rounded-lg p-2.5 bg-[#0B0F14]">
+              <div key={r} className="border border-zinc-800 rounded-lg p-2.5 bg-[#0a0908]">
                 <Cap>{r}</Cap>
                 <div className="mt-2 space-y-1">{rows3().map((i) => (
                   <div key={i} className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-zinc-700" /><span className="h-1 flex-1 rounded bg-zinc-800" /></div>
@@ -388,7 +388,7 @@ export const OperationsProcurement: React.FC<PatternProps> = ({ entry }) => {
           <Cap className="mb-1.5">Solicitation explorer</Cap>
           <div className="space-y-1.5">
             {solicitations.map((s, i) => (
-              <button key={s} onClick={() => setOpen(i)} className={`w-full text-left px-2.5 py-2 rounded-lg border text-[10px] cursor-pointer ${open === i ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-zinc-800 bg-[#0B0F14] text-zinc-400'}`}>
+              <button key={s} onClick={() => setOpen(i)} className={`w-full text-left px-2.5 py-2 rounded-lg border text-[10px] cursor-pointer ${open === i ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-zinc-800 bg-[#0a0908] text-zinc-400'}`}>
                 {s}
                 <span className="block text-[8px] text-zinc-600 mt-0.5">{open === i ? 'closes 2026-09-12 · 14 requirements' : 'closes 2026-09-30'}</span>
               </button>

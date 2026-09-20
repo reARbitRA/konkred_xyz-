@@ -1,17 +1,17 @@
 {
   "name": "KONKRED – Production Node",
-  "version": "2.5.0",
-  "description": "The enterprise-grade ecosystem for Structural AI Capital. Verified protocols, autonomous agents, and deterministic frameworks.",
+  "version": "2.6.0",
+  "description": "Controlled enterprise AI workflow products with evidence-linked, human-reviewed outputs.",
   "author": {
     "name": "KONKRED Systems",
     "email": "ari@konkred.xyz",
     "url": "https://konkred.xyz"
   },
   "tech_stack": {
-    "frontend": "React 18",
-    "backend": "Firebase Firestore / Cloud Functions",
-    "ai": "Unified AI Provider Gateway (Gemini 3 Pro + External)",
-    "payments": "USDT (TRC-20)"
+    "frontend": "React 19 / Vite",
+    "backend": "Express / Firebase Firestore",
+    "ai": "Unified AI Provider Gateway",
+    "payments": "Not configured — inquiry-only"
   },
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

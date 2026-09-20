@@ -17,6 +17,7 @@ import Loader from './components/common/Loader.tsx';
 // Eager Page for instant load
 import LandingPage from './pages/LandingPage.tsx';
 import { PageTransition } from './components/brand/PageTransition.tsx';
+import { ChalkChrome } from './components/brand/ChalkChrome.tsx';
 import './styles/brutal.css';
 
 // Code-split pages for optimized bundle size & TTI
@@ -132,7 +133,8 @@ const App: React.FC = () => {
     const showFooter = !['enter', 'join_network', 'verify_email', 'redaeye', 'redaeye_sandbox', 'landing', 'catalogue'].includes(currentPage);
 
     return (
-        <div className="min-h-screen bg-void text-metal-light selection:bg-neon-cyan selection:text-black font-sans flex overflow-hidden">
+        <div className="min-h-screen chalk-smudge text-[var(--body)] flex overflow-hidden">
+            <ChalkChrome />
             <CommandPalette isOpen={isCmdOpen} onClose={() => setIsCmdOpen(false)} onNavigate={navigate} />
 
             <main className="flex-1 min-h-screen relative w-full overflow-y-auto custom-scrollbar">

@@ -1,266 +1,47 @@
-
 <!DOCTYPE html>
 <html lang="en" class="dark">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0908" />
     <title>KONKRED | Controlled Enterprise Workflow Products</title>
-    <meta name="description" content="KONKRED — a data-driven catalogue of 15 AI workflow products plus the AUDITOR neural audit engine, REDAEYE adversarial diagnostics and the fullKONK_&gt; product builder." />
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◆</text></svg>">
-       <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind -->
+    <meta name="description" content="KONKRED gives enterprise AI work a controlled intake, a visible workflow rail, and a reviewable output." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0908'/%3E%3Cpath d='M50 13 87 50 50 87 13 50Z' fill='none' stroke='%23d60019' stroke-width='9'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700;800&family=Special+Elite&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['IBM Plex Mono', 'monospace'],
-                        display: ['IBM Plex Mono', 'monospace'],
-                        vazir: ['Vazirmatn', 'Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        'void': {
-                            DEFAULT: '#0B0F14',   // Void-1
-                            50: '#0B0F14',
-                            100: '#0E1319',  // Void-2 / Card
-                            200: '#0D1218',  // Card / alt / Tool rows
-                            300: '#1A212B',  // Line / Border
-                            400: '#222B36',  // Line-2 / Hover
-                            500: '#9AA0A8',  // Muted secondary text
-                            600: '#6B717A',  // Mid / Meta
-                        },
-                        'clinical': {
-                            DEFAULT: '#D7D9DD', // Light Gray
-                            light: '#E8E9EC',   // Concrete Light / Cube top
-                            shadow: '#C1C4C9',  // Concrete Shadow / Cube right
-                        },
-                        'signal': {
-                            DEFAULT: '#D98A2E', // Signal Amber / Accent
-                            accent: '#D98A2E',
-                            hover: '#C2751E',
-                        },
-                        'caution': {
-                            DEFAULT: '#D98A2E', // Alias of signal accent
-                            accent: '#D98A2E',
-                            hover: '#C2751E',
-                        },
-                        'metal': {
-                            light: '#D7D9DD',
-                            DEFAULT: '#9AA0A8',
-                            dark: '#6B717A',
-                            darker: '#222B36',
-                        },
-                        'ghost': {
-                            DEFAULT: '#9AA0A8',
-                            light: '#D7D9DD',
-                            lighter: '#E8E9EC',
-                        },
-                    },
-                    boxShadow: {
-                        'brutalist': '4px 4px 0px 0px #000000',
-                        'brutalist-hover': '6px 6px 0px 0px #000000',
-                        'brutalist-lg': '8px 8px 0px 0px #000000',
-                        'brutalist-yellow': '4px 4px 0px 0px #D98A2E',
-                        'brutalist-yellow-lg': '8px 8px 0px 0px #D98A2E',
-                        'neon-cyan': '0 0 15px rgba(217, 138, 46, 0.4)',
-                    },
-                    animation: {
-                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'fade-in': 'fadeIn 0.5s ease-out forwards',
-                        'zoom-in': 'zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'float': 'float 3s ease-in-out infinite',
-                        'glow-pulse': 'glowPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'shimmer': 'shimmer 1.5s linear infinite',
-                        'spin-slow': 'spin 8s linear infinite',
-                        'dust-shimmer': 'dust-shimmer 8s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        slideUp: {
-                            '0%': { transform: 'translateY(20px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        },
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        },
-                        zoomIn: {
-                            '0%': { transform: 'scale(0.95)', opacity: '0' },
-                            '100%': { transform: 'scale(1)', opacity: '1' },
-                        },
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0px)' },
-                            '50%': { transform: 'translateY(-10px)' },
-                        },
-                        glowPulse: {
-                            '0%, 100%': { opacity: '0.2', transform: 'scale(1)' },
-                            '50%': { opacity: '0.6', transform: 'scale(1.05)' },
-                        },
-                        shimmer: {
-                            '0%': { backgroundPosition: '-200% 0' },
-                            '100%': { backgroundPosition: '200% 0' },
-                        },
-                        'dust-shimmer': {
-                            '0%': { backgroundPosition: '0% 0%', opacity: '0.03' },
-                            '25%': { backgroundPosition: '50% 50%', opacity: '0.06' },
-                            '50%': { backgroundPosition: '100% 100%', opacity: '0.03' },
-                            '75%': { backgroundPosition: '50% 0%', opacity: '0.06' },
-                            '100%': { backgroundPosition: '0% 0%', opacity: '0.03' },
-                        },
-                    }
-                }
-            }
-        }
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Special Elite', 'Georgia', 'serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+              display: ['Archivo Black', 'Impact', 'sans-serif'],
+              vazir: ['Vazirmatn', 'Special Elite', 'serif'],
+            },
+            colors: {
+              void: { DEFAULT: '#0a0908', 50: '#0a0908', 100: '#171514', 200: '#100e0d', 300: '#2a2624', 400: '#33302e', 500: '#8a857d', 600: '#7a756d' },
+              clinical: { DEFAULT: '#eae7e1', light: '#f4f1eb', shadow: '#b7b2a9' },
+              signal: { DEFAULT: '#d60019', accent: '#d60019', hover: '#ff1a2e' },
+              caution: { DEFAULT: '#d60019', accent: '#d60019', hover: '#ff1a2e' },
+              metal: { light: '#f4f1eb', DEFAULT: '#b7b2a9', dark: '#8a857d', darker: '#2a2624' },
+              ghost: { DEFAULT: '#5c5852', light: '#b7b2a9', lighter: '#eae7e1' },
+              'neon-red': '#d60019', 'neon-cyan': '#b7b2a9', 'neon-blue': '#b7b2a9', 'neon-purple': '#b7b2a9', 'neon-green': '#b7b2a9',
+            },
+            boxShadow: { brutalist: '4px 4px 0 #0a0908', 'brutalist-hover': '6px 6px 0 rgba(214,0,25,.18)', 'brutalist-lg': '8px 8px 0 #0a0908', 'brutalist-yellow': '4px 4px 0 rgba(214,0,25,.18)', 'brutalist-yellow-lg': '8px 8px 0 rgba(214,0,25,.18)' },
+          },
+        },
+      };
     </script>
-    
-    <style>
-        :root {
-            --color-void: #0B0F14;
-            --color-caution: #D98A2E;
-            --color-neon-cyan: #D98A2E;
-            --transition-normal: 150ms;
-        }
-        body {
-            background: var(--color-void);
-            color: #D7D9DD;
-            font-family: 'Inter', sans-serif;
-            overflow-x: hidden;
-        }
-        .bg-void-gradient {
-            background-color: #0B0F14;
-            background-image: 
-                radial-gradient(ellipse 60% 40% at 50% 0%, rgba(217, 138, 46, 0.03) 0%, transparent 60%),
-                linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px), 
-                linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
-            background-size: 100% 100%, 30px 30px, 30px 30px;
-        }
-        .preserve-3d { transform-style: preserve-3d; }
-        .perspective-1000 { perspective: 1000px; }
-        
-        .btn-primary {
-            background: #D98A2E;
-            color: #000000;
-            font-weight: 800;
-            text-transform: uppercase;
-            padding: 12px 24px;
-            border: 3px solid #000000;
-            border-radius: 0px !important;
-            box-shadow: 4px 4px 0px 0px #000000;
-            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .btn-primary:hover {
-            transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0px 0px #000000;
-        }
-        .btn-primary:active {
-            transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0px 0px #000000;
-        }
-        
-        /* Brutalist classes */
-        .brutalist-border {
-            border: 3px solid #1A212B !important;
-            border-radius: 0px !important;
-        }
-        
-        .brutalist-card {
-            background-color: #0E1319;
-            border: 3px solid #1A212B !important;
-            border-radius: 0 tracking-tight;
-            box-shadow: 4px 4px 0px 0px #000000;
-            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        .brutalist-card:hover {
-            transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0px 0px #000000;
-        }
-        
-        .gradient-text {
-            color: #D98A2E;
-            font-weight: 900;
-            text-transform: uppercase;
-        }
-        .logo-3d-effect {
-            text-shadow: 2px 2px 0px #000, 4px 4px 0px #D98A2E;
-        }
-
-        @keyframes grid-flow {
-            0% { transform: perspective(500px) rotateX(60deg) translateY(0); }
-            100% { transform: perspective(500px) rotateX(60deg) translateY(40px); }
-        }
-        .grid-plane {
-            background-image: linear-gradient(rgba(217, 138, 46, 0.05) 1px, transparent 1px), 
-                              linear-gradient(90deg, rgba(217, 138, 46, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-            animation: grid-flow 2s linear infinite;
-        }
-        .grid-bg {
-             background-image: linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px), 
-                              linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
-            background-size: 30px 30px;
-        }
-
-        @keyframes scanline {
-            0% { top: -100% }
-            100% { top: 100% }
-        }
-        .scanline {
-            width: 100%;
-            height: 120px;
-            z-index: 99;
-            background: linear-gradient(to bottom, transparent 0%, rgba(217, 138, 46, 0.02) 50%, transparent 100%);
-            position: fixed;
-            pointer-events: none;
-            animation: scanline 6s linear infinite;
-        }
-        
-        .fill-mode-forwards {
-            animation-fill-mode: forwards;
-        }
-        .delay-100 { animation-delay: 100ms; }
-        .delay-200 { animation-delay: 200ms; }
-        .delay-300 { animation-delay: 300ms; }
-        .delay-500 { animation-delay: 500ms; }
-
-        .concrete-card {
-            background-color: #0E1319;
-            border: 3px solid #1A212B !important;
-            border-radius: 0px !important;
-            box-shadow: 4px 4px 0px 0px #000000;
-        }
-        
-        .brutalist-bg {
-            background-color: #0B0F14;
-            background-image: url('https://www.transparenttextures.com/patterns/concrete-wall.png');
-            position: relative;
-            overflow: hidden;
-        }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "firebase/": "https://esm.sh/firebase@^12.8.0/"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
-<body class="bg-void-gradient">
+    <script type="importmap">
+      {"imports":{"lucide-react":"https://esm.sh/lucide-react@^0.562.0","@google/genai":"https://esm.sh/@google/genai@^1.34.0","react-dom/":"https://esm.sh/react-dom@^19.2.3/","react/":"https://esm.sh/react@^19.2.3/","react":"https://esm.sh/react@^19.2.3","firebase/":"https://esm.sh/firebase@^12.8.0/"}}
+    </script>
+  </head>
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-</body>
+  </body>
 </html>

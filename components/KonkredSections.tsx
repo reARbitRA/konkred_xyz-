@@ -159,7 +159,7 @@ export const PremiumServicesSection: React.FC = () => {
             
             <div className="space-y-1.5">
               <h3 className="text-xl font-mono font-black text-white uppercase tracking-tight">Bespoke Agent Workflows</h3>
-              <p className="text-[9px] text-[#22d3ee] font-mono uppercase tracking-widest font-black">MULTI-MODEL AGENT PIPELINES_</p>
+              <p className="text-[9px] text-[#d60019] font-mono uppercase tracking-widest font-black">MULTI-MODEL AGENT PIPELINES_</p>
             </div>
 
             <p className="text-void-500 text-xs font-mono leading-relaxed uppercase">
@@ -176,7 +176,7 @@ export const PremiumServicesSection: React.FC = () => {
                 { step: '3', title: 'Production Ship', details: 'We deploy lightweight container endpoints on your secure cloud environment.' }
               ].map(item => (
                 <div key={item.step} className="flex gap-3">
-                  <span className="w-6 h-6 rounded-none bg-black text-[#22d3ee] flex items-center justify-center text-[10px] font-mono border border-void-300 font-black">{item.step}</span>
+                  <span className="w-6 h-6 rounded-none bg-black text-[#d60019] flex items-center justify-center text-[10px] font-mono border border-void-300 font-black">{item.step}</span>
                   <div>
                     <h5 className="text-[11px] font-bold text-white font-mono uppercase">{item.title}</h5>
                     <p className="text-xs text-void-550 font-mono font-light uppercase">{item.details}</p>
@@ -346,7 +346,7 @@ export const DynamicBlogSection: React.FC = () => {
 
                 <form onSubmit={handleCreateCustomBlog} className="space-y-4">
                   {/* File drop and select manual option */}
-                  <div className="bg-[#030712] p-6 rounded-none border border-void-300 text-center ">
+                  <div className="bg-[#0a0908] p-6 rounded-none border border-void-300 text-center ">
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -375,7 +375,7 @@ export const DynamicBlogSection: React.FC = () => {
                         value={customTitle}
                         onChange={(e) => setCustomTitle(e.target.value)}
                         placeholder="e.g. Prompt Leakage Patterns Analysed"
-                        className="w-full bg-[#030712] border border-void-300 rounded-none p-3 text-white focus:outline-none focus:border-signal font-mono text-xs"
+                        className="w-full bg-[#0a0908] border border-void-300 rounded-none p-3 text-white focus:outline-none focus:border-signal font-mono text-xs"
                       />
                     </div>
                     <div>
@@ -385,7 +385,7 @@ export const DynamicBlogSection: React.FC = () => {
                         value={customSummary}
                         onChange={(e) => setCustomSummary(e.target.value)}
                         placeholder="e.g., A breakdown of semantic alignment telemetry findings under high payload stress models."
-                        className="w-full bg-[#030712] border border-void-300 rounded-none p-3 text-white focus:outline-none focus:border-signal font-mono text-xs"
+                        className="w-full bg-[#0a0908] border border-void-300 rounded-none p-3 text-white focus:outline-none focus:border-signal font-mono text-xs"
                       />
                     </div>
                     <div>
@@ -395,7 +395,7 @@ export const DynamicBlogSection: React.FC = () => {
                         onChange={(e) => setCustomHtml(e.target.value)}
                         placeholder="<article>\n  <h1>Heading</h1>\n  <p>Your raw text paragraphs...</p>\n  <pre><code>someCode();</code></pre>\n</article>"
                         rows={8}
-                        className="w-full bg-[#030712] border border-void-300 rounded-none p-3 text-white focus:outline-none focus:border-signal font-mono text-xs focus:ring-1 focus:ring-void-300 focus:outline-none resize-none"
+                        className="w-full bg-[#0a0908] border border-void-300 rounded-none p-3 text-white focus:outline-none focus:border-signal font-mono text-xs focus:ring-1 focus:ring-void-300 focus:outline-none resize-none"
                       />
                     </div>
                   </div>
@@ -444,43 +444,43 @@ export const DynamicBlogSection: React.FC = () => {
       {/* Internal Typography styling wrapper injection specifically for HTML block rendering */}
       <style>{`
         .custom-rendered-html h1, .custom-rendered-html h2, .custom-rendered-html h3 {
-          color: #FAFAFA !important;
+          color: #f4f1eb !important;
           font-weight: 700 !important;
           letter-spacing: -0.025em !important;
           margin-top: 1.5rem !important;
           margin-bottom: 0.5rem !important;
         }
         .custom-rendered-html h1 { font-size: 1.5rem !important; }
-        .custom-rendered-html h2 { font-size: 1.25rem !important; border-bottom: 1px solid #1A212B; padding-bottom: 0.25rem; }
+        .custom-rendered-html h2 { font-size: 1.25rem !important; border-bottom: 1px solid #2a2624; padding-bottom: 0.25rem; }
         .custom-rendered-html h3 { font-size: 1.125rem !important; }
         .custom-rendered-html p {
-          color: #9AA0A8 !important;
+          color: #8a857d !important;
           margin-bottom: 1rem !important;
         }
         .custom-rendered-html p.lead {
           font-size: 1.1rem !important;
-          color: #D7D9DD !important;
+          color: #eae7e1 !important;
           font-weight: 300 !important;
         }
         .custom-rendered-html blockquote {
-          border-left: 2px solid #D98A2E !important;
+          border-left: 2px solid #d60019 !important;
           padding-left: 1rem !important;
-          color: #D7D9DD !important;
+          color: #eae7e1 !important;
           font-style: italic !important;
           margin: 1.5rem 0 !important;
         }
         .custom-rendered-html ul, .custom-rendered-html ol {
           padding-left: 1.5rem !important;
           margin-bottom: 1rem !important;
-          color: #9AA0A8 !important;
+          color: #8a857d !important;
           list-style-type: unset !important;
         }
         .custom-rendered-html li {
           margin-bottom: 0.5rem !important;
         }
         .custom-rendered-html pre {
-          background-color: #030712 !important;
-          border: 1px solid #1A212B !important;
+          background-color: #0a0908 !important;
+          border: 1px solid #2a2624 !important;
           padding: 1rem !important;
           border-radius: 0px !important;
           overflow-x: auto !important;
@@ -489,19 +489,19 @@ export const DynamicBlogSection: React.FC = () => {
         .custom-rendered-html code {
           font-family: 'IBM Plex Mono', 'Fira Code', monospace !important;
           font-size: 0.85em !important;
-          color: #D98A2E !important;
+          color: #d60019 !important;
           background-color: rgba(217,138,46,0.05) !important;
           padding: 0.15em 0.3em !important;
           border-radius: 0px !important;
         }
         .custom-rendered-html pre code {
-          color: #D7D9DD !important;
+          color: #eae7e1 !important;
           background-color: transparent !important;
           padding: 0 !important;
           display: block !important;
         }
         .custom-rendered-html strong {
-          color: #ffffff !important;
+          color: #f4f1eb !important;
           font-weight: 600 !important;
         }
       `}</style>

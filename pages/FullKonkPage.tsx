@@ -401,9 +401,9 @@ export default function FullKonkPage() {
       <strong className="fk-brand">fullKONK_&gt;</strong>
       <div style={{ flex: 1 }} />
       {userId && <button onClick={() => setShowSidebar(value => !value)} className="fk-btn">≡ WORKSPACE</button>}
-      {userId && files.length > 0 && <button onClick={() => { void handleSaveProject(); }} className="fk-btn" style={{ borderColor: '#ffb400', color: '#ffb400' }}>{saveState}</button>}
+      {userId && files.length > 0 && <button onClick={() => { void handleSaveProject(); }} className="fk-btn" style={{ borderColor: '#d60019', color: '#d60019' }}>{saveState}</button>}
       {userId && <button onClick={() => setShowAnalytics(true)} className="fk-btn">◎ ANALYTICS</button>}
-      {files.length > 0 && <button onClick={() => setShowGitHub(true)} className="fk-btn" style={{ background: '#19d3c5', borderColor: '#000', color: '#0b0d10' }}>↑ GITHUB</button>}
+      {files.length > 0 && <button onClick={() => setShowGitHub(true)} className="fk-btn" style={{ background: '#d60019', borderColor: '#0a0908', color: '#100e0d' }}>↑ GITHUB</button>}
       <div style={{ display: 'flex', gap: 4 }}>{MODES.map(item => <button key={item.id} disabled={streaming} onClick={() => setMode(item.id)} className={`fk-btn${mode === item.id ? ' fk-btn-acc' : ''}`}>{item.label}</button>)}</div>
       <button onClick={() => setShowSettings(value => !value)} className="fk-btn">⚙ SETTINGS</button>
       <button onClick={() => setLiveEnv(value => !value)} className={`fk-btn${liveEnv ? ' fk-btn-acc' : ''}`}>▶ LIVE ENV</button>
@@ -419,13 +419,13 @@ export default function FullKonkPage() {
       </select>
       <input value={systemPrompt} onChange={event => setSystemPrompt(event.target.value)} placeholder="Optional system prompt override (or load a playbook)" className="fk-select" style={{ width: '100%', boxSizing: 'border-box' }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ color: byokKeys[provider] ? '#ffb400' : '#666' }}>🔑 {(allProviders.find(o => o.id === provider)?.name || provider).toUpperCase()} KEY</span>
+        <span style={{ color: byokKeys[provider] ? '#d60019' : '#7a756d' }}>🔑 {(allProviders.find(o => o.id === provider)?.name || provider).toUpperCase()} KEY</span>
         <input type="password" value={byokDraft} onChange={event => saveByok(event.target.value)} placeholder={byokKeys[provider] ? '●●●● saved in this browser' : 'paste a free-tier key'} className="fk-select" style={{ width: 190, marginLeft: 5 }} autoComplete="off" />
         {!byokKeys[provider] && PROVIDER_SIGNUP[provider] && (
           <a href={PROVIDER_SIGNUP[provider]} target="_blank" rel="noreferrer noopener" className="fk-btn fk-btn-acc" style={{ textDecoration: 'none' }}>GET FREE KEY ↗</a>
         )}
       </label>
-      <span style={{ color: '#555' }}>BYOK stays in this browser; sent only with your own requests, never stored server-side.</span>
+      <span style={{ color: '#5c5852' }}>BYOK stays in this browser; sent only with your own requests, never stored server-side.</span>
     </div>}
     <PipelineStatus stage={stage} text={stageText} streaming={streaming} metrics={metrics} onStop={() => abortRef.current?.abort()} canRetry={retryable && Boolean(latestPromptRef.current)} onRetry={handleRetry} />
     {/* Tablet / narrow layout: one panel at a time with a touch tab bar */}
@@ -436,13 +436,13 @@ export default function FullKonkPage() {
           {panel === 'code' && <div style={{ flex: 1, minWidth: 0 }}><CodeOutput files={files} previousFiles={previousFiles} activeFile={activeFile} onSelectFile={setActiveFile} streaming={streaming} /></div>}
           {panel === 'live' && <div style={{ flex: 1, minWidth: 0 }}><LiveEnvironment files={files} streaming={streaming} /></div>}
         </div>
-        <nav aria-label="Console panels" style={{ display: 'flex', flexShrink: 0, borderTop: '4px solid #000', background: '#0e0f14' }}>
+        <nav aria-label="Console panels" style={{ display: 'flex', flexShrink: 0, borderTop: '4px solid #0a0908', background: '#100e0d' }}>
           {([
             ['chat', '▤ CHAT'],
             ['code', '◈ CODE'],
             ['live', '▶ LIVE'],
           ] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setPanel(id)} className={`fk-btn${panel === id ? ' fk-btn-acc' : ''}`} style={{ flex: 1, padding: '14px 0', fontSize: 10, border: 'none', borderBottom: panel === id ? '4px solid #ffb400' : '4px solid transparent' }}>
+            <button key={id} onClick={() => setPanel(id)} className={`fk-btn${panel === id ? ' fk-btn-acc' : ''}`} style={{ flex: 1, padding: '14px 0', fontSize: 10, border: 'none', borderBottom: panel === id ? '4px solid #d60019' : '4px solid transparent' }}>
               {label}{id === 'live' && !liveEnv ? ' (off)' : ''}
             </button>
           ))}
@@ -455,8 +455,8 @@ export default function FullKonkPage() {
       : liveEnv ? 'minmax(260px, 360px) minmax(0, 1fr) minmax(300px, 420px)'
       : 'minmax(300px, 380px) minmax(0, 1fr)' }}>
       {showSidebar && userId && <SessionSidebar userId={userId} activeSessionId={activeSession} activeProjectId={activeProject?.id || null} refreshKey={sidebarRefresh} onSelect={selectSession} onSelectProject={selectProject} onNew={clearWorkspace} />}
-      <div style={{ minWidth: 0, borderRight: '3px solid #000' }}><ChatPanel messages={messages} streaming={streaming} attachments={attachments} onAttachmentsChange={setAttachments} onSend={prompt => { void handleSend(prompt); }} onClear={clearWorkspace} /></div>
-      <div style={{ minWidth: 0, borderRight: liveEnv ? '3px solid #000' : undefined }}><CodeOutput files={files} previousFiles={previousFiles} activeFile={activeFile} onSelectFile={setActiveFile} streaming={streaming} /></div>
+      <div style={{ minWidth: 0, borderRight: '3px solid #0a0908' }}><ChatPanel messages={messages} streaming={streaming} attachments={attachments} onAttachmentsChange={setAttachments} onSend={prompt => { void handleSend(prompt); }} onClear={clearWorkspace} /></div>
+      <div style={{ minWidth: 0, borderRight: liveEnv ? '3px solid #0a0908' : undefined }}><CodeOutput files={files} previousFiles={previousFiles} activeFile={activeFile} onSelectFile={setActiveFile} streaming={streaming} /></div>
       {liveEnv && <div style={{ minWidth: 0 }}><LiveEnvironment files={files} streaming={streaming} /></div>}
     </main>
     )}

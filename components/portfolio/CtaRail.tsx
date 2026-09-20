@@ -30,7 +30,7 @@ export const CtaRail: React.FC<{ entry: PortfolioEntry }> = ({ entry }) => {
 
   return (
     <aside aria-label="Pricing" className="space-y-3">
-      <div className="bg-[#0E1319] border-2 border-black rounded-2xl p-5 space-y-4 sticky top-24 shadow-[4px_4px_0px_0px_#000000]">
+      <div className="bg-[#171514] border-2 border-black rounded-2xl p-5 space-y-4 sticky top-24 shadow-[4px_4px_0px_0px_#0a0908]">
         <div>
           <p className="font-mono uppercase tracking-widest text-[9px] text-zinc-500">{headline.label}</p>
           <p className="font-mono font-black text-2xl text-amber-400 mt-0.5">{headline.price}</p>

@@ -81,7 +81,7 @@ const Station: React.FC<{
           <Typewriter text={e.jobToBeDone ?? ''} speed={12} className="text-[11px] leading-relaxed block min-h-[3.6em]" />
           <div className="flex flex-wrap gap-1.5">
             {[badge(e), `${e.staticDesignScore}/100 DESIGN`, e.status.replace(/_/g, ' ')].map((m) => (
-              <span key={m} className="text-[8px] tracking-[0.18em] border px-2 py-1" style={{ borderColor: 'var(--k-line)', color: 'var(--k-ph, #3dff9a)' }}>{m}</span>
+              <span key={m} className="text-[8px] tracking-[0.18em] border px-2 py-1" style={{ borderColor: 'var(--k-line)', color: 'var(--k-ph, #d60019)' }}>{m}</span>
             ))}
           </div>
           <button

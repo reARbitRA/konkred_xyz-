@@ -59,9 +59,9 @@ export default function GitHubExportModal({ files, onClose }: Props) {
 
   const inputStyle: React.CSSProperties = {
     width:      '100%',
-    background: '#050505',
-    border:     '1px solid #222',
-    color:      '#fff',
+    background: '#0a0908',
+    border:     '1px solid #2a2624',
+    color:      '#f4f1eb',
     fontFamily: '"JetBrains Mono", monospace',
     fontSize:    11,
     padding:    '8px 10px',
@@ -72,7 +72,7 @@ export default function GitHubExportModal({ files, onClose }: Props) {
   const labelStyle: React.CSSProperties = {
     fontFamily:    '"JetBrains Mono", monospace',
     fontSize:       9,
-    color:          '#444',
+    color:          '#5c5852',
     letterSpacing:  2,
     textTransform: 'uppercase',
     marginBottom:   5,
@@ -100,8 +100,8 @@ export default function GitHubExportModal({ files, onClose }: Props) {
         initial={{ scale: .95, y: 16 }}
         animate={{ scale: 1, y: 0 }}
         style={{
-          background:  '#0a0a0a',
-          border:      '3px solid #1a1a1a',
+          background:  '#0a0908',
+          border:      '3px solid #2a2624',
           width:       '100%',
           maxWidth:     480,
           fontFamily: '"JetBrains Mono", monospace',
@@ -113,28 +113,28 @@ export default function GitHubExportModal({ files, onClose }: Props) {
           alignItems:     'center',
           justifyContent: 'space-between',
           padding:         '12px 16px',
-          borderBottom:   '1px solid #1a1a1a',
+          borderBottom:   '1px solid #2a2624',
         }}>
-          <span style={{ fontSize: 10, letterSpacing: 3, color: '#FFD700', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: 10, letterSpacing: 3, color: '#d60019', textTransform: 'uppercase' }}>
             // EXPORT TO GITHUB
           </span>
-          <button onClick={closeSecurely} style={{ background: 'none', border: '1px solid #222', color: '#555', width: 26, height: 26, cursor: 'pointer', fontSize: 12 }}>
+          <button onClick={closeSecurely} style={{ background: 'none', border: '1px solid #2a2624', color: '#5c5852', width: 26, height: 26, cursor: 'pointer', fontSize: 12 }}>
             ✕
           </button>
         </div>
 
         <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* File count */}
-          <div style={{ fontSize: 10, color: '#444', padding: '8px 10px', border: '1px solid #111', background: '#050505' }}>
+          <div style={{ fontSize: 10, color: '#5c5852', padding: '8px 10px', border: '1px solid #171514', background: '#0a0908' }}>
             {files.length} file{files.length !== 1 ? 's' : ''} ready to export
             <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {files.slice(0, 6).map(f => (
-                <span key={f.path} style={{ fontSize: 8, color: '#333', padding: '2px 6px', border: '1px solid #111' }}>
+                <span key={f.path} style={{ fontSize: 8, color: '#3d3835', padding: '2px 6px', border: '1px solid #171514' }}>
                   {f.path.split('/').pop()}
                 </span>
               ))}
               {files.length > 6 && (
-                <span style={{ fontSize: 8, color: '#2a2a2a', padding: '2px 6px' }}>
+                <span style={{ fontSize: 8, color: '#2a2624', padding: '2px 6px' }}>
                   +{files.length - 6} more
                 </span>
               )}
@@ -142,7 +142,7 @@ export default function GitHubExportModal({ files, onClose }: Props) {
           </div>
 
           {/* Credential notice: the gateway owns the GitHub token */}
-          <div style={{ fontSize: 9, color: '#00FF88', padding: '8px 10px', border: '1px solid #00351c', background: '#03110a', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 9, color: '#d60019', padding: '8px 10px', border: '1px solid #3a201f', background: '#100e0d', lineHeight: 1.5 }}>
             // SECURE EXPORT — no token required in your browser.
             <br />
             The Konkred Gateway holds the server-managed GitHub credential and opens the pull request on your behalf.
@@ -174,24 +174,24 @@ export default function GitHubExportModal({ files, onClose }: Props) {
 
           {/* Error */}
           {error && (
-            <div style={{ fontSize: 10, color: '#FF003C', padding: '8px 10px', border: '1px solid #FF003C', background: '#0d0000' }}>
+            <div style={{ fontSize: 10, color: '#d60019', padding: '8px 10px', border: '1px solid #d60019', background: '#120d0c' }}>
               {error}
             </div>
           )}
 
           {/* Result */}
           {result && (
-            <div style={{ fontSize: 10, padding: '10px', border: `1px solid ${result.success ? '#00FF88' : '#FF003C'}`, background: result.success ? '#001a00' : '#0d0000' }}>
-              <div style={{ color: result.success ? '#00FF88' : '#FF003C', fontWeight: 700, marginBottom: 6 }}>
+            <div style={{ fontSize: 10, padding: '10px', border: `1px solid ${result.success ? '#d60019' : '#d60019'}`, background: result.success ? '#120d0c' : '#120d0c' }}>
+              <div style={{ color: result.success ? '#d60019' : '#d60019', fontWeight: 700, marginBottom: 6 }}>
                 {result.success ? `✓ ${result.filesUploaded} files exported` : '✕ Export failed'}
               </div>
               {result.prUrl && (
-                <a href={result.prUrl} target="_blank" rel="noreferrer" style={{ color: '#FFD700', fontSize: 9, display: 'block', marginTop: 4 }}>
+                <a href={result.prUrl} target="_blank" rel="noreferrer" style={{ color: '#d60019', fontSize: 9, display: 'block', marginTop: 4 }}>
                   → View Pull Request
                 </a>
               )}
               {result.errors.length > 0 && (
-                <div style={{ marginTop: 6, color: '#FF003C', fontSize: 9 }}>
+                <div style={{ marginTop: 6, color: '#d60019', fontSize: 9 }}>
                   {result.errors.map((e, i) => <div key={i}>{e}</div>)}
                 </div>
               )}
@@ -204,9 +204,9 @@ export default function GitHubExportModal({ files, onClose }: Props) {
               onClick={handleExport}
               disabled={loading}
               style={{
-                background:    loading ? '#222' : '#FFD700',
+                background:    loading ? '#2a2624' : '#d60019',
                 border:        'none',
-                color:         loading ? '#555' : '#000',
+                color:         loading ? '#5c5852' : '#0a0908',
                 fontFamily:    '"JetBrains Mono", monospace',
                 fontSize:       10,
                 fontWeight:     700,

@@ -155,7 +155,7 @@ export const SprintPage: React.FC<PageProps> = ({ onNavigate }) => {
           ))}
         </div>
         <div className="space-y-3">
-          <div className="border-2 border-black bg-[#0E1319] rounded-2xl p-5 space-y-2">
+          <div className="border-2 border-black bg-[#171514] rounded-2xl p-5 space-y-2">
             <p className="font-mono font-black uppercase tracking-widest text-[10px] text-zinc-500">Sprint entry prices (from the catalogue)</p>
             <div className="space-y-1.5">
               {[...SUITES.filter((s) => s.pricing.sprintFromUsd).map((s) => [s.title, s.pricing.sprintFromUsd] as const),
@@ -180,7 +180,7 @@ export const EnterprisePage: React.FC<PageProps> = () => {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
         {caps.map((c) => <div key={c} className="border-2 px-3.5 py-3 k-mono text-[11px]" style={{ borderColor: 'var(--k-line)', background: 'var(--k-panel)' }}>{c}</div>)}
       </div>
-      <div className="mt-8 border border-zinc-800 rounded-2xl p-5 bg-[#0E1319] space-y-2">
+      <div className="mt-8 border border-zinc-800 rounded-2xl p-5 bg-[#171514] space-y-2">
         <h3 className="k-title text-lg">Controlled-pilot catalogue</h3>
         <p className="text-[11px] text-zinc-400 leading-relaxed">These products run only with a named human approver and a controlled environment:</p>
         <div className="flex flex-wrap gap-2 pt-1">
@@ -202,7 +202,7 @@ export const PartnersPage: React.FC<PageProps> = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {sectors.map((s) => <div key={s} className="border-2 px-3.5 py-4 k-mono text-[11px] text-center" style={{ borderColor: 'var(--k-line)', background: 'var(--k-panel)' }}>{s}</div>)}
       </div>
-      <div className="mt-8 border border-zinc-800 rounded-2xl p-5 bg-[#0E1319]">
+      <div className="mt-8 border border-zinc-800 rounded-2xl p-5 bg-[#171514]">
         <h3 className="k-title text-lg mb-2">What partners get</h3>
         <p className="text-[11px] text-zinc-400 leading-relaxed">Workflow kits at partner terms, joint validation sprints, and supervised pilots inside your delivery envelope. Partner contracts and margins are agreed directly — nothing automatic on this page.</p>
       </div>

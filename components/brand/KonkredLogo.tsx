@@ -46,9 +46,9 @@ export const KonkredLogo: React.FC<KonkredLogoProps> = ({
         role="img"
         aria-hidden="true"
         className={animate ? 'brutal-stamp' : undefined}
-        style={{ filter: 'drop-shadow(3px 3px 0 #000)' }}
+        style={{ filter: 'drop-shadow(3px 3px 0 rgba(0,0,0,.65))' }}
       >
-        <rect x="0" y="0" width="100" height="100" fill="#0b0f14" stroke="#f59e0b" strokeWidth="7" />
+        <rect x="0" y="0" width="100" height="100" fill="var(--konk-black)" stroke="var(--konk-red)" strokeWidth="7" />
         {K_BLOCKS.map(([cx, cy], i) => (
           <rect
             key={`${cx}-${cy}`}
@@ -56,7 +56,7 @@ export const KonkredLogo: React.FC<KonkredLogoProps> = ({
             y={cy * unit + 9}
             width={unit - 18}
             height={unit - 18}
-            fill={cx === 0 ? '#f59e0b' : '#ffffff'}
+            fill={cx === 0 ? 'var(--konk-red)' : 'var(--ink)'}
             style={animate ? { animation: `k-block-in 0.35s ${0.08 + i * 0.045}s cubic-bezier(0.2,0.9,0.2,1) both` } : undefined}
           />
         ))}
@@ -64,14 +64,14 @@ export const KonkredLogo: React.FC<KonkredLogoProps> = ({
 
       {/* wordmark */}
       {showWordmark && (
-        <span className={`${wordClass} font-mono font-black tracking-[0.22em] text-white uppercase leading-none`} style={{ fontSize: size * 0.42 }}>
+        <span className={`${wordClass} font-mono font-black tracking-[0.22em] text-[var(--ink)] uppercase leading-none`} style={{ fontSize: size * 0.42 }}>
           {WORD.split('').map((ch, i) => (
             <span key={i} style={animate ? { animationDelay: `${0.15 + i * 0.055}s` } : undefined}>
               {ch}
             </span>
           ))}
           <span
-            className={`brutal-cursor text-amber-500 ${animate ? '' : 'opacity-100'}`}
+            className={`brutal-cursor text-[var(--konk-red)] ${animate ? '' : 'opacity-100'}`}
             style={{ animationDelay: '0.6s', marginLeft: '0.1em' }}
             aria-hidden="true"
           >

@@ -29,7 +29,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <div className={`relative w-full ${sizes[size]} concrete-card bg-[#08080A] border border-white/10 shadow-2xl overflow-hidden animate-zoom-in rounded-2xl`}>
+      <div className={`relative w-full ${sizes[size]} concrete-card bg-[#0a0908] border border-white/10 shadow-2xl overflow-hidden animate-zoom-in rounded-2xl`}>
         {title && (
           <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
              <h3 className="text-sm font-display font-bold text-white uppercase tracking-widest">{title}</h3>

@@ -394,7 +394,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
       {/* Embedded stylesheet to styled generic HTML tags rendered under DangerousHTML */}
       <style>{`
         #raw-html-outlet {
-          color: #e4e4e7;
+          color: #eae7e1;
           font-family: 'Inter', system-ui, sans-serif;
           font-size: 1rem;
           line-height: 1.8;
@@ -408,14 +408,14 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
         #raw-html-outlet h2, 
         #raw-html-outlet h3, 
         #raw-html-outlet h4 {
-          color: #ffffff;
+          color: #f4f1eb;
           font-family: var(--font-display, 'Space Grotesk', 'Inter', sans-serif);
           font-weight: 700;
           letter-spacing: -0.02em;
           margin-top: 2.22rem;
           margin-bottom: 1.2rem;
           line-height: 1.3;
-          border-left: 3px solid #ccff00;
+          border-left: 3px solid #d60019;
           padding-left: 1rem;
         }
         #raw-html-outlet h1 {
@@ -432,7 +432,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
         #raw-html-outlet p {
           margin-top: 0;
           margin-bottom: 1.4rem;
-          color: #d1d5db;
+          color: #b7b2a9;
           font-weight: 300;
         }
         #raw-html-outlet ul, 
@@ -453,16 +453,16 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
         }
         #raw-html-outlet li {
           margin-bottom: 0.6rem;
-          color: #a1a1aa;
+          color: #8a857d;
           font-weight: 400;
         }
         #raw-html-outlet li::marker {
-          color: #ccff00;
+          color: #d60019;
         }
         #raw-html-outlet blockquote {
-          border-left: 4px solid #ccff00;
+          border-left: 4px solid #d60019;
           padding: 1rem 1.4rem;
-          color: #ccff00;
+          color: #d60019;
           background: rgba(204, 255, 0, 0.04);
           font-style: italic;
           margin: 1.8rem 0;
@@ -470,7 +470,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
           font-size: 0.95rem;
         }
         #raw-html-outlet strong {
-          color: #ccff00;
+          color: #d60019;
           font-weight: 600;
         }
         #raw-html-outlet code {
@@ -478,17 +478,17 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
           background-color: rgba(204, 255, 0, 0.08);
           padding: 0.15rem 0.35rem;
           font-size: 0.85em;
-          color: #ccff00;
+          color: #d60019;
           border: 1px dashed rgba(204, 255, 0, 0.2);
         }
         #raw-html-outlet pre {
-          background-color: #0c0c0e;
+          background-color: #100e0d;
           border: 1px solid rgba(204, 255, 0, 0.2);
           padding: 1.2rem;
           overflow-x: auto;
           font-family: var(--font-mono, monospace);
           font-size: 0.85rem;
-          color: #ffffff;
+          color: #f4f1eb;
           margin: 1.8rem 0;
           box-shadow: inset 3px 3px 10px rgba(0,0,0,0.8);
         }
@@ -506,7 +506,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                 onNavigate('landing');
               }
             }}
-            className="inline-flex items-center gap-2 border-2 border-neutral-800 bg-[#0A0A0A] hover:bg-neutral-900 text-text-secondary hover:text-neon-cyan px-4 py-2 text-[10px] uppercase tracking-widest font-mono transition-all duration-200 hover:shadow-[2px_2px_0px_#ccff00]"
+            className="inline-flex items-center gap-2 border-2 border-neutral-800 bg-[#0a0908] hover:bg-neutral-900 text-text-secondary hover:text-neon-cyan px-4 py-2 text-[10px] uppercase tracking-widest font-mono transition-all duration-200 hover:shadow-[2px_2px_0px_#d60019]"
             id="btn-blog-back"
           >
             <ArrowLeft size={12} className="text-neon-cyan" /> 
@@ -532,7 +532,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
               className={`px-5 py-2.5 border-2 text-xs font-mono tracking-widest font-bold uppercase transition-all flex items-center gap-2 ${
                 showConsole || showAuthGate
                   ? 'bg-neon-cyan text-black border-neon-cyan shadow-[3px_3px_0px_rgba(255,255,255,0.15)]' 
-                  : 'bg-[#0A0A0A] text-white hover:text-black hover:bg-neon-cyan border-neutral-800 hover:border-neon-cyan hover:shadow-[3px_3px_0px_#ccff00] active:translate-y-[2px]'
+                  : 'bg-[#0a0908] text-white hover:text-black hover:bg-neon-cyan border-neutral-800 hover:border-neon-cyan hover:shadow-[3px_3px_0px_#d60019] active:translate-y-[2px]'
               }`}
               id="btn-toggle-publisher"
             >
@@ -544,7 +544,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
 
         {/* Secure Authorization Gate Section */}
         {showAuthGate && !canShowConsole && isAuthenticated && (
-          <div className="bg-[#0A0A0A] border-2 border-red-500/40 concrete-card p-6 md:p-8 animate-in fade-in slide-in-from-top-4 duration-300 relative overflow-hidden" id="authority-barrier-box">
+          <div className="bg-[#0a0908] border-2 border-red-500/40 concrete-card p-6 md:p-8 animate-in fade-in slide-in-from-top-4 duration-300 relative overflow-hidden" id="authority-barrier-box">
             {/* Red alert accent boundary */}
             <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-red-600 via-red-500 to-red-600"></div>
             
@@ -576,7 +576,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
               <div className="pt-2">
                 <button
                   onClick={() => setShowAuthGate(false)}
-                  className="w-full bg-[#111] border-2 border-neutral-800 text-white font-bold py-3.5 rounded-none text-xs font-mono tracking-widest uppercase transition-all hover:bg-neutral-900"
+                  className="w-full bg-[#171514] border-2 border-neutral-800 text-white font-bold py-3.5 rounded-none text-xs font-mono tracking-widest uppercase transition-all hover:bg-neutral-900"
                 >
                   DISMISS_BARRIER
                 </button>
@@ -587,7 +587,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
 
         {/* HTML Uploader Console Area - Matches brutalist concrete panel */}
         {showConsole && canShowConsole && (
-          <div className="bg-[#111114] border-2 border-neon-cyan/40 concrete-card p-6 md:p-8 animate-in fade-in slide-in-from-top-6 duration-300 relative overflow-hidden" id="publisher-console-box">
+          <div className="bg-[#100e0d] border-2 border-neon-cyan/40 concrete-card p-6 md:p-8 animate-in fade-in slide-in-from-top-6 duration-300 relative overflow-hidden" id="publisher-console-box">
             <div className="absolute top-0 right-0 p-2 font-mono text-[9px] text-neon-cyan/40 pointer-events-none select-none">
               UPLINK_TERM_v4.45
             </div>
@@ -601,7 +601,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
               </div>
 
               {/* Console Mode Tab Controller */}
-              <div className="flex bg-[#050505] p-1 border-2 border-neutral-800 font-mono text-[9px]">
+              <div className="flex bg-[#0a0908] p-1 border-2 border-neutral-800 font-mono text-[9px]">
                 <button
                   type="button"
                   onClick={() => setConsoleTab('upload')}
@@ -647,7 +647,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                     className={`border-2 border-dashed p-8 text-center transition-all cursor-pointer relative ${
                       isDragging 
                         ? 'border-neon-cyan bg-neon-cyan/10' 
-                        : 'border-neutral-805 bg-[#0A0A0A] hover:border-neutral-700'
+                        : 'border-neutral-805 bg-[#0a0908] hover:border-neutral-700'
                     }`}
                   >
                     <input 
@@ -677,8 +677,8 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                 {consoleTab === 'write' && (
                   <div className="space-y-2">
                     <label className="text-[10px] font-mono text-text-secondary uppercase tracking-[0.21em] block">HTML SOURCE STRING</label>
-                    <div className="relative overflow-hidden border-2 border-neutral-800 bg-[#070709]">
-                      <div className="bg-[#0e0e12] px-4 py-2 flex items-center gap-2 border-b border-neutral-800">
+                    <div className="relative overflow-hidden border-2 border-neutral-800 bg-[#0a0908]">
+                      <div className="bg-[#100e0d] px-4 py-2 flex items-center gap-2 border-b border-neutral-800">
                         <Code size={14} className="text-neon-cyan" />
                         <span className="text-[9px] font-mono font-bold text-text-secondary uppercase tracking-wider">MarkUp Console Editor</span>
                       </div>
@@ -688,7 +688,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                         value={htmlFileText}
                         onChange={(e) => parseHtmlAndExtractMetadata(e.target.value)}
                         placeholder={`<div class="space-y-6">\n  <p>Your strategic documentation briefs go here...</p>\n</div>`}
-                        className="w-full bg-transparent p-5 font-mono text-xs text-[#ccff00] focus:outline-none leading-relaxed h-64 resize-y"
+                        className="w-full bg-transparent p-5 font-mono text-xs text-[#d60019] focus:outline-none leading-relaxed h-64 resize-y"
                       ></textarea>
                     </div>
                   </div>
@@ -696,7 +696,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
 
                 {/* Extracted Metadata Dashboard Panel */}
                 {htmlFileText && (
-                  <div className="bg-[#050505] border-2 border-neutral-800 p-6 space-y-6" id="metadata-tuning-panel">
+                  <div className="bg-[#0a0908] border-2 border-neutral-800 p-6 space-y-6" id="metadata-tuning-panel">
                     <div className="flex items-center gap-2 pb-2 border-b border-neutral-800">
                       <Terminal size={14} className="text-neon-cyan animate-pulse" />
                       <h4 className="text-[10px] font-mono text-white tracking-[0.2em] uppercase">
@@ -712,7 +712,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                            required
                            value={title}
                            onChange={(e) => setTitle(e.target.value)}
-                           className="w-full bg-[#111] border-2 border-neutral-800 px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan transition-all"
+                           className="w-full bg-[#171514] border-2 border-neutral-800 px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan transition-all"
                         />
                       </div>
                       
@@ -721,7 +721,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                         <select
                           value={category}
                           onChange={(e) => setCategory(e.target.value)}
-                          className="w-full bg-[#111] border-2 border-neutral-800 px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan transition-all"
+                          className="w-full bg-[#171514] border-2 border-neutral-800 px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan transition-all"
                         >
                           <option value="Strategy">Strategic Capital (Strategy)</option>
                           <option value="Engineering">Neural Engineering (Engineering)</option>
@@ -740,7 +740,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                           required
                           value={readTime}
                           onChange={(e) => setReadTime(e.target.value)}
-                          className="w-full bg-[#111] border-2 border-neutral-800 px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan transition-all font-mono"
+                          className="w-full bg-[#171514] border-2 border-neutral-800 px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan transition-all font-mono"
                         />
                       </div>
 
@@ -751,7 +751,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                           required
                           value={desc}
                           onChange={(e) => setDesc(e.target.value)}
-                          className="w-full bg-[#111] border-2 border-neutral-800 px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan transition-all"
+                          className="w-full bg-[#171514] border-2 border-neutral-800 px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan transition-all"
                         ></textarea>
                       </div>
                     </div>
@@ -760,7 +760,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                       <button
                         type="submit"
                         disabled={isPublishing}
-                        className="px-6 py-3.5 bg-neon-cyan text-black font-semibold text-xs font-mono uppercase tracking-widest hover:bg-white transition-all duration-200 flex items-center gap-1.5 shadow-[3px_3px_0px_#ffffff] disabled:opacity-50"
+                        className="px-6 py-3.5 bg-neon-cyan text-black font-semibold text-xs font-mono uppercase tracking-widest hover:bg-white transition-all duration-200 flex items-center gap-1.5 shadow-[3px_3px_0px_#f4f1eb] disabled:opacity-50"
                       >
                         {isPublishing ? <Loader2 size={14} className="animate-spin" /> : <>DEPLOY TO INTEL NODE <ChevronRight size={14} /></>}
                       </button>
@@ -833,7 +833,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}
-                  className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-zinc-900 border-2 border-neutral-800 hover:border-neon-cyan text-text-secondary hover:text-white transition-all text-[10px] font-mono uppercase tracking-wider flex items-center gap-2 hover:shadow-[2px_2px_0px_#ccff00]"
+                  className="px-4 py-2.5 bg-[#0a0908] hover:bg-zinc-900 border-2 border-neutral-800 hover:border-neon-cyan text-text-secondary hover:text-white transition-all text-[10px] font-mono uppercase tracking-wider flex items-center gap-2 hover:shadow-[2px_2px_0px_#d60019]"
                   title="Share document link"
                 >
                   <Share2 size={13} className="text-neon-cyan" />
@@ -868,7 +868,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                   placeholder="QUERY DATA ARCHIVES..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#070709] border-2 border-neutral-800 rounded-none pl-12 pr-6 py-4 text-xs text-white focus:outline-none focus:border-neon-cyan focus:shadow-[3px_3px_0px_#ccff00] font-mono tracking-widest transition-all placeholder:text-neutral-600" 
+                  className="w-full bg-[#0a0908] border-2 border-neutral-800 rounded-none pl-12 pr-6 py-4 text-xs text-white focus:outline-none focus:border-neon-cyan focus:shadow-[3px_3px_0px_#d60019] font-mono tracking-widest transition-all placeholder:text-neutral-600"
                 />
               </div>
             </header>
@@ -879,7 +879,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
               {/* Feed lists */}
               <div className="lg:col-span-3 space-y-6">
                 {filteredPosts.length === 0 ? (
-                  <div className="text-center py-20 bg-[#0A0A0A] border-2 border-neutral-800 rounded-none" id="empty-search-state">
+                  <div className="text-center py-20 bg-[#0a0908] border-2 border-neutral-800 rounded-none" id="empty-search-state">
                     <p className="text-text-secondary font-mono text-xs uppercase tracking-[0.2em]">0 MATCHING DEPLOYMENTS FOUND</p>
                   </div>
                 ) : (
@@ -887,7 +887,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                     <article 
                       key={post.id} 
                       onClick={() => setSelectedPost(post)}
-                      className="group bg-[#0A0A0A] border-2 border-neutral-800 hover:border-neon-cyan concrete-card p-6 md:p-8 hover:shadow-[4px_4px_0px_#ccff00] transition-all duration-300 cursor-pointer flex flex-col justify-between relative overflow-hidden"
+                      className="group bg-[#0a0908] border-2 border-neutral-800 hover:border-neon-cyan concrete-card p-6 md:p-8 hover:shadow-[4px_4px_0px_#d60019] transition-all duration-300 cursor-pointer flex flex-col justify-between relative overflow-hidden"
                     >
                       <div className="space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -907,7 +907,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                             {post.isUserUploaded && (
                               <button
                                 onClick={(e) => handleDeletePost(post.id, e)}
-                                className="p-1.5 bg-[#111] hover:bg-red-950/30 text-text-secondary hover:text-red-400 border border-neutral-800 hover:border-red-500/50 rounded-none transition-colors"
+                                className="p-1.5 bg-[#171514] hover:bg-red-950/30 text-text-secondary hover:text-red-400 border border-neutral-800 hover:border-red-500/50 rounded-none transition-colors"
                                 title="Delete HTML Post"
                               >
                                 <Trash2 size={12} />
@@ -943,7 +943,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
               <aside className="space-y-8" id="blog-feeds-sidebar">
                 
                 {/* Channels dispatch subscription card */}
-                <div className="bg-[#0A0A0A] border-2 border-neutral-800 concrete-card p-6 relative overflow-hidden hover:border-neon-cyan/40 transition-all duration-300 shadow-[3px_3px_0px_rgba(255,255,255,0.02)]">
+                <div className="bg-[#0a0908] border-2 border-neutral-800 concrete-card p-6 relative overflow-hidden hover:border-neon-cyan/40 transition-all duration-300 shadow-[3px_3px_0px_rgba(255,255,255,0.02)]">
                   <div className="absolute -bottom-8 -right-8 p-4 opacity-5 pointer-events-none text-neon-cyan">
                     <Bookmark size={120} />
                   </div>
@@ -973,11 +973,11 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                         value={emailInput}
                         onChange={(e) => setEmailInput(e.target.value)}
                         placeholder="ari@konkred.xyz" 
-                        className="w-full bg-[#111] border-2 border-neutral-800 rounded-none px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan focus:shadow-[2px_2px_0px_#ccff00] transition-all font-mono tracking-wider placeholder:text-neutral-700" 
+                        className="w-full bg-[#171514] border-2 border-neutral-800 rounded-none px-4 py-3 text-xs text-white focus:outline-none focus:border-neon-cyan focus:shadow-[2px_2px_0px_#d60019] transition-all font-mono tracking-wider placeholder:text-neutral-700"
                       />
                       <button 
                         type="submit"
-                        className="w-full bg-neon-cyan hover:bg-white text-black font-bold py-3.5 rounded-none text-[10px] font-mono tracking-widest uppercase transition-all shadow-[3px_3px_0px_#ffffff]"
+                        className="w-full bg-neon-cyan hover:bg-white text-black font-bold py-3.5 rounded-none text-[10px] font-mono tracking-widest uppercase transition-all shadow-[3px_3px_0px_#f4f1eb]"
                       >
                         ESTABLISH UPLINK
                       </button>
@@ -986,14 +986,14 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
                 </div>
 
                 {/* Direct industry note */}
-                <div className="bg-[#0A0A0A]/60 border-2 border-dashed border-neutral-805 p-6 space-y-4">
+                <div className="bg-[#0a0908]/60 border-2 border-dashed border-neutral-805 p-6 space-y-4">
                   <div className="flex items-center gap-1.5">
                     <Code size={13} className="text-neon-cyan" />
                     <h4 className="text-[10px] font-mono text-white tracking-[0.2em] uppercase">
                       SYSTEM_NOTICE
                     </h4>
                   </div>
-                  <p className="text-[11px] text-[#A1A1AA] leading-relaxed font-light">
+                  <p className="text-[11px] text-[#8a857d] leading-relaxed font-light">
                     The intelligence matrix allows authorized coordinators to project custom HTML slides instantly. All components are sandboxed.
                   </p>
                 </div>

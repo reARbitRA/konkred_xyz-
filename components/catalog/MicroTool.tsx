@@ -148,10 +148,10 @@ export const MicroTool: React.FC<MicroToolProps> = ({ product, fixtureKey }) => 
   return (
     <section
       aria-label={`${product.name} tool`}
-      className="border-2 border-black bg-[#0E1319] rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_#000000]"
+      className="border-2 border-black bg-[#171514] rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_#0a0908]"
     >
       {/* Tool header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black bg-[#181F2A] px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black bg-[#171514] px-5 py-3">
         <div className="flex items-center gap-2">
           <TerminalSquare size={15} className="text-amber-400" />
           <span className="font-mono font-black uppercase tracking-widest text-[11px] text-white">
@@ -184,7 +184,7 @@ export const MicroTool: React.FC<MicroToolProps> = ({ product, fixtureKey }) => 
                   onChange={(e) => setValue(field.key, e.target.value)}
                   rows={4}
                   placeholder='[ { "key": "value" } ]'
-                  className="w-full bg-[#070A0E] border-2 border-black rounded-xl p-3 text-xs font-mono text-emerald-300 placeholder-zinc-600 focus:outline-none focus:border-amber-500 transition-colors resize-y"
+                  className="w-full bg-[#0a0908] border-2 border-black rounded-xl p-3 text-xs font-mono text-emerald-300 placeholder-zinc-600 focus:outline-none focus:border-amber-500 transition-colors resize-y"
                 />
               ) : field.isLongText ? (
                 <textarea
@@ -193,7 +193,7 @@ export const MicroTool: React.FC<MicroToolProps> = ({ product, fixtureKey }) => 
                   onChange={(e) => setValue(field.key, e.target.value)}
                   rows={8}
                   placeholder="Paste your text here…"
-                  className="w-full bg-[#070A0E] border-2 border-black rounded-xl p-3 text-xs font-mono text-emerald-300 placeholder-zinc-600 focus:outline-none focus:border-amber-500 transition-colors resize-y"
+                  className="w-full bg-[#0a0908] border-2 border-black rounded-xl p-3 text-xs font-mono text-emerald-300 placeholder-zinc-600 focus:outline-none focus:border-amber-500 transition-colors resize-y"
                 />
               ) : (
                 <input
@@ -202,7 +202,7 @@ export const MicroTool: React.FC<MicroToolProps> = ({ product, fixtureKey }) => 
                   value={values[field.key]}
                   onChange={(e) => setValue(field.key, e.target.value)}
                   placeholder="Enter a value…"
-                  className="w-full bg-[#070A0E] border-2 border-black rounded-xl p-3 text-xs font-mono text-emerald-300 placeholder-zinc-600 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full bg-[#0a0908] border-2 border-black rounded-xl p-3 text-xs font-mono text-emerald-300 placeholder-zinc-600 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               )}
             </div>
@@ -258,7 +258,7 @@ export const MicroTool: React.FC<MicroToolProps> = ({ product, fixtureKey }) => 
                   <span>· MODEL: {result.model}</span>
                   <span>· OUTPUT VALIDATED</span>
                 </div>
-                <pre className="bg-[#070A0E] border-2 border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-200 font-mono leading-relaxed overflow-x-auto max-h-[480px] overflow-y-auto whitespace-pre-wrap" data-testid="demo-result">
+                <pre className="bg-[#0a0908] border-2 border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-200 font-mono leading-relaxed overflow-x-auto max-h-[480px] overflow-y-auto whitespace-pre-wrap" data-testid="demo-result">
                   {JSON.stringify(result.result ?? result.output, null, 2)}
                 </pre>
                 {result.validation && (

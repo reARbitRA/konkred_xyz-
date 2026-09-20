@@ -82,7 +82,7 @@
 - **Konkred AI Ecosystem Gateway:** `/fullkonk` provider discovery, SSE generation, GitHub export, and standard inference (`/api/ai`) flow through same-origin Vercel Node routes (`api/index.ts` → `server/gateway-proxy.ts`) that attach all credentials server-side. See **`docs/fullkonk/GATEWAY_INTEGRATION.md`** for architecture, environment variables, security, SSE, and rollback.
 - **Vercel function env (server-only):** `KONKRED_GATEWAY_URL`, `FULLKONK_KEY`, `KONKRED_GATEWAY_API_KEY` (legacy `BRAIN_URL`/`BRAIN_KEY` aliases supported). Never prefixed for public exposure.
 - **Firestore:** Stores users, listings, audit logs, and fullKONK session/project/usage history (sessions/usage/analytics routes remain on the bundled Express app).
-- **Payments:** Integrated Stripe/NowPayments hooks (ready for configuration).
+- **Payments:** **Not configured.** Product, kit, sprint, and pilot CTAs currently collect explicit inquiries only; no checkout, wallet, invoice, payment intent, or settlement flow is exposed.
 - **Security:** Firestore Rules enforced for level-based access control; proxy strips spoofed credential headers, caps/validates bodies, screens upstream responses, and preserves status/Retry-After.
 - **Persistence:** LocalStorage used for the operator's own BYOK provider key (sent only to the same-origin generate route) and UI state; gateway credentials never touch the browser.
 

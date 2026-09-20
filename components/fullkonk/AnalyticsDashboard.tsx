@@ -13,7 +13,7 @@ interface Props {
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
-    <div style={{ height: 4, background: '#111', flex: 1, overflow: 'hidden' }}>
+    <div style={{ height: 4, background: '#171514', flex: 1, overflow: 'hidden' }}>
       <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${pct}%` }}
@@ -24,24 +24,24 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
   );
 }
 
-function StatCard({ label, value, sub, color = '#FFD700' }: { label: string; value: string | number; sub?: string; color?: string }) {
+function StatCard({ label, value, sub, color = '#d60019' }: { label: string; value: string | number; sub?: string; color?: string }) {
   return (
     <div style={{
       padding:   '18px 20px',
-      border:    '1px solid #1a1a1a',
-      background:'#050505',
+      border:    '1px solid #2a2624',
+      background:'#0a0908',
       display:   'flex',
       flexDirection: 'column',
       gap: 6,
     }}>
-      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: '#444', letterSpacing: 2, textTransform: 'uppercase' }}>
+      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: '#5c5852', letterSpacing: 2, textTransform: 'uppercase' }}>
         {label}
       </div>
       <div style={{ fontFamily: '"Orbitron", sans-serif', fontSize: 22, fontWeight: 900, color }}>
         {value}
       </div>
       {sub && (
-        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: '#333' }}>
+        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: '#3d3835' }}>
           {sub}
         </div>
       )}
@@ -79,11 +79,11 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
   const maxCount  = providers[0]?.[1].count ?? 1;
 
   const PROVIDER_COLORS: Record<string, string> = {
-    groq:       '#FFD700',
-    deepseek:   '#0055FF',
-    cerebras:   '#00FF88',
-    sambanova:  '#FF6B00',
-    openrouter: '#9B00FF',
+    groq:       '#d60019',
+    deepseek:   '#d60019',
+    cerebras:   '#d60019',
+    sambanova:  '#e8a46c',
+    openrouter: '#d60019',
   };
 
   return (
@@ -108,8 +108,8 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
         initial={{ scale: .96, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         style={{
-          background:  '#0a0a0a',
-          border:      '3px solid #1a1a1a',
+          background:  '#0a0908',
+          border:      '3px solid #2a2624',
           width:       '100%',
           maxWidth:     900,
           maxHeight:   '88vh',
@@ -123,11 +123,11 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
           alignItems:    'center',
           justifyContent:'space-between',
           padding:        '14px 20px',
-          borderBottom:  '1px solid #1a1a1a',
+          borderBottom:  '1px solid #2a2624',
           flexShrink:     0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 11, letterSpacing: 3, color: '#FFD700', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 11, letterSpacing: 3, color: '#d60019', textTransform: 'uppercase' }}>
               // ANALYTICS
             </span>
             <div style={{ display: 'flex', gap: 0 }}>
@@ -137,10 +137,10 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
                   onClick={() => setDays(d)}
                   style={{
                     padding:    '3px 10px',
-                    background: days === d ? '#FFD700' : 'transparent',
-                    border:     '1px solid #222',
+                    background: days === d ? '#d60019' : 'transparent',
+                    border:     '1px solid #2a2624',
                     borderRight: 'none',
-                    color:      days === d ? '#000' : '#444',
+                    color:      days === d ? '#0a0908' : '#5c5852',
                     fontSize:    9,
                     fontWeight:  700,
                     letterSpacing: 1,
@@ -151,12 +151,12 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
                   {d}D
                 </button>
               ))}
-              <div style={{ width: 1, background: '#222' }} />
+              <div style={{ width: 1, background: '#2a2624' }} />
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: '1px solid #222', color: '#555', width: 28, height: 28, cursor: 'pointer', fontSize: 13 }}
+            style={{ background: 'none', border: '1px solid #2a2624', color: '#5c5852', width: 28, height: 28, cursor: 'pointer', fontSize: 13 }}
           >
             ✕
           </button>
@@ -164,44 +164,44 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
 
         <div style={{ padding: '20px' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#333', fontSize: 11 }}>
+            <div style={{ textAlign: 'center', padding: 40, color: '#3d3835', fontSize: 11 }}>
               LOADING...
             </div>
           ) : error ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#FF003C', fontSize: 11 }}>
+            <div style={{ textAlign: 'center', padding: 40, color: '#d60019', fontSize: 11 }}>
               {error}
             </div>
           ) : !summary ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#333', fontSize: 11 }}>
+            <div style={{ textAlign: 'center', padding: 40, color: '#3d3835', fontSize: 11 }}>
               No data yet. Build something first.
             </div>
           ) : (
             <>
               {/* Stat cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 1, marginBottom: 1 }}>
-                <StatCard label="Generations"  value={summary.totalGenerations} color="#FFD700" />
-                <StatCard label="Total Tokens" value={summary.totalTokens.toLocaleString()} color="#00FF88" />
-                <StatCard label="Avg Duration" value={`${(summary.avgDurationMs / 1000).toFixed(1)}s`} color="#0055FF" />
-                <StatCard label="Providers Used" value={Object.keys(summary.byProvider).length} color="#FF003C" />
+                <StatCard label="Generations"  value={summary.totalGenerations} color="#d60019" />
+                <StatCard label="Total Tokens" value={summary.totalTokens.toLocaleString()} color="#d60019" />
+                <StatCard label="Avg Duration" value={`${(summary.avgDurationMs / 1000).toFixed(1)}s`} color="#d60019" />
+                <StatCard label="Providers Used" value={Object.keys(summary.byProvider).length} color="#d60019" />
               </div>
 
               {/* Provider breakdown */}
               {providers.length > 0 && (
                 <div style={{ marginTop: 20 }}>
-                  <div style={{ fontSize: 9, letterSpacing: 3, color: '#333', textTransform: 'uppercase', marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, letterSpacing: 3, color: '#3d3835', textTransform: 'uppercase', marginBottom: 12 }}>
                     // PROVIDER USAGE
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {providers.map(([id, data]) => (
                       <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 80, fontSize: 9, color: PROVIDER_COLORS[id] ?? '#555', textTransform: 'uppercase', letterSpacing: 1, textAlign: 'left', flexShrink: 0 }}>
+                        <div style={{ width: 80, fontSize: 9, color: PROVIDER_COLORS[id] ?? '#5c5852', textTransform: 'uppercase', letterSpacing: 1, textAlign: 'left', flexShrink: 0 }}>
                           {id}
                         </div>
-                        <Bar value={data.count} max={maxCount} color={PROVIDER_COLORS[id] ?? '#555'} />
-                        <div style={{ fontSize: 9, color: '#555', width: 60, textAlign: 'right', flexShrink: 0 }}>
+                        <Bar value={data.count} max={maxCount} color={PROVIDER_COLORS[id] ?? '#5c5852'} />
+                        <div style={{ fontSize: 9, color: '#5c5852', width: 60, textAlign: 'right', flexShrink: 0 }}>
                           {data.count} req
                         </div>
-                        <div style={{ fontSize: 9, color: '#333', width: 80, textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: 9, color: '#3d3835', width: 80, textAlign: 'right', flexShrink: 0 }}>
                           {data.tokens.toLocaleString()} tok
                         </div>
                       </div>
@@ -213,19 +213,19 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
               {/* Mode breakdown */}
               {Object.keys(summary.byMode).length > 0 && (
                 <div style={{ marginTop: 20 }}>
-                  <div style={{ fontSize: 9, letterSpacing: 3, color: '#333', textTransform: 'uppercase', marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, letterSpacing: 3, color: '#3d3835', textTransform: 'uppercase', marginBottom: 12 }}>
                     // MODE BREAKDOWN
                   </div>
                   <div style={{ display: 'flex', gap: 1 }}>
                     {Object.entries(summary.byMode).map(([mode, count]) => {
                       const pct = summary.totalGenerations > 0 ? Math.round((count / summary.totalGenerations) * 100) : 0;
-                      const modeColors: Record<string, string> = { fullstack: '#FFD700', frontend: '#0055FF', backend: '#00FF88', review: '#FF003C' };
+                      const modeColors: Record<string, string> = { fullstack: '#d60019', frontend: '#d60019', backend: '#d60019', review: '#d60019' };
                       return (
-                        <div key={mode} style={{ flex: pct || 1, background: modeColors[mode] ?? '#333', padding: '10px 8px', minWidth: 40 }}>
-                          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, color: '#000', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>
+                        <div key={mode} style={{ flex: pct || 1, background: modeColors[mode] ?? '#3d3835', padding: '10px 8px', minWidth: 40 }}>
+                          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, color: '#0a0908', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>
                             {mode}
                           </div>
-                          <div style={{ fontFamily: '"Orbitron", sans-serif', fontSize: 14, fontWeight: 900, color: '#000', marginTop: 4 }}>
+                          <div style={{ fontFamily: '"Orbitron", sans-serif', fontSize: 14, fontWeight: 900, color: '#0a0908', marginTop: 4 }}>
                             {pct}%
                           </div>
                         </div>
@@ -238,32 +238,32 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
               {/* Recent activity */}
               {recent.length > 0 && (
                 <div style={{ marginTop: 20 }}>
-                  <div style={{ fontSize: 9, letterSpacing: 3, color: '#333', textTransform: 'uppercase', marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, letterSpacing: 3, color: '#3d3835', textTransform: 'uppercase', marginBottom: 12 }}>
                     // RECENT ACTIVITY
                   </div>
-                  <div style={{ border: '1px solid #111' }}>
+                  <div style={{ border: '1px solid #171514' }}>
                     {recent.map((e, i) => (
                       <div key={e.id} style={{
                         display:       'flex',
                         alignItems:    'center',
                         gap:            12,
                         padding:        '8px 12px',
-                        borderBottom:  i < recent.length - 1 ? '1px solid #0d0d0d' : 'none',
+                        borderBottom:  i < recent.length - 1 ? '1px solid #0d0c0b' : 'none',
                         fontSize:       9,
                       }}>
-                        <div style={{ color: e.success ? '#00FF88' : '#FF003C', width: 8, flexShrink: 0 }}>
+                        <div style={{ color: e.success ? '#d60019' : '#d60019', width: 8, flexShrink: 0 }}>
                           {e.success ? '●' : '✕'}
                         </div>
-                        <div style={{ color: PROVIDER_COLORS[e.provider] ?? '#555', width: 70, flexShrink: 0, letterSpacing: 1 }}>
+                        <div style={{ color: PROVIDER_COLORS[e.provider] ?? '#5c5852', width: 70, flexShrink: 0, letterSpacing: 1 }}>
                           {e.provider}
                         </div>
-                        <div style={{ color: '#444', width: 70, flexShrink: 0 }}>
+                        <div style={{ color: '#5c5852', width: 70, flexShrink: 0 }}>
                           {e.mode}
                         </div>
-                        <div style={{ color: '#333', flex: 1 }}>
+                        <div style={{ color: '#3d3835', flex: 1 }}>
                           {e.tokens.toLocaleString()} tokens
                         </div>
-                        <div style={{ color: '#222', flexShrink: 0 }}>
+                        <div style={{ color: '#2a2624', flexShrink: 0 }}>
                           {(e.durationMs / 1000).toFixed(1)}s
                         </div>
                       </div>
