@@ -4,6 +4,7 @@ import { db } from './firebase.ts';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { AIProviderFactory, ChatMessage } from '../lib/ai/providers.ts';
 import { AI_PROVIDERS } from '../constants.ts';
+import { gatewayComplete, extractJsonFromText } from './gateway.ts';
 
 class UnifiedAIService {
   constructor() {}
@@ -13,55 +14,34 @@ class UnifiedAIService {
    * This is the core verification layer for all assets on the platform.
    */
   async runAudit(payload: string, userId: string): Promise<AuditResult> {
-    const response = await fetch('/api/ai/generate', {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        provider: "google",
-        messages: [{
-          role: "user",
-          content: `Perform an exhaustive architecture audit for KONKRED Executive Systems.
+    // Standard inference flows through the same-origin /api/ai gateway proxy.
+    // The gateway owns provider selection and credentials; the browser never
+    // sees a key and contains no provider-specific logic.
+    const content = await gatewayComplete({
+      taskType: 'general',
+      maxTokens: 2048,
+      temperature: 0.2,
+      messages: [{
+        role: "user",
+        content: `Perform an exhaustive architecture audit for KONKRED Executive Systems.
           Score the payload on: Logical Integrity (0-100), Safety/Compliance (0-100), and Execution Efficiency (0-100).
+          Respond with raw JSON only (no markdown, no commentary) using this shape:
+          {"overallScore":number,"logic":number,"safety":number,"efficiency":number,"summary":string,"vulnerabilities":string[],"recommendations":string[]}
           Input: "${payload}"`
-        }],
-        config: {
-          defaultModel: "gemini-3-pro-preview",
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              overallScore: { type: "NUMBER" },
-              logic: { type: "NUMBER" },
-              safety: { type: "NUMBER" },
-              efficiency: { type: "NUMBER" },
-              summary: { type: "STRING" },
-              vulnerabilities: { type: "ARRAY", items: { type: "STRING" } },
-              recommendations: { type: "ARRAY", items: { type: "STRING" } }
-            },
-            required: ["overallScore", "logic", "safety", "efficiency", "summary"]
-          }
-        }
-      })
+      }],
     });
 
-    if (!response.ok) {
-      throw new Error("Audit service uplink failed.");
-    }
-
-    const resultData = await response.json();
-    const data = JSON.parse(resultData.text?.trim() || '{}');
+    const data = extractJsonFromText<Record<string, any>>(content) as Partial<AuditResult>;
     const auditId = `aud_${Date.now()}`;
     
     const result: AuditResult = {
       id: auditId,
       userId,
-      ...data,
+      ...(data as Partial<AuditResult>),
       provider: 'google',
       model: 'gemini-3-pro-preview',
       timestamp: serverTimestamp()
-    };
+    } as AuditResult;
 
     await setDoc(doc(db, 'audits', auditId), result);
     return result;
@@ -78,26 +58,13 @@ class UnifiedAIService {
     const keysSnap = await getDoc(keysRef);
 
     if (!configSnap.exists() || !keysSnap.exists()) {
-        // Default to internal Gemini if user has no keys
-        const response = await fetch('/api/ai/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            provider: 'google',
-            messages,
-            config: {
-              defaultModel: 'gemini-3-flash-preview',
-              temperature: 0.7,
-            }
-          })
+        // Default inference node: the Konkred Gateway selects the model and
+        // owns every provider credential server-side.
+        return gatewayComplete({
+          messages,
+          temperature: 0.7,
+          maxTokens: 2048,
         });
-        if (!response.ok) {
-          throw new Error("Gateway failed to proxy internal Gemini node.");
-        }
-        const data = await response.json();
-        return data.text;
     }
 
     const config = configSnap.data() as AIProviderConfig;
