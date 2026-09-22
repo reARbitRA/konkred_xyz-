@@ -120,6 +120,69 @@ gateway's own health body is deliberately *not* echoed to the client.
 
 ---
 
+## 3b. Monetization layer (added after the incident fix)
+
+The paid product is now implemented and tested. Summary of the moving parts:
+
+| File | Role |
+|---|---|
+| `src/db/migrations/0001_billing.sql` | Idempotent schema: `accounts`, `usage_ledger`, `plans`, `payments`, `webhook_events`. Apply before deploying. |
+| `server/billing.ts` | Quota engine. Trial/daily/paid allowances, spend ordering, refunds, idempotent grants. |
+| `server/payments.ts` | NowPayments IPN verification (HMAC-SHA512 over the recursively key-sorted body) + amount/order-ownership checks. |
+| `server/payment-routes.ts` | `/api/quota`, `/api/payments/{plans,create,status}`, `/api/payments/nowpayments/webhook`. |
+| `server/metering.ts` | Reserves quota on `/api/fullkonk/generate`; refunds failed generations. |
+| `server/billing-runtime.ts` | Lazy construction from env; returns null (→503) instead of crashing. |
+| `pages/CheckoutPage.tsx` | Persian RTL checkout with plan, price, network, status, retry. |
+
+**Guarantees, each covered by a test:**
+
+* PostgreSQL is the source of truth — quota survives restarts, and the website
+  and Telegram bot share one balance via a single canonical identity.
+* A replayed payment webhook **never** grants twice (`webhook_events.event_id`
+  is UNIQUE; the database arbitrates the race, not application code).
+* Forged and unsigned webhooks are rejected with 401 before any state changes.
+* Identity is derived server-side only; a forged `x-end-user` header is ignored.
+* Users are never charged for our failures (refund on upstream error/no content)
+  and never twice for one generation (idempotency key scoped under identity).
+* Metering **fails open**: a database outage degrades revenue, not availability.
+
+### Additional environment variables
+
+```text
+DATABASE_URL=postgres://user:pass@host:5432/db   # REQUIRED for billing
+NOWPAYMENTS_API_KEY=<from the NowPayments dashboard>
+NOWPAYMENTS_IPN_SECRET=<IPN secret; must be set or callbacks are not sent>
+NOWPAYMENTS_IPN_CALLBACK_URL=https://www.konkred.xyz/api/payments/nowpayments/webhook
+ANON_SALT=<long random string; rotating it resets anonymous trials>
+FIREBASE_PROJECT_ID=<enables verified fb:<uid> identities>
+TRIAL_MESSAGES=10
+TRIAL_ENABLED=true
+DAILY_MODE=false
+```
+
+Without `DATABASE_URL` the billing routes answer a controlled
+`503 BILLING_NOT_CONFIGURED` and generation runs unmetered — the site stays up.
+
+### Applying the migration
+
+```bash
+psql "$DATABASE_URL" -f src/db/migrations/0001_billing.sql   # safe to re-run
+```
+
+### Verifying payments after deploy
+
+```bash
+curl -sS https://www.konkred.xyz/api/payments/plans | jq
+curl -sS https://www.konkred.xyz/api/quota | jq
+
+# An unsigned webhook MUST be rejected (expect 401):
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST \
+  -H 'content-type: application/json' -d '{"order_id":"x","payment_status":"finished"}' \
+  https://www.konkred.xyz/api/payments/nowpayments/webhook
+```
+
+---
+
 ## 4. Environment variables (Vercel project)
 
 Server-only. No `VITE_` prefix — anything `VITE_`-prefixed is compiled into
