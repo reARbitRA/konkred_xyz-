@@ -17,6 +17,8 @@ export interface BillingRuntimeEnv {
   NOWPAYMENTS_API_KEY?: string;
   NOWPAYMENTS_IPN_SECRET?: string;
   NOWPAYMENTS_IPN_CALLBACK_URL?: string;
+  /** Override the provider base URL (local verification only; never in prod). */
+  NOWPAYMENTS_API_BASE?: string;
   ANON_SALT?: string;
   TRIAL_MESSAGES?: string;
   TRIAL_ENABLED?: string;
@@ -94,6 +96,7 @@ export async function getPaymentRoutes(env: BillingRuntimeEnv = process.env): Pr
       apiKey: env.NOWPAYMENTS_API_KEY || '',
       ipnSecret: env.NOWPAYMENTS_IPN_SECRET || '',
       ipnCallbackUrl: env.NOWPAYMENTS_IPN_CALLBACK_URL || '',
+      apiBase: env.NOWPAYMENTS_API_BASE || undefined,
     });
 
     cached = createPaymentRoutes({

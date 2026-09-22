@@ -6,7 +6,8 @@ export type PageView =
     | 'catalogue' | 'suite_detail' | 'workflow_detail' | 'pricing' | 'kit_detail'
     | 'sprint' | 'enterprise' | 'partners' | 'validation' | 'not_found'
     | 'academy' | 'intel' | 'network' | 'advisory' | 'documentation' | 'career'
-    | 'resources' | 'enter' | 'join_network' | 'account' | 'contact' | 'style_guide' | 'verify_email';
+    | 'resources' | 'enter' | 'join_network' | 'account' | 'contact' | 'style_guide' | 'verify_email'
+    | 'checkout';
 
 export type AIProviderID = 
   | 'openai' | 'anthropic' | 'google' | 'openrouter' | 'groq' 

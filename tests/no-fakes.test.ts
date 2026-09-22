@@ -26,7 +26,6 @@ const MUST_NOT_EXIST = [
   'pages/AdminPage.tsx',
   'pages/KToolsPage.tsx',
   'pages/ForgePage.tsx',
-  'pages/CheckoutPage.tsx',
   'pages/PricingPage.tsx',
   'pages/PlaygroundsPage.tsx',
   'pages/IntelReportPage.tsx',
@@ -131,3 +130,40 @@ function walk(dir: string, cb: (file: string) => void): void {
     else if (/\.(ts|tsx)$/.test(entry.name)) cb(full);
   }
 }
+
+/**
+ * pages/CheckoutPage.tsx was previously on the purged list because the old one
+ * was a mock storefront with invented balances and fake "purchases".
+ *
+ * The current file is the opposite: it renders only data returned by the real
+ * /api/payments/* and /api/quota endpoints, which are backed by PostgreSQL and
+ * signed NowPayments callbacks. These assertions pin that distinction so the
+ * mock version can never quietly return.
+ */
+describe('checkout page is real, not a mock storefront', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'pages/CheckoutPage.tsx'), 'utf8');
+
+  it('drives itself from the real billing API', () => {
+    expect(source).toContain('/api/payments/plans');
+    expect(source).toContain('/api/payments/create');
+    expect(source).toContain('/api/payments/status');
+    expect(source).toContain('/api/quota');
+  });
+
+  it('hard-codes no prices, balances or fake wallet state', () => {
+    // Prices and balances must come from the server, never from the bundle.
+    expect(source).not.toMatch(/balance\s*[:=]\s*\{?\s*(fiat|crypto)/i);
+    expect(source).not.toMatch(/\bmockPlans\b|\bfakeInvoice\b|\bdemoBalance\b/i);
+  });
+
+  it('shows the wrong-network warning before payment', () => {
+    expect(source).toContain('warning');
+    expect(source).toMatch(/شبکه/);
+  });
+
+  it('gives every async state a terminal outcome and a retry control', () => {
+    expect(source).toContain('AbortError');   // timeout handling
+    expect(source).toContain('تلاش دوباره');  // retry button
+    expect(source).toMatch(/setPlansStatus\('error'\)/);
+  });
+});

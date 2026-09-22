@@ -34,6 +34,48 @@ export async function createApp(): Promise<express.Express> {
   const app = express();
 
   app.use(cors());
+
+  // ── Billing / payments ────────────────────────────────────────────────────
+  // Mounted BEFORE express.json() because the NowPayments webhook signature is
+  // computed over the body, and these handlers read and parse the raw stream
+  // themselves. Letting body-parser consume it first would leave the webhook
+  // handler with an empty stream and break verification.
+  //
+  // Mirrors the Vercel function (api/index.ts) so local behaviour matches
+  // production. A deployment without DATABASE_URL gets a controlled 503.
+  const BILLING_PATHS = new Set([
+    "/api/quota",
+    "/api/payments/plans",
+    "/api/payments/create",
+    "/api/payments/status",
+    "/api/payments/nowpayments/webhook",
+  ]);
+  app.use(async (req, res, next) => {
+    if (!BILLING_PATHS.has(req.path)) return next();
+    try {
+      const { billingConfigured, getPaymentRoutes } = await import("./server/billing-runtime");
+      if (!billingConfigured()) {
+        return res.status(503).json({
+          error: "سرویس پرداخت هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.",
+          code: "BILLING_NOT_CONFIGURED",
+        });
+      }
+      const routes = await getPaymentRoutes();
+      if (!routes) {
+        return res.status(503).json({
+          error: "سرویس پرداخت موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.",
+          code: "BILLING_UNAVAILABLE",
+          retryable: true,
+        });
+      }
+      if (await routes(req, res)) return undefined;
+      return next();
+    } catch (error) {
+      console.error("[billing] event=error.mount name=" + ((error as Error)?.name || "Error"));
+      return res.status(503).json({ error: "سرویس پرداخت موقتاً در دسترس نیست.", code: "BILLING_UNAVAILABLE", retryable: true });
+    }
+  });
+
   app.use(express.json({ limit: "1mb" }));
 
   // API Routes
