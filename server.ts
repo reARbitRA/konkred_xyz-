@@ -37,8 +37,59 @@ export async function createApp(): Promise<express.Express> {
   app.use(express.json({ limit: "1mb" }));
 
   // API Routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", node: "KONKRED-PROD-01" });
+  //
+  // Health contract — kept deliberately identical in shape to the Vercel
+  // function (server/gateway-proxy.ts) so that what is verified locally is what
+  // runs in production. Both report liveness plus which server-only variables
+  // are present, as booleans only: a value is never echoed to the browser.
+  app.get(["/api/health", "/api/ready"], async (req, res) => {
+    const gatewayUrl = (process.env.KONKRED_GATEWAY_URL || process.env.BRAIN_URL || '').replace(/\/+$/, '');
+    const fullkonkKey = process.env.FULLKONK_KEY || process.env.BRAIN_KEY || '';
+    const base = {
+      status: "ok",
+      service: "konkred-website",
+      runtime: "node-express",
+      node: "KONKRED-PROD-01",
+      time: new Date().toISOString(),
+      configured: {
+        gatewayUrl: Boolean(gatewayUrl),
+        gatewayApiKey: Boolean(process.env.KONKRED_GATEWAY_API_KEY),
+        fullkonkKey: Boolean(fullkonkKey),
+      },
+    };
+
+    // Liveness: must succeed whenever the process can serve a request at all.
+    if (req.path !== "/api/ready") return res.json(base);
+
+    // Readiness: additionally prove the gateway is reachable, with a short
+    // timeout so this endpoint can never hang.
+    if (!gatewayUrl) {
+      return res.status(503).json({ ...base, status: "degraded", code: "GATEWAY_NOT_CONFIGURED", gateway: { reachable: false, reason: "not_configured" } });
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const started = Date.now();
+    try {
+      const upstream = await fetch(`${gatewayUrl}/api/health`, {
+        headers: { accept: "application/json", "x-brain-key": fullkonkKey },
+        signal: controller.signal,
+      });
+      const ms = Date.now() - started;
+      if (!upstream.ok) {
+        return res.status(503).json({ ...base, status: "degraded", code: "GATEWAY_UNHEALTHY", gateway: { reachable: true, status: upstream.status, ms } });
+      }
+      return res.json({ ...base, gateway: { reachable: true, status: upstream.status, ms } });
+    } catch (error) {
+      const aborted = (error as Error)?.name === "AbortError";
+      return res.status(503).json({
+        ...base,
+        status: "degraded",
+        code: aborted ? "GATEWAY_TIMEOUT" : "GATEWAY_UNREACHABLE",
+        gateway: { reachable: false, reason: aborted ? "timeout" : "network" },
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   });
 
   // GitHub OAuth: Get URL

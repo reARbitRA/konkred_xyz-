@@ -148,7 +148,10 @@ export default function FullKonkPage() {
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const [saveState, setSaveState] = useState('SAVE AS PROJECT');
   const [providersLoaded, setProvidersLoaded] = useState(false);
+  /** Persian, user-facing reason the provider list could not be loaded. */
+  const [providersError, setProvidersError] = useState<string | null>(null);
   const [retryable, setRetryable] = useState(false);
+  const providersAbortRef = useRef<AbortController | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
   const startTimeRef = useRef(0);
@@ -176,18 +179,46 @@ export default function FullKonkPage() {
     try { localStorage.setItem('fk-byok', JSON.stringify(next)); } catch { /* private mode */ }
   };
 
-  useEffect(() => {
+  /**
+   * Provider discovery.
+   *
+   * Every outcome must be terminal: success, a controlled configuration error,
+   * a network error, or a timeout. The selector previously stayed on "LOADING…"
+   * forever whenever this request failed, which is one of the infinite spinners
+   * the brief calls out. A 12s abort guarantees the UI always settles, and
+   * `providersError` drives a visible Persian message plus a RETRY button.
+   */
+  const loadProviders = useCallback(() => {
+    providersAbortRef.current?.abort();
     const controller = new AbortController();
+    providersAbortRef.current = controller;
+    // Guarantees the UI leaves the loading state even if the network stalls.
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+
+    setProvidersError(null);
+    setProvidersLoaded(false);
+
     fetch('/api/fullkonk/providers', { signal: controller.signal })
       .then(async response => {
         if (!response.ok) {
           // Configuration/availability problem — never masquerade as "no providers".
+          const detail = (await response.json().catch(() => ({}))) as { error?: string; code?: string };
+          // Branch on the HTTP status only. Server-side error *codes* are never
+          // hard-coded in client JavaScript (see tests/client-bundle.test.ts):
+          // 503 = the deployment is not configured, anything else = transient.
+          const message = response.status === 503
+            ? 'سرویس هوش مصنوعی هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.'
+            : 'دریافت فهرست ارائه‌دهنده‌ها ممکن نشد. لطفاً دوباره تلاش کنید.';
+          // Diagnostic code stays in the console only; users see plain Persian.
+          console.warn('[fullkonk] providers failed', { status: response.status, code: detail.code });
+          setProvidersError(message);
           setProvidersLoaded(true);
           return { providers: [] as ProviderOption[] };
         }
         return (await response.json().catch(() => ({}))) as { providers?: ProviderOption[] };
       })
       .then(data => {
+        if (!mountedRef.current) return;
         setAllProviders(data.providers || []);
         setProvidersLoaded(true);
         const all = data.providers || [];
@@ -205,10 +236,30 @@ export default function FullKonkPage() {
       })
       // A failed probe says nothing about server configuration; never claim
       // "no providers" just because this request could not be completed.
-      .catch(() => undefined);
-    return () => controller.abort();
+      .catch((error: unknown) => {
+        if (!mountedRef.current) return;
+        const aborted = (error as Error)?.name === 'AbortError';
+        console.warn('[fullkonk] providers unreachable', { reason: aborted ? 'timeout' : 'network' });
+        setProvidersError(aborted
+          ? 'زمان دریافت فهرست ارائه‌دهنده‌ها به پایان رسید. لطفاً دوباره تلاش کنید.'
+          : 'ارتباط با سرور برقرار نشد. اتصال خود را بررسی و دوباره تلاش کنید.');
+        // Terminal state: the spinner must never persist.
+        setProvidersLoaded(true);
+      })
+      .finally(() => window.clearTimeout(timeout));
   }, []);
-  useEffect(() => () => { mountedRef.current = false; abortRef.current?.abort(); }, []);
+
+  useEffect(() => {
+    loadProviders();
+    return () => providersAbortRef.current?.abort();
+  }, [loadProviders]);
+  // Re-arm on mount: React StrictMode (and any remount) runs the cleanup once,
+  // and a ref that is only ever set to false would permanently suppress every
+  // subsequent setState — leaving the UI stuck in its loading state.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; abortRef.current?.abort(); };
+  }, []);
   useEffect(() => {
     if (!streaming) return;
     const timer = window.setInterval(() => setMetrics(value => ({ ...value, elapsedMs: Date.now() - startTimeRef.current })), 100);
@@ -407,9 +458,20 @@ export default function FullKonkPage() {
       <div style={{ display: 'flex', gap: 4 }}>{MODES.map(item => <button key={item.id} disabled={streaming} onClick={() => setMode(item.id)} className={`fk-btn${mode === item.id ? ' fk-btn-acc' : ''}`}>{item.label}</button>)}</div>
       <button onClick={() => setShowSettings(value => !value)} className="fk-btn">⚙ SETTINGS</button>
       <button onClick={() => setLiveEnv(value => !value)} className={`fk-btn${liveEnv ? ' fk-btn-acc' : ''}`}>▶ LIVE ENV</button>
-      <select className="fk-select" value={provider} disabled={streaming} onChange={event => { const next = providerOptions.find(option => option.id === event.target.value); setProvider(event.target.value); if (next?.models[0]) setModel(next.models[0].id); }}>{providerOptions.length ? providerOptions.map(option => <option key={option.id} value={option.id}>{option.name.toUpperCase()}</option>) : <option value={provider}>{providersLoaded ? 'NO KEY — PICK ONE, ADD KEY IN ⚙' : 'LOADING…'}</option>}</select>
+      <select className="fk-select" value={provider} disabled={streaming} onChange={event => { const next = providerOptions.find(option => option.id === event.target.value); setProvider(event.target.value); if (next?.models[0]) setModel(next.models[0].id); }}>{providerOptions.length ? providerOptions.map(option => <option key={option.id} value={option.id}>{option.name.toUpperCase()}</option>) : <option value={provider}>{!providersLoaded ? 'LOADING…' : providersError ? 'UNAVAILABLE — RETRY' : 'NO KEY — PICK ONE, ADD KEY IN ⚙'}</option>}</select>
       <select value={model} disabled={streaming} onChange={event => setModel(event.target.value)} className="fk-select">{(providerOptions.find(option => option.id === provider)?.models || [{ id: model, label: model }]).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
     </header>
+    {/* Terminal error state for provider discovery: Persian message + retry. */}
+    {providersError && <div
+      role="alert"
+      dir="rtl"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '8px 16px', background: '#2a1416', borderBottom: '2px solid #ff4d4f', color: '#ffd7d8', fontSize: 12 }}
+    >
+      <span>{providersError}</span>
+      <button type="button" onClick={loadProviders} className="fk-btn" style={{ background: '#ff4d4f', borderColor: '#000', color: '#fff' }}>
+        تلاش دوباره
+      </button>
+    </div>}
     {showSettings && <div className="fk-settings" style={{ display: 'grid', gridTemplateColumns: '120px 160px 170px minmax(240px, 1fr)', gap: 10, alignItems: 'center', padding: '8px 16px' }}>
       <label>TEMPERATURE <input type="number" min={0} max={1} step={0.05} value={temperature} onChange={event => setTemperature(Number(event.target.value))} className="fk-select" style={{ width: 58, marginLeft: 5 }} /></label>
       <label>MAX TOKENS <select value={maxTokens} onChange={event => setMaxTokens(Number(event.target.value))} className="fk-select" style={{ marginLeft: 5 }}><option value={4096}>4096</option><option value={8192}>8192</option><option value={16384}>16384</option></select></label>
