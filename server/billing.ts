@@ -16,6 +16,12 @@
  */
 import type { Pool, PoolClient } from 'pg';
 
+/**
+ * Anything that can run a query: the pool itself, or an already-checked-out
+ * client. Used to make "reuse the caller's connection" explicit at call sites.
+ */
+type Queryable = Pick<Pool, 'query'> | Pick<PoolClient, 'query'>;
+
 export const TRIAL_MESSAGES_DEFAULT = 10;
 export const DAILY_FREE_MESSAGES_DEFAULT = 10;
 
@@ -194,7 +200,7 @@ export class Billing {
       );
       await client.query('COMMIT');
 
-      const updated = await this.readAccount(identity);
+      const updated = await this.readAccount(identity, client);
       return { ok: true, balance: this.toBalance(updated) };
     } catch (error) {
       await client.query('ROLLBACK').catch(() => undefined);
@@ -239,7 +245,9 @@ export class Billing {
         // Unique violation → this exact event was already processed.
         await client.query('ROLLBACK').catch(() => undefined);
         if (isUniqueViolation(error)) {
-          return { granted: false, reason: 'duplicate_event', balance: await this.getBalance(identity) };
+          // Reuse the held client: getBalance() would request a second
+          // connection and deadlock the pool under concurrent deliveries.
+          return { granted: false, reason: 'duplicate_event', balance: await this.balanceOn(client, identity) };
         }
         throw error;
       }
@@ -255,7 +263,7 @@ export class Billing {
       }
       if (payment.rows[0].granted_at) {
         await client.query('ROLLBACK').catch(() => undefined);
-        return { granted: false, reason: 'already_granted', balance: await this.getBalance(identity) };
+        return { granted: false, reason: 'already_granted', balance: await this.balanceOn(client, identity) };
       }
       // The order must belong to the identity being credited, so a webhook can
       // never be used to top up somebody else's account.
@@ -283,7 +291,7 @@ export class Billing {
         [identity, messages, orderId],
       );
       await client.query('COMMIT');
-      return { granted: true, balance: await this.getBalance(identity) };
+      return { granted: true, balance: await this.balanceOn(client, identity) };
     } catch (error) {
       await client.query('ROLLBACK').catch(() => undefined);
       throw error;
@@ -338,9 +346,23 @@ export class Billing {
     return row;
   }
 
-  private async readAccount(identity: string): Promise<AccountRow> {
-    const result = await this.pool.query(`SELECT * FROM accounts WHERE identity = $1`, [identity]);
+  /**
+   * Read an account row.
+   *
+   * `executor` defaults to the pool, but callers that already hold a client
+   * MUST pass it. Acquiring a second connection while holding one deadlocks
+   * the pool as soon as concurrency reaches the pool size — every connection
+   * ends up waiting for a connection that can never be freed.
+   */
+  private async readAccount(identity: string, executor: Queryable = this.pool): Promise<AccountRow> {
+    const result = await executor.query(`SELECT * FROM accounts WHERE identity = $1`, [identity]);
     return result.rows[0] as AccountRow;
+  }
+
+  /** Balance read on an existing client (no extra connection). */
+  private async balanceOn(executor: Queryable, identity: string): Promise<Balance> {
+    const row = await this.readAccount(identity, executor);
+    return this.toBalance(row);
   }
 
   private toBalance(row: AccountRow): Balance {

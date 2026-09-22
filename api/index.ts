@@ -37,6 +37,7 @@
 import type { Express } from 'express';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { configFromEnv, createGatewayHandler, defaultLogger } from '../server/gateway-proxy';
+import { billingConfigured, getPaymentRoutes } from '../server/billing-runtime';
 
 // Runtime: Node.js (Express + streaming require it; this is not an Edge function).
 export const config = {
@@ -83,7 +84,40 @@ const legacyApp = (): Promise<Express> => {
  * rejection — which is exactly what kills a serverless invocation. Both are
  * trapped below.
  */
+/** Paths owned by the billing layer; matched before the legacy app sees them. */
+const BILLING_PATHS = new Set([
+  '/api/quota',
+  '/api/payments/plans',
+  '/api/payments/create',
+  '/api/payments/status',
+  '/api/payments/nowpayments/webhook',
+]);
+
 const fallback = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
+  // ── Billing / payments ────────────────────────────────────────────────────
+  // Handled here (rather than inside the gateway proxy) because these routes
+  // are owned by this deployment's own database, not by the AI gateway.
+  const pathname = (request.url || '/').split('?')[0];
+  if (BILLING_PATHS.has(pathname)) {
+    if (!billingConfigured()) {
+      safeJson(response, 503, {
+        error: 'سرویس پرداخت هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.',
+        code: 'BILLING_NOT_CONFIGURED',
+      });
+      return;
+    }
+    const routes = await getPaymentRoutes();
+    if (!routes) {
+      safeJson(response, 503, {
+        error: 'سرویس پرداخت موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.',
+        code: 'BILLING_UNAVAILABLE',
+        retryable: true,
+      });
+      return;
+    }
+    if (await routes(request, response)) return;
+  }
+
   let app: Express;
   try {
     app = await legacyApp();
