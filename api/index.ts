@@ -37,7 +37,7 @@
 import type { Express } from 'express';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { configFromEnv, createGatewayHandler, defaultLogger } from '../server/gateway-proxy';
-import { billingConfigured, getPaymentRoutes } from '../server/billing-runtime';
+import { billingConfigured, getMeter, getPaymentRoutes } from '../server/billing-runtime';
 
 // Runtime: Node.js (Express + streaming require it; this is not an Edge function).
 export const config = {
@@ -145,7 +145,15 @@ export default async function handler(request: IncomingMessage, response: Server
     // missing configuration) never require a cold start.
     let gatewayHandler;
     try {
-      gatewayHandler = createGatewayHandler({ config: configFromEnv(process.env), fallback, log: defaultLogger });
+      gatewayHandler = createGatewayHandler({
+        config: configFromEnv(process.env),
+        fallback,
+        log: defaultLogger,
+        // Enforces the free-tier limit on paid generation. Resolves to
+        // undefined without a database, leaving generation unmetered rather
+        // than offline.
+        meter: await getMeter(),
+      });
     } catch (error) {
       // Invalid configuration (bad URL, http in production, credentials in the
       // URL...). This is an operator error and must read as one — not a crash.

@@ -300,6 +300,39 @@ export class Billing {
     }
   }
 
+  /**
+   * Return previously spent messages (e.g. the generation failed upstream).
+   *
+   * Credited to the paid balance rather than trying to un-consume the trial:
+   * that keeps the ledger simple and always favours the user. Recorded with
+   * reason 'refund' so spend and refund remain distinguishable in the audit.
+   */
+  async grantRefund(identity: string, amount = 1, reference?: string): Promise<Balance> {
+    assertIdentity(identity);
+    if (!Number.isInteger(amount) || amount < 1) throw new Error('amount must be a positive integer');
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await this.lockAccount(client, identity);
+      await client.query(
+        `UPDATE accounts SET paid_balance = paid_balance + $2, updated_at = now() WHERE identity = $1`,
+        [identity, amount],
+      );
+      await client.query(
+        `INSERT INTO usage_ledger (identity, delta, reason, surface, reference)
+         VALUES ($1, $2, 'refund', 'system', $3)`,
+        [identity, amount, reference ?? null],
+      );
+      await client.query('COMMIT');
+      return await this.balanceOn(client, identity);
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   /** Record a payment intent before redirecting the user to the provider. */
   async createPayment(params: {
     orderId: string;

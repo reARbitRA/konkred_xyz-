@@ -123,4 +123,64 @@ export async function getPaymentRoutes(env: BillingRuntimeEnv = process.env): Pr
 /** Test seam: drop the memoised handler. */
 export function resetPaymentRoutes(): void {
   cached = undefined;
+  cachedMeter = undefined;
+}
+
+/**
+ * Build the generation meter for the gateway proxy, or `undefined` when this
+ * deployment has no database (generation then runs unmetered rather than
+ * failing closed).
+ *
+ * Kept separate from getPaymentRoutes() so the proxy never needs to know about
+ * payments, and so a metering failure can be contained independently.
+ */
+let cachedMeter: ((req: IncomingMessage) => Promise<{ allowed: boolean; body?: unknown; refund?: () => Promise<void> }>) | null | undefined;
+
+export async function getMeter(env: BillingRuntimeEnv = process.env) {
+  if (cachedMeter !== undefined) return cachedMeter ?? undefined;
+  try {
+    if (!env.DATABASE_URL) { cachedMeter = null; return undefined; }
+
+    const [{ Pool }, { Meter, paywallBody }] = await Promise.all([import('pg'), import('./metering')]);
+    const pool = new Pool({
+      connectionString: env.DATABASE_URL,
+      max: 3,
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 10_000,
+      ssl: /localhost|127\.0\.0\.1/.test(env.DATABASE_URL) ? undefined : { rejectUnauthorized: false },
+    });
+    pool.on('error', () => undefined);
+
+    const trialEnabled = (env.TRIAL_ENABLED ?? 'true') !== 'false';
+    const billing = new Billing(pool, {
+      trialMessages: trialEnabled ? Number(env.TRIAL_MESSAGES || 10) : 0,
+      dailyFreeMessages: Number(env.DAILY_FREE_MESSAGES || 10),
+      dailyMode: env.DAILY_MODE === 'true',
+    });
+    const meter = new Meter({
+      billing,
+      anonSalt: env.ANON_SALT || 'konkred-default-anon-salt',
+      verifyIdToken: await verifyIdTokenFactory(env.FIREBASE_PROJECT_ID),
+      log: (event) => console.log(`[meter] event=${event}`),
+    });
+
+    cachedMeter = async (req: IncomingMessage) => {
+      // The client supplies an idempotency key per logical generation so a
+      // stream reconnect is not billed twice. It is scoped under the
+      // server-derived identity inside Meter, so it cannot be abused.
+      const header = req.headers['x-idempotency-key'];
+      const key = typeof header === 'string' && /^[A-Za-z0-9_-]{8,128}$/.test(header) ? header : undefined;
+      const decision = await meter.reserve(req, 'web', key);
+      return {
+        allowed: decision.allowed,
+        body: decision.allowed ? undefined : paywallBody(decision.balance),
+        refund: decision.refund,
+      };
+    };
+    return cachedMeter;
+  } catch (error) {
+    console.error('[meter] event=error.init name=' + ((error as Error)?.name || 'Error'));
+    cachedMeter = null;
+    return undefined;
+  }
 }

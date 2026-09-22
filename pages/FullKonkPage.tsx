@@ -150,6 +150,9 @@ export default function FullKonkPage() {
   const [providersLoaded, setProvidersLoaded] = useState(false);
   /** Persian, user-facing reason the provider list could not be loaded. */
   const [providersError, setProvidersError] = useState<string | null>(null);
+  /** Set when the server answers 402: the user is out of quota. */
+  const [paywalled, setPaywalled] = useState(false);
+  const [quota, setQuota] = useState<{ totalRemaining: number; trialRemaining: number; paidRemaining: number } | null>(null);
   const [retryable, setRetryable] = useState(false);
   const providersAbortRef = useRef<AbortController | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -158,6 +161,7 @@ export default function FullKonkPage() {
   const generationTextRef = useRef('');
   const baseFilesRef = useRef<GeneratedFile[]>([]);
   const latestPromptRef = useRef('');
+  const idempotencyRef = useRef('');
   const metricsRef = useRef<PipelineMetrics>({ tokensPerSecond: 0, totalTokens: 0, provider: '', elapsedMs: 0 });
 
   useEffect(() => {
@@ -277,18 +281,39 @@ export default function FullKonkPage() {
     });
   }, []);
 
-  const handleSend = useCallback(async (rawPrompt: string) => {
+  /** Read the authoritative balance from the server (never computed client-side). */
+  const refreshQuota = useCallback(async () => {
+    try {
+      const response = await fetch('/api/quota');
+      if (!response.ok) return;              // quota display is best-effort
+      const data = await response.json();
+      if (mountedRef.current) setQuota(data);
+    } catch {
+      /* Non-fatal: the balance strip simply stays hidden. */
+    }
+  }, []);
+
+  useEffect(() => { void refreshQuota(); }, [refreshQuota]);
+
+  const handleSend = useCallback(async (rawPrompt: string, reuseIdempotencyKey = false) => {
     const prompt = rawPrompt.trim();
     if (!prompt || streaming) return;
     const controller = new AbortController();
     abortRef.current = controller;
     startTimeRef.current = Date.now();
     latestPromptRef.current = prompt;
+    // One key per logical generation. A retry of the SAME generation reuses it
+    // so a reconnect is never billed twice (server-side dedup lives in
+    // server/metering.ts; the key is scoped under the server-derived identity).
+    if (!reuseIdempotencyKey || !idempotencyRef.current) {
+      idempotencyRef.current = crypto.randomUUID().replace(/-/g, '');
+    }
     generationTextRef.current = '';
     baseFilesRef.current = activeProject?.files || files;
     setPreviousFiles(baseFilesRef.current);
     setStreaming(true);
     setRetryable(false);
+    setPaywalled(false);
     setStage(mode === 'review' ? 'review' : 'architect');
     setStageText('INITIALIZING PIPELINE');
     metricsRef.current = { tokensPerSecond: 0, totalTokens: 0, provider: '', elapsedMs: 0 };
@@ -313,7 +338,7 @@ export default function FullKonkPage() {
       const byok = byokKeys[provider] ? { 'x-provider-key': byokKeys[provider] } : {};
       const response = await fetch('/api/fullkonk/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...byok, ...headers },
+        headers: { 'Content-Type': 'application/json', 'x-idempotency-key': idempotencyRef.current, ...byok, ...headers },
         body: JSON.stringify({ prompt, mode, provider, model, temperature, maxTokens, systemPrompt: systemPrompt || undefined, projectId: activeProject?.id, attachedFiles: attachments }),
         signal: controller.signal,
       });
@@ -387,12 +412,23 @@ export default function FullKonkPage() {
       if (userId) void logUsage({ userId, provider: metricsRef.current.provider || provider, model, mode, stage: 'done', tokens: metricsRef.current.totalTokens, durationMs: Date.now() - startTimeRef.current, success: true });
       setAttachments([]);
       setSidebarRefresh(value => value + 1);
+      void refreshQuota();   // reflect the message just consumed
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         // User STOP or unmount: leave no error banner behind.
         if (mountedRef.current) { setStage('idle'); setStageText(''); }
       } else if (mountedRef.current) {
         const message = error instanceof Error && error.message ? error.message : 'Unknown pipeline error';
+        // 402 is a business state, not a fault: show the paywall instead of an
+        // error the user cannot act on. Retrying would fail identically.
+        if (error instanceof GatewayError && error.status === 402) {
+          setPaywalled(true);
+          setRetryable(false);
+          setStage('idle');
+          setStageText('');
+          void refreshQuota();
+          return;
+        }
         // Exhausted failover, capacity (429/5xx) and network faults are
         // recoverable; validation/configuration faults are terminal.
         const retryable = error instanceof RetryablePipelineError
@@ -413,7 +449,8 @@ export default function FullKonkPage() {
     const prompt = latestPromptRef.current;
     if (!prompt || streaming) return;
     setRetryable(false);
-    void handleSend(prompt);
+    // Reuse the key: this is the same logical generation, retried.
+    void handleSend(prompt, true);
   }, [handleSend, streaming]);
 
   useEffect(() => {
@@ -471,6 +508,19 @@ export default function FullKonkPage() {
       <button type="button" onClick={loadProviders} className="fk-btn" style={{ background: '#ff4d4f', borderColor: '#000', color: '#fff' }}>
         تلاش دوباره
       </button>
+    </div>}
+    {paywalled && <div
+      role="alert"
+      dir="rtl"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '10px 16px', background: '#2a2413', borderBottom: '2px solid #ffb020', color: '#ffe0a3', fontSize: 12 }}
+    >
+      <span>
+        سهمیهٔ رایگان شما به پایان رسیده است. برای ادامه یکی از بسته‌ها را تهیه کنید.
+        {quota ? ` (باقی‌مانده: ${quota.totalRemaining})` : ''}
+      </span>
+      <a href="/checkout" className="fk-btn" style={{ background: '#ffb020', borderColor: '#000', color: '#0b0d10', textDecoration: 'none' }}>
+        ارتقای حساب
+      </a>
     </div>}
     {showSettings && <div className="fk-settings" style={{ display: 'grid', gridTemplateColumns: '120px 160px 170px minmax(240px, 1fr)', gap: 10, alignItems: 'center', padding: '8px 16px' }}>
       <label>TEMPERATURE <input type="number" min={0} max={1} step={0.05} value={temperature} onChange={event => setTemperature(Number(event.target.value))} className="fk-select" style={{ width: 58, marginLeft: 5 }} /></label>

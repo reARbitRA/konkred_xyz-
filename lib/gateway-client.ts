@@ -46,6 +46,13 @@ function friendlyMessage(status: number, upstream: string | undefined, retryAfte
     case 401:
     case 403:
       return { message: 'Authorization or gateway configuration error. The request could not be authenticated.', retryable: false };
+    case 402:
+      // Payment required: an expected business state, not a fault. Retrying
+      // without buying would fail identically, so it is not retryable.
+      return {
+        message: upstream || 'سهمیهٔ شما به پایان رسیده است. برای ادامه یکی از بسته‌ها را تهیه کنید.',
+        retryable: false,
+      };
     case 404:
       return { message: 'The requested gateway route was not found.', retryable: false };
     case 413:

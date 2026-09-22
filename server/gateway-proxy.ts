@@ -68,6 +68,20 @@ export interface ProxyDeps {
   timeouts?: { jsonMs?: number; connectMs?: number; idleMs?: number; overallMs?: number };
   /** Fallback for every route not owned by the gateway (the legacy Express app). */
   fallback?: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>;
+  /**
+   * Optional quota hook for paid generation.
+   *
+   * Injected rather than imported so the proxy stays independent of the
+   * database: when it is absent (or the deployment has no DATABASE_URL)
+   * generation is simply unmetered instead of failing closed. Returning
+   * `allowed:false` makes the route answer 402 with `body`.
+   */
+  meter?: (req: IncomingMessage) => Promise<{
+    allowed: boolean;
+    body?: unknown;
+    /** Called when the generation produced nothing, so it is not charged. */
+    refund?: () => Promise<void>;
+  }>;
 }
 
 type RouteName = 'providers' | 'generate' | 'export' | 'ai';
@@ -604,7 +618,20 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     }
   }
 
-  async function handleGenerate(req: IncomingMessage, res: ServerResponse, validated: { body: string }): Promise<void> {
+  async function handleGenerate(
+    req: IncomingMessage,
+    res: ServerResponse,
+    validated: { body: string },
+    refund?: () => Promise<void>,
+  ): Promise<void> {
+    // Refund at most once, and only when the user received nothing of value.
+    let refunded = false;
+    const refundOnce = async (reason: string): Promise<void> => {
+      if (!refund || refunded) return;
+      refunded = true;
+      log('meter.refund', { route: 'generate', reason });
+      try { await refund(); } catch { log('error.refund_failed', { route: 'generate' }); }
+    };
     const controller = new AbortController();
     const cancellation = bindCancellation(req, res, controller);
     const clientGone = (): boolean => cancellation.isClientGone();
@@ -655,7 +682,14 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
       if (requestId) res.setHeader('x-request-id', requestId);
       res.flushHeaders?.();
       headWritten = true;
-      if (!upstream.body) { res.end(); return; }
+      // Upstream refused (4xx/5xx): the user got no generation, so refund.
+      if (!upstream.ok) await refundOnce(`upstream_${upstream.status}`);
+      if (!upstream.body) {
+        if (upstream.ok) await refundOnce('empty_body');
+        res.end();
+        return;
+      }
+      let streamedBytes = 0;
       const guard = makeSecretGuard(secrets);
       const reader = upstream.body.getReader();
       resetIdle();
@@ -671,12 +705,18 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
           break;
         }
         if (clientGone() || res.destroyed || res.writableEnded) { controller.abort(); break; }
+        streamedBytes += chunk.length;
         res.write(chunk);
       }
+      // A successful connection that produced no content is still a failure
+      // from the user's point of view; do not charge for it.
+      if (upstream.ok && streamedBytes === 0) await refundOnce('no_content');
       if (!clientGone() && !res.destroyed && !res.writableEnded) res.end();
       log('route.complete', { route: 'generate', status: upstream.status, ms: now() - started });
     } catch (error) {
       if (!headWritten) {
+        // Nothing was delivered at all — always refund.
+        await refundOnce('upstream_failure');
         handleUpstreamFailure(req, res, 'generate', error, controller, log, started, now);
       } else {
         // Mid-stream failure: terminate cleanly; the client treats a truncated
@@ -767,7 +807,24 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     }
     const safe = validation as { ok: true; body: string };
     if (routeMatch.name === 'generate') {
-      await handleGenerate(req, res, safe);
+      // Meter BEFORE contacting the gateway: an exhausted user must never
+      // consume provider credit. A metering failure is deliberately non-fatal
+      // (fail-open) so a database blip cannot take generation offline.
+      let refund: (() => Promise<void>) | undefined;
+      if (deps.meter) {
+        try {
+          const decision = await deps.meter(req);
+          if (!decision.allowed) {
+            log('route.quota_exhausted', { route: 'generate' });
+            sendJson(res, 402, decision.body ?? { error: 'Quota exhausted.', code: 'QUOTA_EXHAUSTED', upgradeUrl: '/checkout' });
+            return;
+          }
+          refund = decision.refund;
+        } catch (error) {
+          log('error.meter_failed', { name: (error as Error)?.name || 'Error' });
+        }
+      }
+      await handleGenerate(req, res, safe, refund);
     } else {
       await forwardJson(req, res, routeMatch.name, routeMatch.upstream, routeMatch.kind, safe, timeouts.jsonMs);
     }

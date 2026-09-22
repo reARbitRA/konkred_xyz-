@@ -44,6 +44,7 @@ async function mount(upstream: typeof fetch, deps: Partial<ProxyDeps> = {}): Pro
     limits: deps.limits,
     timeouts: deps.timeouts || { jsonMs: 5_000, connectMs: 1_000, idleMs: 1_000, overallMs: 5_000 },
     fallback: deps.fallback,
+    meter: deps.meter,
   });
   const server: Server = createServer((req, res) => {
     void handler(req, res);
@@ -627,6 +628,106 @@ describe('health contract (incident regression)', () => {
     try {
       expect((await fetch(`${h.baseUrl}/api/health`)).status).toBe(200);
       expect((await fetch(`${h.baseUrl}/api/ready`)).status).toBe(503);
+    } finally { await h.close(); }
+  });
+});
+
+/**
+ * Metering integration: the proxy must enforce the paywall before spending
+ * provider credit, and must never charge for a generation it failed to deliver.
+ */
+describe('generation metering', () => {
+  const sse = (body: string) =>
+    new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+
+  it('answers 402 with an upgrade path when quota is exhausted', async () => {
+    const h = await mount(async () => sse('data: {"type":"delta","content":"x"}\n\n'), {
+      meter: async () => ({ allowed: false, body: { error: 'exhausted', code: 'QUOTA_EXHAUSTED', upgradeUrl: '/checkout' } }),
+    });
+    try {
+      const res = await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody());
+      expect(res.status).toBe(402);
+      const body = await res.json();
+      expect(body.code).toBe('QUOTA_EXHAUSTED');
+      expect(body.upgradeUrl).toBe('/checkout');
+      // The gateway must NOT have been contacted: no provider credit spent.
+      expect(h.calls).toHaveLength(0);
+    } finally { await h.close(); }
+  });
+
+  it('allows and does not refund a successful generation', async () => {
+    let refunds = 0;
+    const h = await mount(async () => sse('data: {"type":"delta","content":"hello"}\n\ndata: {"type":"done"}\n\n'), {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      const res = await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody());
+      expect(res.status).toBe(200);
+      await res.text();
+      expect(refunds).toBe(0);
+      expect(h.calls).toHaveLength(1);
+    } finally { await h.close(); }
+  });
+
+  it('refunds when the gateway rejects the request', async () => {
+    let refunds = 0;
+    const h = await mount(async () => jsonResponse(503, { error: 'no capacity' }), {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      await (await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).text();
+      expect(refunds).toBe(1);
+    } finally { await h.close(); }
+  });
+
+  it('refunds when the gateway is unreachable', async () => {
+    let refunds = 0;
+    const h = await mount(async () => { throw new Error('ECONNREFUSED'); }, {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      await (await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).text();
+      expect(refunds).toBe(1);
+    } finally { await h.close(); }
+  });
+
+  it('refunds a 200 response that streams no content', async () => {
+    let refunds = 0;
+    const h = await mount(async () => sse(''), {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      await (await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).text();
+      expect(refunds).toBe(1);
+    } finally { await h.close(); }
+  });
+
+  it('refunds at most once per generation', async () => {
+    let refunds = 0;
+    const h = await mount(async () => jsonResponse(500, { error: 'boom' }), {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      await (await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).text();
+      expect(refunds).toBeLessThanOrEqual(1);
+    } finally { await h.close(); }
+  });
+
+  it('FAILS OPEN: a metering outage never blocks generation', async () => {
+    const h = await mount(async () => sse('data: {"type":"done"}\n\n'), {
+      meter: async () => { throw new Error('database down'); },
+    });
+    try {
+      const res = await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody());
+      // Losing revenue on one request beats taking the product offline.
+      expect(res.status).toBe(200);
+    } finally { await h.close(); }
+  });
+
+  it('remains unmetered when no meter is configured', async () => {
+    const h = await mount(async () => sse('data: {"type":"done"}\n\n'));
+    try {
+      expect((await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).status).toBe(200);
     } finally { await h.close(); }
   });
 });
