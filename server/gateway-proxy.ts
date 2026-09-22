@@ -31,6 +31,8 @@ const GENERATE_CONNECT_TIMEOUT_MS = 15_000;
 const GENERATE_IDLE_TIMEOUT_MS = 90_000;
 const GENERATE_OVERALL_TIMEOUT_MS = 280_000;      // below Vercel maxDuration 300
 const PROVIDER_CACHE_TTL_MS = 30_000;
+/** /api/ready probes the gateway; kept short so the health check never hangs. */
+const READY_PROBE_TIMEOUT_MS = 5_000;
 
 const BUILD_MODES = new Set(['fullstack', 'frontend', 'backend', 'review']);
 const ATTACHMENT_EXT = /\.(?:tsx?|jsx?|json|prisma|sql|ya?ml|sh|css|html?|md)$/i;
@@ -423,6 +425,81 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     return false;
   }
 
+  /**
+   * Health / readiness.
+   *
+   *  GET /api/health → liveness. ALWAYS 200 when the serverless function can
+   *    execute at all. It reports which server-only variables are configured
+   *    (booleans only — never values) so an operator can diagnose a bad Vercel
+   *    environment from the browser without any secret leaking.
+   *
+   *  GET /api/ready → readiness. Additionally probes the gateway's own
+   *    /api/health with a short timeout. A gateway outage yields a controlled
+   *    503 JSON body, never an invocation crash and never a hanging request.
+   */
+  async function handleHealth(req: IncomingMessage, res: ServerResponse, deep: boolean): Promise<void> {
+    const configured = {
+      gatewayUrl: Boolean(gatewayUrl),
+      gatewayApiKey: Boolean(config.gatewayApiKey),
+      fullkonkKey: Boolean(config.fullkonkKey),
+    };
+    const base = {
+      status: 'ok' as string,
+      service: 'konkred-website',
+      runtime: 'vercel-node',
+      time: new Date().toISOString(),
+      configured,
+    };
+
+    if (!deep) {
+      sendJson(res, 200, base);
+      return;
+    }
+
+    if (!gatewayUrl) {
+      sendJson(res, 503, {
+        ...base,
+        status: 'degraded',
+        code: 'GATEWAY_NOT_CONFIGURED',
+        gateway: { reachable: false, reason: 'not_configured' },
+        error: 'The Konkred Gateway integration is not configured on this deployment.',
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = timers(READY_PROBE_TIMEOUT_MS, () => controller.abort());
+    if (typeof timer.unref === 'function') timer.unref();
+    const started = now();
+    try {
+      const upstream = await fetchImpl(`${gatewayUrl}/api/health`, {
+        method: 'GET',
+        headers: { accept: 'application/json', 'x-brain-key': config.fullkonkKey },
+        signal: controller.signal,
+      });
+      const ms = now() - started;
+      // The gateway's body is deliberately NOT echoed: it may contain provider
+      // or key-pool detail that is not safe for an unauthenticated browser.
+      if (!upstream.ok) {
+        log('health.gateway_unhealthy', { status: upstream.status, ms });
+        sendJson(res, 503, { ...base, status: 'degraded', code: 'GATEWAY_UNHEALTHY', gateway: { reachable: true, status: upstream.status, ms } });
+        return;
+      }
+      sendJson(res, 200, { ...base, gateway: { reachable: true, status: upstream.status, ms } });
+    } catch (error) {
+      const aborted = (error as Error)?.name === 'AbortError';
+      log('health.gateway_unreachable', { ms: now() - started, reason: aborted ? 'timeout' : 'network' });
+      sendJson(res, 503, {
+        ...base,
+        status: 'degraded',
+        code: aborted ? 'GATEWAY_TIMEOUT' : 'GATEWAY_UNREACHABLE',
+        gateway: { reachable: false, reason: aborted ? 'timeout' : 'network' },
+      });
+    } finally {
+      clearTimeout(timer as unknown as ReturnType<typeof setTimeout>);
+    }
+  }
+
   async function forwardJson(
     req: IncomingMessage,
     res: ServerResponse,
@@ -622,6 +699,16 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     const rawUrl = req.url || '/';
     const pathname = rawUrl.split('?')[0];
     const method = req.method || 'GET';
+
+    // ── Health contract (Phase 1) ───────────────────────────────────────────
+    // These routes are owned by the proxy itself and MUST NOT depend on the
+    // bundled legacy Express app, a database, Firebase, or the gateway being
+    // reachable. They are the only thing that can prove "the Vercel function is
+    // alive" during an incident, so they must never throw.
+    if (pathname === '/api/health' || pathname === '/api/ready') {
+      await handleHealth(req, res, pathname === '/api/ready');
+      return;
+    }
 
     const routeMatch =
       pathname === '/api/fullkonk/providers' ? { name: 'providers' as RouteName, method: 'GET', upstream: '/api/fullkonk/providers', kind: 'brain' as const, max: 0, validate: null }
