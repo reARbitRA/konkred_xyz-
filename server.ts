@@ -941,6 +941,20 @@ export async function createApp(): Promise<express.Express> {
     }
   });
 
+  // ── Unknown API routes must answer JSON, never the SPA shell ──────────────
+  // Without this, /api/anything falls through to the Vite/static handler and
+  // returns 200 text/html. A JSON client then tries to parse "<!DOCTYPE html>"
+  // and reports a confusing syntax error instead of a clean 404, which is
+  // exactly the class of misleading failure that made the original incident
+  // hard to diagnose.
+  app.use("/api", (req, res) => {
+    res.status(404).json({
+      error: "The requested API route does not exist.",
+      code: "ROUTE_NOT_FOUND",
+      path: req.path,
+    });
+  });
+
   // Serve REDAEYE sales checkout page
   app.get(["/redaeye", "/redaeye.html"], (req, res) => {
     const prodFile = path.join(process.cwd(), "dist", "redaeye.html");
