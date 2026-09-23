@@ -98,7 +98,9 @@ const fallback = async (request: IncomingMessage, response: ServerResponse): Pro
   // Handled here (rather than inside the gateway proxy) because these routes
   // are owned by this deployment's own database, not by the AI gateway.
   const pathname = (request.url || '/').split('?')[0];
-  if (BILLING_PATHS.has(pathname)) {
+  // /api/internal/* is the service-to-service quota contract used by the
+  // Telegram bot; it is authenticated by INTERNAL_API_KEY inside the handler.
+  if (BILLING_PATHS.has(pathname) || pathname.startsWith('/api/internal/')) {
     if (!billingConfigured()) {
       safeJson(response, 503, {
         error: 'سرویس پرداخت هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.',

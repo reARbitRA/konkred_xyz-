@@ -51,7 +51,8 @@ export async function createApp(): Promise<express.Express> {
     "/api/payments/nowpayments/webhook",
   ]);
   app.use(async (req, res, next) => {
-    if (!BILLING_PATHS.has(req.path)) return next();
+    // /api/internal/* is the bot's quota contract (service token authenticated).
+    if (!BILLING_PATHS.has(req.path) && !req.path.startsWith("/api/internal/")) return next();
     try {
       const { billingConfigured, getPaymentRoutes } = await import("./server/billing-runtime");
       if (!billingConfigured()) {

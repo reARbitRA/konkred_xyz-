@@ -11,6 +11,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Billing } from './billing';
 import { Payments } from './payments';
 import { createPaymentRoutes } from './payment-routes';
+import { createInternalQuotaRoutes } from './internal-quota-routes';
 
 export interface BillingRuntimeEnv {
   DATABASE_URL?: string;
@@ -20,6 +21,8 @@ export interface BillingRuntimeEnv {
   /** Override the provider base URL (local verification only; never in prod). */
   NOWPAYMENTS_API_BASE?: string;
   ANON_SALT?: string;
+  /** Shared secret the Telegram bot presents to /api/internal/*. */
+  INTERNAL_API_KEY?: string;
   TRIAL_MESSAGES?: string;
   TRIAL_ENABLED?: string;
   DAILY_FREE_MESSAGES?: string;
@@ -99,7 +102,13 @@ export async function getPaymentRoutes(env: BillingRuntimeEnv = process.env): Pr
       apiBase: env.NOWPAYMENTS_API_BASE || undefined,
     });
 
-    cached = createPaymentRoutes({
+    const internalRoutes = createInternalQuotaRoutes({
+      billing,
+      internalKey: env.INTERNAL_API_KEY || '',
+      log: (event, meta) => console.log(`[internal] event=${event}` + Object.entries(meta || {}).map(([k, v]) => ` ${k}=${String(v)}`).join('')),
+    });
+
+    const publicRoutes = createPaymentRoutes({
       billing,
       payments,
       // Falls back to a per-deployment constant; rotating it resets anon trials.
@@ -112,6 +121,14 @@ export async function getPaymentRoutes(env: BillingRuntimeEnv = process.env): Pr
         else console.log(line.join(' '));
       },
     });
+
+    // Internal (service-to-service) routes are matched first; they own the
+    // /api/internal/* prefix exclusively and never fall through to public
+    // handlers, so the bot's surface can never be reached from a browser path.
+    cached = async (req, res) => {
+      if (await internalRoutes(req, res)) return true;
+      return publicRoutes(req, res);
+    };
     return cached;
   } catch (error) {
     console.error('[billing] event=error.init name=' + ((error as Error)?.name || 'Error'));
