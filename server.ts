@@ -33,7 +33,40 @@ const adminDb = getAdminFirestore();
 export async function createApp(): Promise<express.Express> {
   const app = express();
 
-  app.use(cors());
+  /**
+   * CORS policy.
+   *
+   * Previously `cors()` with no options, which emits
+   * `Access-Control-Allow-Origin: *` on every route. That was tolerable when
+   * the API was public read-only content, but the billing and quota endpoints
+   * added since are per-user state — any site could read a visitor's balance
+   * or start a purchase flow against their identity.
+   *
+   * Policy now:
+   *   * `/api/internal/*` — no CORS at all. Service-to-service only; a browser
+   *     must never be able to reach it, token or otherwise.
+   *   * `/api/quota`, `/api/payments/*` — same-origin only (no ACAO header),
+   *     since only our own pages call them.
+   *   * everything else — unchanged public access, so existing embeds and
+   *     integrations that read catalogue/demo endpoints keep working.
+   */
+  const PRIVATE_CORS_PREFIXES = ["/api/internal/", "/api/payments/", "/api/quota"];
+  const publicCors = cors();
+  app.use((req, res, next) => {
+    const isPrivate = PRIVATE_CORS_PREFIXES.some(
+      (prefix) => req.path === prefix || req.path.startsWith(prefix),
+    );
+    if (isPrivate) {
+      // Vary so a cached public response can never be reused for these paths.
+      res.setHeader("Vary", "Origin");
+      // A cross-origin preflight for a private route is refused outright.
+      if (req.method === "OPTIONS" && req.headers.origin) {
+        return res.status(403).json({ error: "Cross-origin requests are not allowed.", code: "CORS_DENIED" });
+      }
+      return next();
+    }
+    return publicCors(req, res, next);
+  });
 
   // ── Billing / payments ────────────────────────────────────────────────────
   // Mounted BEFORE express.json() because the NowPayments webhook signature is

@@ -39,6 +39,31 @@ const ATTACHMENT_EXT = /\.(?:tsx?|jsx?|json|prisma|sql|ya?ml|sh|css|html?|md)$/i
 const OWNER_REPO_RE = /^[A-Za-z0-9_.-]{1,100}$/;
 const BRANCH_RE = /^[A-Za-z0-9._/-]{1,200}$/;
 const FILE_PATH_RE = /^[\w@+.,()[\] /-]{1,240}$/;
+/**
+ * Repository paths an export may never write, even though the characters are
+ * individually legal.
+ *
+ * Found by the P8 audit: the character class alone allowed `/etc/passwd`,
+ * `.git/config` and `.github/workflows/ci.yml`. Writing into `.git/` can
+ * rewrite remotes or credential helpers, and a file under `.github/workflows/`
+ * is CODE THAT GITHUB EXECUTES on the owner's repository — a generated-content
+ * feature must never be able to place either.
+ */
+const FORBIDDEN_PATH_PREFIXES = ['.git/', '.github/workflows/', '.github/actions/'];
+const FORBIDDEN_PATH_EXACT = new Set(['.git', '.env', '.npmrc', '.netrc', '.gitmodules', '.git-credentials']);
+
+/** True when a validated-looking path is still unsafe to write. */
+function isUnsafeExportPath(candidate: string): boolean {
+  // Absolute paths escape the repository root entirely.
+  if (candidate.startsWith('/')) return true;
+  // Leading "./" and doubled slashes normalise away and can mask a prefix.
+  if (candidate.startsWith('./') || candidate.includes('//')) return true;
+  const lower = candidate.toLowerCase();
+  if (FORBIDDEN_PATH_EXACT.has(lower)) return true;
+  if (FORBIDDEN_PATH_PREFIXES.some((prefix) => lower.startsWith(prefix))) return true;
+  // Any path segment that is exactly ".env" or sits inside a .git directory.
+  return lower.split('/').some((segment) => segment === '.git' || segment === '.env');
+}
 
 export interface GatewayConfig {
   /** Root URL of the Konkred Gateway, e.g. https://gateway.example.com (env-only). */
@@ -312,7 +337,7 @@ function validateExport(body: Record<string, unknown> | null): ValidationResult 
     if (!item || typeof item !== 'object') return { ok: false, status: 400, error: 'Each file must be an object.' };
     const f = item as Record<string, unknown>;
     const fpath = asString(f.path, 240);
-    if (!fpath || !FILE_PATH_RE.test(fpath) || fpath.includes('..')) {
+    if (!fpath || !FILE_PATH_RE.test(fpath) || fpath.includes('..') || isUnsafeExportPath(fpath)) {
       return { ok: false, status: 400, error: `File path is not allowed: ${fpath || '(empty)'}.` };
     }
     if (typeof f.content !== 'string' || f.content.length > 1_000_000) {
