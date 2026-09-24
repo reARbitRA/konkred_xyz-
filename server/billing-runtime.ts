@@ -21,6 +21,8 @@ export interface BillingRuntimeEnv {
   /** Override the provider base URL (local verification only; never in prod). */
   NOWPAYMENTS_API_BASE?: string;
   ANON_SALT?: string;
+  /** Escape hatch for a self-signed DB certificate. Never set in production. */
+  DATABASE_SSL_INSECURE?: string;
   /** Shared secret the Telegram bot presents to /api/internal/*. */
   INTERNAL_API_KEY?: string;
   TRIAL_MESSAGES?: string;
@@ -31,6 +33,29 @@ export interface BillingRuntimeEnv {
 }
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<boolean>;
+
+/**
+ * TLS settings for the database connection.
+ *
+ * Certificate verification is ON by default. This carries payment and quota
+ * records, so an unverified connection would let a man-in-the-middle read or
+ * alter balances. Every managed provider this is likely to run against (Neon,
+ * Supabase, Railway, RDS, Render) presents a publicly-trusted certificate, so
+ * verification simply works.
+ *
+ * `DATABASE_SSL_INSECURE=true` is the deliberate, documented escape hatch for
+ * a self-signed certificate on a private network — it must never be set for a
+ * database reachable over the public internet.
+ */
+function sslConfigFor(dsn: string, env: BillingRuntimeEnv): false | { rejectUnauthorized: boolean } {
+  // A unix socket or loopback connection never leaves the machine.
+  if (/localhost|127\.0\.0\.1|host=\/|sslmode=disable/.test(dsn)) return false;
+  if (env.DATABASE_SSL_INSECURE === 'true') {
+    console.warn('[billing] event=warn.tls_verification_disabled — DATABASE_SSL_INSECURE is set; do not use this over the public internet');
+    return { rejectUnauthorized: false };
+  }
+  return { rejectUnauthorized: true };
+}
 
 let cached: Handler | null | undefined;
 
@@ -83,7 +108,7 @@ export async function getPaymentRoutes(env: BillingRuntimeEnv = process.env): Pr
       max: 3,
       connectionTimeoutMillis: 8000,
       idleTimeoutMillis: 10_000,
-      ssl: /localhost|127\.0\.0\.1/.test(env.DATABASE_URL) ? undefined : { rejectUnauthorized: false },
+      ssl: sslConfigFor(env.DATABASE_URL, env),
     });
     // A pool-level error must never become an unhandled exception.
     pool.on('error', () => undefined);
@@ -164,7 +189,7 @@ export async function getMeter(env: BillingRuntimeEnv = process.env) {
       max: 3,
       connectionTimeoutMillis: 8000,
       idleTimeoutMillis: 10_000,
-      ssl: /localhost|127\.0\.0\.1/.test(env.DATABASE_URL) ? undefined : { rejectUnauthorized: false },
+      ssl: sslConfigFor(env.DATABASE_URL, env),
     });
     pool.on('error', () => undefined);
 

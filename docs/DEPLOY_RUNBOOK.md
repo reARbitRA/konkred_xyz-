@@ -30,8 +30,29 @@ two services with no shared transaction. Set them on the website.
 
 ## Step 1 — PostgreSQL **[you]**
 
-Any managed Postgres works (Neon, Supabase, Render, RDS). Create a database and
-copy its connection string.
+### Which free provider
+
+**Use Neon.** It is the only free tier that fits a billing database:
+
+| Provider | Free tier | Verdict for THIS use case |
+|---|---|---|
+| **Neon** | 0.5 GB, 100 CU-hours/mo, permanent, no card | **Recommended.** Built-in PgBouncer pooling, which serverless needs. |
+| Supabase | 500 MB, no card | Pauses after **1 week idle**. A payment webhook arriving during a pause fails. |
+| Render | 1 GB | **Database is DELETED 30 days after creation.** Never use for payment records. |
+| Railway | trial credit only | Not actually free; needs a card. |
+
+Two settings that matter:
+
+1. **Region: US East (N. Virginia).** Your Vercel functions run in `iad1`
+   (visible in the original error IDs). The latency that matters is
+   function→database, not you→database, so do *not* pick Frankfurt.
+2. **Use the POOLED connection string** — the hostname containing `-pooler`.
+   Each serverless invocation can open its own connection, and the unpooled
+   endpoint will exhaust Postgres connection limits under load.
+
+Free tiers have no backups. Once real money flows, move to a paid tier — the
+`usage_ledger` table is append-only so history is auditable, but an audit trail
+is not a backup.
 
 ```bash
 psql "$DATABASE_URL" -f src/db/migrations/0001_billing.sql
@@ -110,6 +131,12 @@ TRIAL_ENABLED=true
 TRIAL_MESSAGES=10
 DAILY_MODE=false
 ```
+
+Database TLS certificates are verified by default. Every managed provider above
+presents a publicly-trusted certificate, so nothing extra is needed. The
+`DATABASE_SSL_INSECURE=true` escape hatch exists only for a self-signed
+certificate on a private network and must never be set for a database reachable
+over the internet.
 
 ## Step 6 — Deploy the website **[you]**
 
