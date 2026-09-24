@@ -253,3 +253,41 @@ describe('resilience', () => {
     expect((await get('/api/something-else')).status).toBe(404);
   });
 });
+
+describe('invoice-creation throttling (DoS defence)', () => {
+  /**
+   * Regression guard: /api/payments/create had no rate limit, so anyone could
+   * spam it to fill the payments table — fatal on a 0.5 GB free-tier database —
+   * and hammer the payment provider's API. The counter lives in SQL, not
+   * memory, because serverless instances do not share state.
+   */
+  it('throttles after too many intents from one identity', async () => {
+    const codes: number[] = [];
+    for (let i = 0; i < 13; i += 1) {
+      codes.push((await post('/api/payments/create', { planId: 'pro' })).status);
+    }
+    expect(codes.filter((c) => c === 200).length).toBeLessThanOrEqual(10);
+    expect(codes).toContain(429);
+  });
+
+  it('returns a Persian message and Retry-After when throttled', async () => {
+    let last: Response | undefined;
+    for (let i = 0; i < 13; i += 1) last = await post('/api/payments/create', { planId: 'pro' });
+    expect(last!.status).toBe(429);
+    expect(last!.headers.get('retry-after')).toBeTruthy();
+    const body = await last!.json();
+    expect(body.code).toBe('TOO_MANY_PAYMENT_ATTEMPTS');
+    expect(body.error).toMatch(/پرداخت/);
+  });
+
+  it('throttles per identity, not globally', async () => {
+    for (let i = 0; i < 12; i += 1) await post('/api/payments/create', { planId: 'pro' });
+    // A different caller must still be able to buy.
+    const other = await fetch(`${baseUrl}/api/payments/create`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.99' },
+      body: JSON.stringify({ planId: 'pro' }),
+    });
+    expect(other.status).toBe(200);
+  });
+});

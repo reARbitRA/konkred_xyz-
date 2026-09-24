@@ -548,7 +548,16 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     validated: { body: string },
     timeoutMs: number,
     cacheable = false,
+    refund?: () => Promise<void>,
   ): Promise<void> {
+    // Refund at most once, and only when the caller received no completion.
+    let refunded = false;
+    const refundOnce = async (reason: string): Promise<void> => {
+      if (!refund || refunded) return;
+      refunded = true;
+      log('meter.refund', { route, reason });
+      try { await refund(); } catch { log('error.refund_failed', { route }); }
+    };
     const controller = new AbortController();
     const cancellation = bindCancellation(req, res, controller);
     const timer = timers(timeoutMs, () => controller.abort());
@@ -567,6 +576,7 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
       // Defense in depth: never relay our own gateway credentials.
       if (secrets.some((secret) => buffer.includes(Buffer.from(secret)))) {
         log('error.secret_in_upstream_body', { route, status: upstream.status });
+        await refundOnce('screening_failed');
         sendJson(res, 502, { error: 'The Konkred Gateway returned a response that failed safety screening.' });
         return;
       }
@@ -576,6 +586,8 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
         headers['cache-control'] = 'private, max-age=30';
         cache.set(upstreamPath, { expires: now() + PROVIDER_CACHE_TTL_MS, status: upstream.status, contentType, retryAfter, body: buffer });
       }
+      // The caller got no usable completion, so do not charge for it.
+      if (!upstream.ok) await refundOnce(`upstream_${upstream.status}`);
       if (res.writableEnded || res.destroyed) return;
       res.statusCode = upstream.status;
       res.setHeader('content-type', contentType);
@@ -831,27 +843,36 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
       return;
     }
     const safe = validation as { ok: true; body: string };
-    if (routeMatch.name === 'generate') {
-      // Meter BEFORE contacting the gateway: an exhausted user must never
-      // consume provider credit. A metering failure is deliberately non-fatal
-      // (fail-open) so a database blip cannot take generation offline.
-      let refund: (() => Promise<void>) | undefined;
-      if (deps.meter) {
-        try {
-          const decision = await deps.meter(req);
-          if (!decision.allowed) {
-            log('route.quota_exhausted', { route: 'generate' });
-            sendJson(res, 402, decision.body ?? { error: 'Quota exhausted.', code: 'QUOTA_EXHAUSTED', upgradeUrl: '/checkout' });
-            return;
-          }
-          refund = decision.refund;
-        } catch (error) {
-          log('error.meter_failed', { name: (error as Error)?.name || 'Error' });
+
+    // Meter EVERY route that performs paid inference, before contacting the
+    // gateway, so an exhausted caller never consumes provider credit.
+    //
+    // /api/ai must be included: it forwards chat messages for real inference
+    // exactly like generate does, so metering only generate left an open
+    // bypass — a user who hit the 402 paywall could simply POST to /api/ai
+    // and keep going for free. Read-only routes (providers) and the export
+    // route are not inference and stay unmetered.
+    const METERED_ROUTES = new Set<RouteName>(['generate', 'ai']);
+    let refund: (() => Promise<void>) | undefined;
+    if (deps.meter && METERED_ROUTES.has(routeMatch.name)) {
+      try {
+        const decision = await deps.meter(req);
+        if (!decision.allowed) {
+          log('route.quota_exhausted', { route: routeMatch.name });
+          sendJson(res, 402, decision.body ?? { error: 'Quota exhausted.', code: 'QUOTA_EXHAUSTED', upgradeUrl: '/checkout' });
+          return;
         }
+        refund = decision.refund;
+      } catch (error) {
+        // Fail open: a database blip must not take inference offline.
+        log('error.meter_failed', { name: (error as Error)?.name || 'Error' });
       }
+    }
+
+    if (routeMatch.name === 'generate') {
       await handleGenerate(req, res, safe, refund);
     } else {
-      await forwardJson(req, res, routeMatch.name, routeMatch.upstream, routeMatch.kind, safe, timeouts.jsonMs);
+      await forwardJson(req, res, routeMatch.name, routeMatch.upstream, routeMatch.kind, safe, timeouts.jsonMs, false, refund);
     }
   };
 }

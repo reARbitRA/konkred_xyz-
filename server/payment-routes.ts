@@ -21,6 +21,8 @@ import { Payments, PLANS } from './payments';
 
 const WEBHOOK_MAX_BYTES = 64 * 1024; // IPN bodies are small; cap to resist DoS.
 const CREATE_MAX_BYTES = 8 * 1024;
+/** Payment intents one identity may create per hour before being throttled. */
+const MAX_PAYMENTS_PER_HOUR = 10;
 
 export interface PaymentRoutesDeps {
   billing: Billing;
@@ -145,6 +147,28 @@ export function createPaymentRoutes(deps: PaymentRoutesDeps) {
     }
 
     const identity = await resolveIdentity(req);
+
+    // Throttle invoice creation. Without this, anyone can spam this endpoint to
+    // fill the payments table (fatal on a small free-tier database) and hammer
+    // the provider's API. Counted in SQL, not memory, because serverless
+    // instances do not share state and a cold start would reset a local
+    // counter. Unpaid intents are harmless rows, so the limit is generous.
+    try {
+      const recent = await billing.recentPaymentCount(identity, 60);
+      if (recent >= MAX_PAYMENTS_PER_HOUR) {
+        log('payment.rate_limited', { recent });
+        res.setHeader('retry-after', '600');
+        return sendJson(res, 429, {
+          error: 'تعداد درخواست‌های پرداخت بیش از حد مجاز است. لطفاً کمی بعد دوباره تلاش کنید.',
+          code: 'TOO_MANY_PAYMENT_ATTEMPTS',
+          retryable: true,
+        });
+      }
+    } catch (error) {
+      // A counting failure must not block a legitimate purchase.
+      log('error.payment_rate_check', { name: (error as Error)?.name || 'Error' });
+    }
+
     try {
       const invoice = await payments.createInvoice(identity, planId);
       log('payment.invoice_created', { planId });

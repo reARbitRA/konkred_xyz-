@@ -307,3 +307,95 @@ describe('CORS policy on private endpoints', () => {
     expect(res.headers.get('access-control-allow-origin')).toBe('*');
   });
 });
+
+/* ── Quota bypass via an unmetered inference route ────────────────────────── */
+describe('every paid inference route is metered', () => {
+  /**
+   * Regression guard for a real bypass found by auditing rather than reading:
+   * only /api/fullkonk/generate was metered, so a user who hit the 402 paywall
+   * could POST the same chat messages to /api/ai and keep getting inference
+   * for free. Both routes forward to the gateway and cost provider credit, so
+   * both must consult the meter.
+   */
+  async function mountMetered(allowed: boolean) {
+    const seen: string[] = [];
+    const handler = createGatewayHandler({
+      config: CONFIG,
+      fetchImpl: (async () =>
+        new Response(JSON.stringify({ ok: true, data: { content: 'hi' } }), {
+          status: 200, headers: { 'content-type': 'application/json' },
+        })) as unknown as typeof fetch,
+      log: () => undefined,
+      cache: new Map(),
+      timeouts: { jsonMs: 4000, connectMs: 1000, idleMs: 1000, overallMs: 4000 },
+      limits: { ai: 500, generate: 500, export: 500, providers: 500 },
+      meter: async (req) => {
+        seen.push(req.url || '');
+        return { allowed, body: { code: 'QUOTA_EXHAUSTED', upgradeUrl: '/checkout' } };
+      },
+    });
+    const server: Server = createServer((req, res) => { void handler(req, res); });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    return {
+      baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+      seen,
+      close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    };
+  }
+
+  const aiBody = { messages: [{ role: 'user', content: 'hello' }] };
+  const genBody = { prompt: 'Build a todo app', mode: 'fullstack', provider: 'groq', model: 'llama', temperature: 0.4, maxTokens: 4096 };
+
+  it('consults the meter for BOTH /api/ai and /api/fullkonk/generate', async () => {
+    const h = await mountMetered(true);
+    try {
+      await postJson(h.baseUrl, '/api/ai', aiBody);
+      await postJson(h.baseUrl, '/api/fullkonk/generate', genBody);
+      expect(h.seen).toHaveLength(2);
+    } finally { await h.close(); }
+  });
+
+  it('refuses /api/ai with 402 once quota is exhausted (the bypass)', async () => {
+    const h = await mountMetered(false);
+    try {
+      const res = await postJson(h.baseUrl, '/api/ai', aiBody);
+      expect(res.status).toBe(402);
+      expect((await res.json()).code).toBe('QUOTA_EXHAUSTED');
+    } finally { await h.close(); }
+  });
+
+  it('does not meter read-only or non-inference routes', async () => {
+    const h = await mountMetered(true);
+    try {
+      await fetch(`${h.baseUrl}/api/fullkonk/providers`);
+      await postJson(h.baseUrl, '/api/fullkonk/github/export', {
+        owner: 'acme', repo: 'demo', files: [{ path: 'a.ts', content: 'x' }],
+      });
+      // Discovery and export cost no inference, so they must not spend quota.
+      expect(h.seen).toHaveLength(0);
+    } finally { await h.close(); }
+  });
+
+  it('refunds an /api/ai call the gateway failed to serve', async () => {
+    let refunds = 0;
+    const handler = createGatewayHandler({
+      config: CONFIG,
+      fetchImpl: (async () => new Response('{"error":"down"}', {
+        status: 503, headers: { 'content-type': 'application/json' },
+      })) as unknown as typeof fetch,
+      log: () => undefined,
+      cache: new Map(),
+      timeouts: { jsonMs: 4000, connectMs: 1000, idleMs: 1000, overallMs: 4000 },
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    const server: Server = createServer((req, res) => { void handler(req, res); });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    try {
+      await postJson(base, '/api/ai', aiBody);
+      expect(refunds).toBe(1);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});

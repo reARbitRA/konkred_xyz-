@@ -78,6 +78,24 @@ describeIfPg('billing against real PostgreSQL', () => {
     expect((await billing.getBalance(id)).totalRemaining).toBe(5);
   });
 
+  it('counts recent payment intents correctly on real Postgres', async () => {
+    // The throttle uses ($2 || ' minutes')::interval, which pg-mem does not
+    // evaluate the same way as Postgres. Verify the real dialect here.
+    const id = 'fb:pg-throttle';
+    expect(await billing.recentPaymentCount(id, 60)).toBe(0);
+    for (let i = 0; i < 3; i += 1) {
+      await billing.createPayment({
+        orderId: `pg-thr-${i}`, identity: id, planId: 'pro',
+        priceMicroUsd: PLANS.pro.priceMicroUsd, messages: PLANS.pro.messages,
+      });
+    }
+    expect(await billing.recentPaymentCount(id, 60)).toBe(3);
+    // A window that excludes just-created rows must report zero.
+    expect(await billing.recentPaymentCount(id, 0)).toBe(0);
+    // And it must be scoped to the identity.
+    expect(await billing.recentPaymentCount('fb:pg-other', 60)).toBe(0);
+  });
+
   it('runs the full purchase journey end to end', async () => {
     const id = 'fb:pg-journey';
     for (let i = 0; i < 10; i += 1) await billing.spend(id);

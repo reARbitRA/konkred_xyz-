@@ -333,6 +333,25 @@ export class Billing {
     }
   }
 
+  /**
+   * How many payment intents this identity created recently.
+   *
+   * Used to throttle invoice creation. Counted in the DATABASE rather than in
+   * process memory because serverless instances do not share memory — an
+   * in-memory counter would reset on every cold start and be trivially
+   * bypassed by spreading requests across instances.
+   */
+  async recentPaymentCount(identity: string, withinMinutes = 60): Promise<number> {
+    assertIdentity(identity);
+    const result = await this.pool.query(
+      `SELECT COUNT(*)::int AS n FROM payments
+        WHERE identity = $1
+          AND created_at > now() - ($2 || ' minutes')::interval`,
+      [identity, String(withinMinutes)],
+    );
+    return Number(result.rows[0]?.n ?? 0);
+  }
+
   /** Record a payment intent before redirecting the user to the provider. */
   async createPayment(params: {
     orderId: string;
