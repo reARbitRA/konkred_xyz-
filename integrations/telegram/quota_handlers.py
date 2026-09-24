@@ -1,31 +1,28 @@
-"""
-`/buy` and `/usage` commands plus chat metering for the Konkred Telegram bot.
+"""`/buy` and `/usage` commands, plus quota metering for chat messages.
 
-Install into the bot service (reARbitRA/konkred-AI-ecosystem, `bot/`) and
-register in `main.py`:
+Behaviour matches the website exactly, because both read the same balance:
 
-    from quota_handlers import quota_router
-    dp.include_router(quota_router)      # BEFORE the generic chat router
+* Every chat message reserves one unit BEFORE the gateway is called, so a user
+  who is out of quota never consumes provider credit.
+* Exhaustion shows an upgrade prompt with a button — not an error.
+* A failed generation is refunded: users are never charged for our faults.
+* If the quota service is unreachable the bot FAILS OPEN and still answers.
 
-Behaviour, matching the website exactly:
-  * Every chat message costs one message of quota, reserved BEFORE the gateway
-    is called, so an exhausted user never consumes provider credit.
-  * Exhaustion produces an upgrade prompt with a button, not an error.
-  * A failed generation is refunded, so users are never billed for our faults.
-  * If the quota service is unreachable the bot FAILS OPEN and still answers:
-    losing revenue on a few messages is better than an outage.
+Payment deliberately happens on the website rather than in chat: the invoice,
+the exact amount and the wrong-network warning must be shown on a page the user
+can read carefully before transferring funds.
 """
 from __future__ import annotations
 
 import logging
 import os
 
-from aiogram import F, Router, types
+from aiogram import Router, types
 from aiogram.filters import Command
 
 from quota_client import QuotaUnavailable, quota_client
 
-logger = logging.getLogger("konkred-bot.quota-handlers")
+logger = logging.getLogger("konkred.quota-handlers")
 
 quota_router = Router(name="quota")
 
@@ -39,27 +36,16 @@ def _upgrade_keyboard() -> types.InlineKeyboardMarkup:
     )
 
 
-def _paywall_text(remaining: int = 0) -> str:
-    return (
-        "⚠️ *Your free quota is finished.*\n\n"
-        f"Remaining messages: `{remaining}`\n\n"
-        "Buy a package to continue. Payment is in USDT on the TRON (TRC20) network.\n"
-        "Your website and Telegram credit are the same balance."
-    )
-
-
 @quota_router.message(Command("usage"))
 async def handle_usage(message: types.Message) -> None:
-    """Show the caller's remaining quota — the same balance the website shows."""
+    """Show remaining quota — the same balance konkred.xyz shows."""
     if message.from_user is None:
         return
     try:
         balance = await quota_client.balance(message.from_user.id)
     except QuotaUnavailable as exc:
         logger.warning("usage lookup failed: %s", exc)
-        await message.answer(
-            "⚠️ The quota service is temporarily unavailable. Please try again shortly."
-        )
+        await message.answer("⚠️ The quota service is temporarily unavailable. Please try again shortly.")
         return
 
     await message.answer(
@@ -67,7 +53,7 @@ async def handle_usage(message: types.Message) -> None:
         f"• Plan: `{balance.plan}`\n"
         f"• Free trial messages left: `{balance.trial_remaining}`\n"
         f"• Purchased messages left: `{balance.paid_remaining}`\n"
-        f"• **Total remaining: `{balance.total_remaining}`**\n\n"
+        f"• *Total remaining: {balance.total_remaining}*\n\n"
         "This is the same balance used on konkred.xyz.",
         reply_markup=_upgrade_keyboard() if balance.exhausted else None,
     )
@@ -75,12 +61,7 @@ async def handle_usage(message: types.Message) -> None:
 
 @quota_router.message(Command("buy"))
 async def handle_buy(message: types.Message) -> None:
-    """Send the user to the checkout page.
-
-    Payment deliberately happens on the website, not in chat: the invoice,
-    the exact amount and the network warning must be shown on a page the user
-    can read carefully before transferring funds.
-    """
+    """Link to the checkout page."""
     if message.from_user is None:
         return
     try:
@@ -91,7 +72,7 @@ async def handle_buy(message: types.Message) -> None:
 
     await message.answer(
         "🛒 *Buy Konkred credit*\n\n"
-        "Packages are paid in **USDT on the TRON (TRC20) network**.\n\n"
+        "Packages are paid in *USDT on the TRON (TRC20) network*.\n\n"
         "⚠️ *Important:* send funds only on the network shown on the invoice page. "
         "Transfers on the wrong network cannot be recovered."
         f"{remaining}",
@@ -102,24 +83,29 @@ async def handle_buy(message: types.Message) -> None:
 async def reserve_quota(message: types.Message) -> bool:
     """Reserve one message before calling the gateway.
 
-    Returns True when the bot should proceed. Call this at the top of the chat
-    handler:
-
-        if not await reserve_quota(message):
-            return
+    Returns True when the bot should proceed. On exhaustion this sends the
+    paywall itself and returns False.
     """
     if message.from_user is None:
         return False
     try:
-        result = await quota_client.spend(message.from_user.id, 1, reference=f"tg:{message.message_id}")
+        result = await quota_client.spend(
+            message.from_user.id, 1, reference=f"tg:{message.message_id}"
+        )
     except QuotaUnavailable as exc:
-        # FAIL OPEN: an outage in billing must not take the bot offline.
+        # FAIL OPEN — a billing outage must not take the bot offline.
         logger.warning("quota check unavailable, allowing message: %s", exc)
         return True
 
     if not result.allowed:
         remaining = result.balance.total_remaining if result.balance else 0
-        await message.answer(_paywall_text(remaining), reply_markup=_upgrade_keyboard())
+        await message.answer(
+            "⚠️ *Your free quota is finished.*\n\n"
+            f"Remaining messages: `{remaining}`\n\n"
+            "Buy a package to continue. Payment is in USDT on the TRON (TRC20) network.\n"
+            "Your website and Telegram credit are the same balance.",
+            reply_markup=_upgrade_keyboard(),
+        )
         return False
     return True
 

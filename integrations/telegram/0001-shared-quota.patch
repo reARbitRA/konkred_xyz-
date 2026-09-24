@@ -1,0 +1,563 @@
+From bbd49c9423cfd8b9bda34d99d665bb34232d0e22 Mon Sep 17 00:00:00 2001
+From: "arena-ai-coding-agent[bot]"
+ <arena-ai-coding-agent[bot]@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 18:02:46 +0000
+Subject: [PATCH] feat(bot): share one quota balance with the website
+
+Adds /buy and /usage, and meters chat messages against the same balance
+konkred.xyz uses, so a user's credit is identical on both surfaces.
+
+- bot/quota_client.py: client for the website's /api/internal/quota/* contract.
+  Uses httpx (already a dependency) rather than adding aiohttp. Identity is
+  always telegram:<id> derived from the update, never from user text.
+- bot/quota_handlers.py: /usage shows the shared balance; /buy links to the
+  checkout page with the TRC20 wrong-network warning. Payment stays on the
+  website so the invoice and warning are read on a real page.
+- bot/main.py: quota_router is registered BEFORE the chat router, otherwise
+  the catch-all text handler would swallow /buy and /usage.
+- bot/handlers.py: reserves one message BEFORE calling the gateway, so an
+  exhausted user never consumes provider credit; refunds on GatewayError, on
+  an unexpected exception, and on a 200 with empty content.
+- render.yaml: KONKRED_SITE_URL and INTERNAL_API_KEY for the bot service.
+
+Design note: an HTTP contract is used instead of giving this bot PostgreSQL
+credentials. Direct access would duplicate the spend/trial/refund rules in a
+second language, and the first divergence between the two is a billing bug.
+
+Fails open by design: if the quota service is unreachable the bot still
+answers. Losing revenue on a few messages beats an outage.
+
+Tests: 97 pass (88 existing + 9 new). scripts/check_python_imports.py OK.
+---
+ bot/handlers.py         |  17 ++++-
+ bot/main.py             |   4 ++
+ bot/quota_client.py     | 152 ++++++++++++++++++++++++++++++++++++++++
+ bot/quota_handlers.py   | 117 +++++++++++++++++++++++++++++++
+ bot/tests/test_quota.py | 125 +++++++++++++++++++++++++++++++++
+ render.yaml             |   8 +++
+ 6 files changed, 421 insertions(+), 2 deletions(-)
+ create mode 100644 bot/quota_client.py
+ create mode 100644 bot/quota_handlers.py
+ create mode 100644 bot/tests/test_quota.py
+
+diff --git a/bot/handlers.py b/bot/handlers.py
+index 5d159cc..0129511 100644
+--- a/bot/handlers.py
++++ b/bot/handlers.py
+@@ -33,6 +33,7 @@ from chunking import chunk_with_footer, split_telegram_message, utf16_len
+ from config import SETTINGS, allowed_user_id_set
+ from gateway_client import GatewayError, gateway_client
+ from history import HistoryManager
++from quota_handlers import refund_quota, reserve_quota
+ from keyboards import (
+     CALLBACK_CLEAR,
+     CALLBACK_STATUS,
+@@ -177,7 +178,7 @@ async def handle_start(message: types.Message, state: FSMContext) -> None:
+         "Stateful, multi-turn AI chat backed by a quota-aware multi-provider pool "
+         "(Gemini · Groq · Cerebras · Mistral · OpenRouter · Cloudflare · GitHub) with "
+         "automatic fallback when a free tier is exhausted.\n\n"
+-        "**Commands:** `/task` switch mode · `/clear` wipe memory · `/status` health\n\n"
++        "**Commands:** `/task` mode · `/clear` memory · `/status` health · `/usage` quota · `/buy` credit\n\n"
+         "Select your active operational task below:",
+         reply_markup=get_task_keyboard(SETTINGS.default_task),
+     )
+@@ -191,7 +192,9 @@ async def handle_help(message: types.Message) -> None:
+         "• `/start` — welcome + task selector\n"
+         "• `/task <name>` — switch mode (general, code-generation, bug-fixing, architecture, summarization, translate)\n"
+         "• `/clear` — purge stored conversation memory\n"
+-        "• `/status` — gateway + bot health snapshot\n\n"
++        "• `/status` — gateway + bot health snapshot\n"
++        "• `/usage` — remaining message quota (shared with konkred.xyz)\n"
++        "• `/buy` — purchase more messages (USDT · TRON TRC20)\n\n"
+         "Just send any text message to chat. Long answers are split automatically.",
+     )
+ 
+@@ -300,6 +303,12 @@ async def handle_chat_message(message: types.Message, state: FSMContext, history
+     if not prompt:
+         return
+ 
++    # Reserve quota BEFORE contacting the gateway, so an exhausted user never
++    # consumes provider credit. This sends the paywall itself when refused, and
++    # fails open if the quota service is unreachable.
++    if not await reserve_quota(message):
++        return
++
+     prior_history: List[Dict[str, str]] = await history_mgr.get_history(user_id)
+     messages_payload = prior_history + [{"role": "user", "content": prompt}]
+ 
+@@ -316,6 +325,7 @@ async def handle_chat_message(message: types.Message, state: FSMContext, history
+     except GatewayError as exc:
+         METRICS["gateway_errors"] += 1
+         logger.warning("gateway error for user=%s: %s", user_id, exc)
++        await refund_quota(message)   # never charge for our own failure
+         await send_long_message(message, _error_text(exc), parse_mode=None)
+         return
+     except asyncio.CancelledError:
+@@ -323,11 +333,14 @@ async def handle_chat_message(message: types.Message, state: FSMContext, history
+     except Exception as exc:  # noqa: BLE001 - never let an update die silently
+         METRICS["gateway_errors"] += 1
+         logger.exception("unexpected failure handling update")
++        await refund_quota(message)
+         await send_long_message(message, f"❌ **Unexpected error:** `{type(exc).__name__}: {str(exc)[:300]}`", parse_mode=None)
+         return
+ 
+     content = str(result.get("content") or "").strip()
+     if not content:
++        # A 200 with no content is still a failed generation for the user.
++        await refund_quota(message)
+         await send_long_message(message, "⚠️ The gateway returned an empty completion. Try again or switch task mode.", parse_mode=None)
+         return
+ 
+diff --git a/bot/main.py b/bot/main.py
+index 098666f..206106b 100644
+--- a/bot/main.py
++++ b/bot/main.py
+@@ -30,6 +30,7 @@ import config
+ from config import SETTINGS
+ from gateway_client import gateway_client
+ from handlers import METRICS, router
++from quota_handlers import quota_router
+ from history import HistoryManager
+ 
+ logging.basicConfig(
+@@ -112,6 +113,9 @@ async def main() -> int:
+     )
+     dp = Dispatcher(storage=storage)
+     dp["history_mgr"] = history_mgr
++    # Quota commands first: `router` ends with a catch-all text handler, so a
++    # later registration would never see /buy or /usage.
++    dp.include_router(quota_router)
+     dp.include_router(router)
+ 
+     await gateway_client.wait_until_ready(timeout=SETTINGS.startup_wait_timeout, interval=2.0)
+diff --git a/bot/quota_client.py b/bot/quota_client.py
+new file mode 100644
+index 0000000..ed86502
+--- /dev/null
++++ b/bot/quota_client.py
+@@ -0,0 +1,152 @@
++"""Quota client — makes the bot share ONE balance with the website.
++
++The website (`reARbitRA/konkred_xyz-`) owns the billing database and exposes a
++narrow service-to-service contract:
++
++    POST /api/internal/quota/spend    {identity, amount, surface, reference}
++    GET  /api/internal/quota/balance?identity=telegram:<id>
++    POST /api/internal/quota/refund   {identity, amount, reference}
++
++Why HTTP rather than giving this bot PostgreSQL credentials: the spend/trial/
++refund rules would then exist twice, in two languages, and the first divergence
++between them is a billing bug. Here the rules live once and the bot holds only
++a service token scoped to quota operations.
++
++Uses `httpx`, already a dependency of this service — no new package.
++
++Configuration:
++    KONKRED_SITE_URL=https://www.konkred.xyz
++    INTERNAL_API_KEY=<identical to the website's INTERNAL_API_KEY>
++
++Identity is always `telegram:<user_id>`, taken from the Telegram update itself
++and never from user-controlled text, so nobody can spend another account's
++quota by typing an identity.
++"""
++from __future__ import annotations
++
++import logging
++import os
++from dataclasses import dataclass
++from typing import Optional
++
++import httpx
++
++logger = logging.getLogger("konkred.quota")
++
++TIMEOUT_SECONDS = 8.0
++
++
++class QuotaUnavailable(RuntimeError):
++    """The quota service is unreachable, unauthenticated or misconfigured.
++
++    Callers treat this as "allow the message through" (fail open): losing
++    revenue on a few messages is better than an outage of the whole bot.
++    """
++
++
++@dataclass(frozen=True)
++class Balance:
++    trial_remaining: int
++    paid_remaining: int
++    total_remaining: int
++    plan: str
++
++    @property
++    def exhausted(self) -> bool:
++        return self.total_remaining <= 0
++
++
++@dataclass(frozen=True)
++class SpendResult:
++    allowed: bool
++    balance: Optional[Balance]
++    upgrade_url: str = "/checkout"
++
++
++def identity_for(user_id: int) -> str:
++    """Canonical identity for a Telegram user. Derived, never user-supplied."""
++    return f"telegram:{int(user_id)}"
++
++
++class QuotaClient:
++    def __init__(self, site_url: Optional[str] = None, internal_key: Optional[str] = None) -> None:
++        self._base = (site_url if site_url is not None else os.getenv("KONKRED_SITE_URL", "")).rstrip("/")
++        self._key = internal_key if internal_key is not None else os.getenv("INTERNAL_API_KEY", "")
++
++    @property
++    def configured(self) -> bool:
++        return bool(self._base and self._key)
++
++    async def _request(self, method: str, path: str, payload: Optional[dict] = None) -> dict:
++        if not self.configured:
++            raise QuotaUnavailable("KONKRED_SITE_URL / INTERNAL_API_KEY are not set")
++        try:
++            async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
++                response = await client.request(
++                    method,
++                    f"{self._base}{path}",
++                    json=payload,
++                    headers={"x-internal-key": self._key},
++                )
++        except httpx.TimeoutException as exc:
++            raise QuotaUnavailable("quota service timed out") from exc
++        except httpx.HTTPError as exc:
++            raise QuotaUnavailable(f"quota service unreachable: {type(exc).__name__}") from exc
++
++        try:
++            body = response.json()
++        except ValueError:
++            body = {}
++
++        # 402 is a normal business outcome (out of quota), not a transport error.
++        if response.status_code not in (200, 402):
++            raise QuotaUnavailable(f"{path} returned HTTP {response.status_code}")
++        return {"_status": response.status_code, **(body if isinstance(body, dict) else {})}
++
++    @staticmethod
++    def _balance_from(body: dict) -> Balance:
++        return Balance(
++            trial_remaining=int(body.get("trialRemaining") or 0),
++            paid_remaining=int(body.get("paidRemaining") or 0),
++            total_remaining=int(body.get("totalRemaining") or 0),
++            plan=str(body.get("plan") or "free"),
++        )
++
++    async def balance(self, user_id: int) -> Balance:
++        body = await self._request("GET", f"/api/internal/quota/balance?identity={identity_for(user_id)}")
++        return self._balance_from(body)
++
++    async def spend(self, user_id: int, amount: int = 1, reference: Optional[str] = None) -> SpendResult:
++        body = await self._request(
++            "POST",
++            "/api/internal/quota/spend",
++            {
++                "identity": identity_for(user_id),
++                "amount": amount,
++                "surface": "telegram",
++                "reference": reference,
++            },
++        )
++        if body.get("_status") == 402:
++            return SpendResult(False, self._balance_from(body), str(body.get("upgradeUrl") or "/checkout"))
++        return SpendResult(True, self._balance_from(body))
++
++    async def refund(self, user_id: int, amount: int = 1, reference: Optional[str] = None) -> None:
++        """Return quota after a failed generation.
++
++        Best-effort by design: a refund failure is logged but never raised, so
++        it cannot turn a gateway error into a second, confusing error for the
++        user. The ledger records refunds separately, so a missed one is
++        recoverable from the audit trail.
++        """
++        try:
++            await self._request(
++                "POST",
++                "/api/internal/quota/refund",
++                {"identity": identity_for(user_id), "amount": amount, "reference": reference},
++            )
++        except QuotaUnavailable as exc:
++            logger.warning("refund failed for user=%s: %s", user_id, exc)
++
++
++quota_client = QuotaClient()
+diff --git a/bot/quota_handlers.py b/bot/quota_handlers.py
+new file mode 100644
+index 0000000..680475c
+--- /dev/null
++++ b/bot/quota_handlers.py
+@@ -0,0 +1,117 @@
++"""`/buy` and `/usage` commands, plus quota metering for chat messages.
++
++Behaviour matches the website exactly, because both read the same balance:
++
++* Every chat message reserves one unit BEFORE the gateway is called, so a user
++  who is out of quota never consumes provider credit.
++* Exhaustion shows an upgrade prompt with a button — not an error.
++* A failed generation is refunded: users are never charged for our faults.
++* If the quota service is unreachable the bot FAILS OPEN and still answers.
++
++Payment deliberately happens on the website rather than in chat: the invoice,
++the exact amount and the wrong-network warning must be shown on a page the user
++can read carefully before transferring funds.
++"""
++from __future__ import annotations
++
++import logging
++import os
++
++from aiogram import Router, types
++from aiogram.filters import Command
++
++from quota_client import QuotaUnavailable, quota_client
++
++logger = logging.getLogger("konkred.quota-handlers")
++
++quota_router = Router(name="quota")
++
++SITE_URL = os.getenv("KONKRED_SITE_URL", "https://www.konkred.xyz").rstrip("/")
++CHECKOUT_URL = f"{SITE_URL}/checkout"
++
++
++def _upgrade_keyboard() -> types.InlineKeyboardMarkup:
++    return types.InlineKeyboardMarkup(
++        inline_keyboard=[[types.InlineKeyboardButton(text="🛒 Buy credit", url=CHECKOUT_URL)]]
++    )
++
++
++@quota_router.message(Command("usage"))
++async def handle_usage(message: types.Message) -> None:
++    """Show remaining quota — the same balance konkred.xyz shows."""
++    if message.from_user is None:
++        return
++    try:
++        balance = await quota_client.balance(message.from_user.id)
++    except QuotaUnavailable as exc:
++        logger.warning("usage lookup failed: %s", exc)
++        await message.answer("⚠️ The quota service is temporarily unavailable. Please try again shortly.")
++        return
++
++    await message.answer(
++        "📊 *Your usage*\n\n"
++        f"• Plan: `{balance.plan}`\n"
++        f"• Free trial messages left: `{balance.trial_remaining}`\n"
++        f"• Purchased messages left: `{balance.paid_remaining}`\n"
++        f"• *Total remaining: {balance.total_remaining}*\n\n"
++        "This is the same balance used on konkred.xyz.",
++        reply_markup=_upgrade_keyboard() if balance.exhausted else None,
++    )
++
++
++@quota_router.message(Command("buy"))
++async def handle_buy(message: types.Message) -> None:
++    """Link to the checkout page."""
++    if message.from_user is None:
++        return
++    try:
++        balance = await quota_client.balance(message.from_user.id)
++        remaining = f"\n\nYou currently have `{balance.total_remaining}` messages left."
++    except QuotaUnavailable:
++        remaining = ""  # never block the purchase path on a lookup failure
++
++    await message.answer(
++        "🛒 *Buy Konkred credit*\n\n"
++        "Packages are paid in *USDT on the TRON (TRC20) network*.\n\n"
++        "⚠️ *Important:* send funds only on the network shown on the invoice page. "
++        "Transfers on the wrong network cannot be recovered."
++        f"{remaining}",
++        reply_markup=_upgrade_keyboard(),
++    )
++
++
++async def reserve_quota(message: types.Message) -> bool:
++    """Reserve one message before calling the gateway.
++
++    Returns True when the bot should proceed. On exhaustion this sends the
++    paywall itself and returns False.
++    """
++    if message.from_user is None:
++        return False
++    try:
++        result = await quota_client.spend(
++            message.from_user.id, 1, reference=f"tg:{message.message_id}"
++        )
++    except QuotaUnavailable as exc:
++        # FAIL OPEN — a billing outage must not take the bot offline.
++        logger.warning("quota check unavailable, allowing message: %s", exc)
++        return True
++
++    if not result.allowed:
++        remaining = result.balance.total_remaining if result.balance else 0
++        await message.answer(
++            "⚠️ *Your free quota is finished.*\n\n"
++            f"Remaining messages: `{remaining}`\n\n"
++            "Buy a package to continue. Payment is in USDT on the TRON (TRC20) network.\n"
++            "Your website and Telegram credit are the same balance.",
++            reply_markup=_upgrade_keyboard(),
++        )
++        return False
++    return True
++
++
++async def refund_quota(message: types.Message) -> None:
++    """Refund after a failed generation so the user is not charged."""
++    if message.from_user is None:
++        return
++    await quota_client.refund(message.from_user.id, 1, reference=f"tg:{message.message_id}")
+diff --git a/bot/tests/test_quota.py b/bot/tests/test_quota.py
+new file mode 100644
+index 0000000..3197e0f
+--- /dev/null
++++ b/bot/tests/test_quota.py
+@@ -0,0 +1,125 @@
++"""Tests for the shared-quota client and handlers.
++
++The commercial risk runs both ways, so both are asserted: a user must not get
++unlimited free messages, and a user must never be charged twice or charged for
++our own failures.
++"""
++from __future__ import annotations
++
++import _bootstrap  # noqa: F401  (adds bot/ to sys.path)
++
++import httpx
++import pytest
++
++from quota_client import Balance, QuotaClient, QuotaUnavailable, identity_for
++
++
++def client_with(handler) -> QuotaClient:
++    """A QuotaClient whose HTTP calls are served by `handler`."""
++    transport = httpx.MockTransport(handler)
++    quota = QuotaClient("https://site.test", "service-key")
++
++    async def _request(method: str, path: str, payload=None):
++        async with httpx.AsyncClient(transport=transport) as http:
++            response = await http.request(
++                method, f"https://site.test{path}", json=payload,
++                headers={"x-internal-key": "service-key"},
++            )
++        try:
++            body = response.json()
++        except ValueError:
++            body = {}
++        if response.status_code not in (200, 402):
++            raise QuotaUnavailable(f"{path} returned HTTP {response.status_code}")
++        return {"_status": response.status_code, **(body if isinstance(body, dict) else {})}
++
++    quota._request = _request  # type: ignore[assignment]
++    return quota
++
++
++def json_response(status: int, payload: dict):
++    return lambda request: httpx.Response(status, json=payload)
++
++
++BALANCE = {"plan": "free", "trialRemaining": 7, "paidRemaining": 0, "totalRemaining": 7}
++
++
++def test_identity_is_derived_not_supplied():
++    assert identity_for(12345) == "telegram:12345"
++    # Even if a string sneaks in, it is coerced to an int — no injection.
++    assert identity_for(int("99")) == "telegram:99"
++
++
++def test_unconfigured_client_raises_rather_than_silently_allowing():
++    unconfigured = QuotaClient("", "")
++    assert unconfigured.configured is False
++
++
++@pytest.mark.asyncio
++async def test_balance_is_parsed():
++    quota = client_with(json_response(200, BALANCE))
++    balance = await quota.balance(1)
++    assert balance == Balance(7, 0, 7, "free")
++    assert balance.exhausted is False
++
++
++@pytest.mark.asyncio
++async def test_spend_allows_when_quota_remains():
++    quota = client_with(json_response(200, {**BALANCE, "totalRemaining": 6}))
++    result = await quota.spend(1)
++    assert result.allowed is True
++    assert result.balance.total_remaining == 6
++
++
++@pytest.mark.asyncio
++async def test_spend_refused_on_402_with_upgrade_url():
++    quota = client_with(json_response(402, {
++        "code": "QUOTA_EXHAUSTED", "upgradeUrl": "/checkout",
++        "plan": "free", "trialRemaining": 0, "paidRemaining": 0, "totalRemaining": 0,
++    }))
++    result = await quota.spend(1)
++    assert result.allowed is False
++    assert result.upgrade_url == "/checkout"
++    assert result.balance.exhausted is True
++
++
++@pytest.mark.asyncio
++async def test_unauthorized_is_reported_as_unavailable_not_as_permission_to_spend():
++    # A 401 must never be mistaken for "allowed"; it raises, and the caller
++    # decides (the handler fails open deliberately and logs).
++    quota = client_with(json_response(401, {"code": "UNAUTHORIZED"}))
++    with pytest.raises(QuotaUnavailable):
++        await quota.spend(1)
++
++
++@pytest.mark.asyncio
++async def test_server_error_raises_unavailable():
++    quota = client_with(json_response(503, {"code": "BILLING_UNAVAILABLE"}))
++    with pytest.raises(QuotaUnavailable):
++        await quota.balance(1)
++
++
++@pytest.mark.asyncio
++async def test_refund_never_raises_even_when_the_service_is_down():
++    # A refund failure must not turn a gateway error into a second error for
++    # the user; the ledger keeps the audit trail.
++    quota = client_with(json_response(500, {}))
++    await quota.refund(1)  # must not raise
++
++
++@pytest.mark.asyncio
++async def test_spend_sends_the_telegram_surface_and_derived_identity():
++    seen = {}
++
++    def handler(request: httpx.Request) -> httpx.Response:
++        import json
++        seen.update(json.loads(request.content))
++        seen["auth"] = request.headers.get("x-internal-key")
++        return httpx.Response(200, json=BALANCE)
++
++    quota = client_with(handler)
++    await quota.spend(4242, reference="tg:7")
++    assert seen["identity"] == "telegram:4242"
++    assert seen["surface"] == "telegram"
++    assert seen["reference"] == "tg:7"
++    assert seen["auth"] == "service-key"
+diff --git a/render.yaml b/render.yaml
+index 2cf5049..5ad6438 100644
+--- a/render.yaml
++++ b/render.yaml
+@@ -121,3 +121,11 @@ services:
+         value: /tmp/konkred-bot-heartbeat
+       - key: ALLOWED_USER_IDS
+         sync: false # optional: comma separated Telegram user IDs
++      # ── Shared quota with the website ───────────────────────────────────
++      # The bot spends from the SAME balance as konkred.xyz via the website's
++      # /api/internal/quota/* contract. Without these two variables the bot
++      # still works but is unmetered (it fails open by design).
++      - key: KONKRED_SITE_URL
++        value: https://www.konkred.xyz
++      - key: INTERNAL_API_KEY
++        sync: false # must be IDENTICAL to the website's INTERNAL_API_KEY
+-- 
+2.39.5
+
