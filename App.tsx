@@ -39,6 +39,7 @@ const ResourcesPage = lazy(() => import('./pages/ResourcesPage.tsx'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide.tsx'));
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage.tsx'));
 const ContactPage = lazy(() => import('./pages/ContactPage.tsx'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage.tsx'));
 
 import { getPathForPage, getPageFromPath } from './utils/routes.ts';
 
@@ -169,6 +170,7 @@ const App: React.FC = () => {
                             productSlug ? <KitDetailPage slug={productSlug} onNavigate={navigate} /> : <CataloguePage onNavigate={navigate} />
                         )}
                         {currentPage === 'pricing' && <PricingPage onNavigate={navigate} />}
+                        {currentPage === 'checkout' && <CheckoutPage />}
                         {currentPage === 'sprint' && <SprintPage onNavigate={navigate} />}
                         {currentPage === 'enterprise' && <EnterprisePage onNavigate={navigate} />}
                         {currentPage === 'partners' && <PartnersPage onNavigate={navigate} />}

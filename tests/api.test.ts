@@ -120,3 +120,29 @@ describe('API', () => {
     expect(JSON.stringify(body)).not.toMatch(/gh[pousr]_/);
   });
 });
+
+/**
+ * Unknown /api/* routes must return JSON, never the SPA HTML shell.
+ *
+ * Regression guard: these paths previously fell through to the static/Vite
+ * handler and answered "200 <!DOCTYPE html>". A JSON client then failed while
+ * parsing HTML, producing a misleading error instead of a clean 404 — the same
+ * class of confusing failure that made the original production incident hard
+ * to diagnose.
+ */
+describe('unknown API routes', () => {
+  it('returns a JSON 404 rather than the SPA shell', async () => {
+    for (const path of ['/api/nonexistent', '/api/fullkonk/bogus', '/api/payments/nope']) {
+      const res = await fetch(`${baseUrl}${path}`);
+      expect(res.status, `${path} status`).toBe(404);
+      expect(res.headers.get('content-type'), `${path} content-type`).toMatch(/application\/json/);
+      const raw = await res.text();
+      expect(raw, `${path} body`).not.toContain('<!DOCTYPE');
+      expect(JSON.parse(raw).code).toBe('ROUTE_NOT_FOUND');
+    }
+  });
+
+  it('still serves real API routes normally', async () => {
+    expect((await fetch(`${baseUrl}/api/health`)).status).toBe(200);
+  });
+});

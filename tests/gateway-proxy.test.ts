@@ -44,6 +44,7 @@ async function mount(upstream: typeof fetch, deps: Partial<ProxyDeps> = {}): Pro
     limits: deps.limits,
     timeouts: deps.timeouts || { jsonMs: 5_000, connectMs: 1_000, idleMs: 1_000, overallMs: 5_000 },
     fallback: deps.fallback,
+    meter: deps.meter,
   });
   const server: Server = createServer((req, res) => {
     void handler(req, res);
@@ -460,8 +461,10 @@ describe('gateway proxy — configuration, SSRF, methods and fallback', () => {
       const sessions = await fetch(`${h.baseUrl}/api/fullkonk/sessions/abc?count=5`);
       expect(sessions.status).toBe(200);
       expect((await sessions.json()).legacy).toBe(true);
+      // /api/health is NOT delegated any more: it is owned by the proxy so it
+      // stays answerable even when the legacy bundle cannot be loaded.
       const health = await fetch(`${h.baseUrl}/api/health`);
-      expect((await health.json()).legacy).toBe(true);
+      expect((await health.json()).legacy).toBeUndefined();
       const usage = await post(h.baseUrl, '/api/fullkonk/usage', { userId: 'abc' });
       expect(usage.status).toBe(200);
       const optimize = await post(h.baseUrl, '/api/fullkonk/optimize-prompt', { prompt: 'make it better' });
@@ -522,6 +525,209 @@ describe('gateway proxy — secret screening and redacted logs', () => {
       expect(allLogs).not.toContain(CONFIG.gatewayApiKey);
       expect(allLogs).not.toContain(CONFIG.fullkonkKey);
       expect(allLogs.toLowerCase()).not.toContain('authorization');
+    } finally { await h.close(); }
+  });
+});
+
+/**
+ * Regression suite for the production incident in which every /api/* route
+ * returned `500 FUNCTION_INVOCATION_FAILED`.
+ *
+ * The health contract must hold under the exact conditions that caused the
+ * outage: no configuration at all, and an unreachable gateway. In both cases
+ * the function must answer with controlled JSON.
+ */
+describe('health contract (incident regression)', () => {
+  const UNCONFIGURED: GatewayConfig = { gatewayUrl: '', gatewayApiKey: '', fullkonkKey: '' };
+
+  it('GET /api/health is 200 even with no configuration and no legacy app', async () => {
+    const h = await mount(async () => jsonResponse(200, {}), { config: UNCONFIGURED });
+    try {
+      const res = await fetch(`${h.baseUrl}/api/health`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe('ok');
+      expect(body.service).toBe('konkred-website');
+      // Booleans only — never the values themselves.
+      expect(body.configured).toEqual({ gatewayUrl: false, gatewayApiKey: false, fullkonkKey: false });
+      // The gateway must not even be contacted for a liveness probe.
+      expect(h.calls).toHaveLength(0);
+    } finally { await h.close(); }
+  });
+
+  it('GET /api/health never leaks secret values, only booleans', async () => {
+    const h = await mount(async () => jsonResponse(200, {}));
+    try {
+      const raw = await (await fetch(`${h.baseUrl}/api/health`)).text();
+      expect(raw).not.toContain(CONFIG.gatewayApiKey);
+      expect(raw).not.toContain(CONFIG.fullkonkKey);
+      expect(raw).not.toContain(CONFIG.gatewayUrl);
+      expect(JSON.parse(raw).configured.fullkonkKey).toBe(true);
+    } finally { await h.close(); }
+  });
+
+  it('GET /api/ready reports 503 GATEWAY_NOT_CONFIGURED instead of crashing', async () => {
+    const h = await mount(async () => jsonResponse(200, {}), { config: UNCONFIGURED });
+    try {
+      const res = await fetch(`${h.baseUrl}/api/ready`);
+      expect(res.status).toBe(503);
+      const body = await res.json();
+      expect(body.code).toBe('GATEWAY_NOT_CONFIGURED');
+      expect(body.status).toBe('degraded');
+    } finally { await h.close(); }
+  });
+
+  it('GET /api/ready reports 200 when the gateway answers its health probe', async () => {
+    const h = await mount(async () => jsonResponse(200, { status: 'ok' }));
+    try {
+      const res = await fetch(`${h.baseUrl}/api/ready`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe('ok');
+      expect(body.gateway.reachable).toBe(true);
+      expect(h.calls[0].url).toBe(`${CONFIG.gatewayUrl}/api/health`);
+    } finally { await h.close(); }
+  });
+
+  it('GET /api/ready degrades to 503 GATEWAY_UNREACHABLE on a network failure', async () => {
+    const h = await mount(async () => { throw new Error('ECONNREFUSED'); });
+    try {
+      const res = await fetch(`${h.baseUrl}/api/ready`);
+      expect(res.status).toBe(503);
+      const body = await res.json();
+      expect(body.code).toBe('GATEWAY_UNREACHABLE');
+      expect(body.gateway.reachable).toBe(false);
+    } finally { await h.close(); }
+  });
+
+  it('GET /api/ready degrades to 503 GATEWAY_UNHEALTHY when the gateway errors', async () => {
+    const h = await mount(async () => jsonResponse(502, { error: 'bad' }));
+    try {
+      const res = await fetch(`${h.baseUrl}/api/ready`);
+      expect(res.status).toBe(503);
+      expect((await res.json()).code).toBe('GATEWAY_UNHEALTHY');
+    } finally { await h.close(); }
+  });
+
+  it('a gateway outage degrades /api/ready but never /api/health', async () => {
+    const h = await mount(async () => { throw new Error('ECONNREFUSED'); });
+    try {
+      expect((await fetch(`${h.baseUrl}/api/ready`)).status).toBe(503);
+      // Liveness must stay green: the Vercel function itself is fine.
+      expect((await fetch(`${h.baseUrl}/api/health`)).status).toBe(200);
+    } finally { await h.close(); }
+  });
+
+  it('health routes do not require the legacy fallback to be usable', async () => {
+    // Simulates the deployment where importing the bundled Express app throws
+    // (missing firebase-admin / pg configuration) — the original crash source.
+    const h = await mount(async () => jsonResponse(200, {}), {
+      config: UNCONFIGURED,
+      fallback: () => { throw new Error('legacy app is unavailable'); },
+    });
+    try {
+      expect((await fetch(`${h.baseUrl}/api/health`)).status).toBe(200);
+      expect((await fetch(`${h.baseUrl}/api/ready`)).status).toBe(503);
+    } finally { await h.close(); }
+  });
+});
+
+/**
+ * Metering integration: the proxy must enforce the paywall before spending
+ * provider credit, and must never charge for a generation it failed to deliver.
+ */
+describe('generation metering', () => {
+  const sse = (body: string) =>
+    new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+
+  it('answers 402 with an upgrade path when quota is exhausted', async () => {
+    const h = await mount(async () => sse('data: {"type":"delta","content":"x"}\n\n'), {
+      meter: async () => ({ allowed: false, body: { error: 'exhausted', code: 'QUOTA_EXHAUSTED', upgradeUrl: '/checkout' } }),
+    });
+    try {
+      const res = await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody());
+      expect(res.status).toBe(402);
+      const body = await res.json();
+      expect(body.code).toBe('QUOTA_EXHAUSTED');
+      expect(body.upgradeUrl).toBe('/checkout');
+      // The gateway must NOT have been contacted: no provider credit spent.
+      expect(h.calls).toHaveLength(0);
+    } finally { await h.close(); }
+  });
+
+  it('allows and does not refund a successful generation', async () => {
+    let refunds = 0;
+    const h = await mount(async () => sse('data: {"type":"delta","content":"hello"}\n\ndata: {"type":"done"}\n\n'), {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      const res = await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody());
+      expect(res.status).toBe(200);
+      await res.text();
+      expect(refunds).toBe(0);
+      expect(h.calls).toHaveLength(1);
+    } finally { await h.close(); }
+  });
+
+  it('refunds when the gateway rejects the request', async () => {
+    let refunds = 0;
+    const h = await mount(async () => jsonResponse(503, { error: 'no capacity' }), {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      await (await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).text();
+      expect(refunds).toBe(1);
+    } finally { await h.close(); }
+  });
+
+  it('refunds when the gateway is unreachable', async () => {
+    let refunds = 0;
+    const h = await mount(async () => { throw new Error('ECONNREFUSED'); }, {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      await (await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).text();
+      expect(refunds).toBe(1);
+    } finally { await h.close(); }
+  });
+
+  it('refunds a 200 response that streams no content', async () => {
+    let refunds = 0;
+    const h = await mount(async () => sse(''), {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      await (await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).text();
+      expect(refunds).toBe(1);
+    } finally { await h.close(); }
+  });
+
+  it('refunds at most once per generation', async () => {
+    let refunds = 0;
+    const h = await mount(async () => jsonResponse(500, { error: 'boom' }), {
+      meter: async () => ({ allowed: true, refund: async () => { refunds += 1; } }),
+    });
+    try {
+      await (await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).text();
+      expect(refunds).toBeLessThanOrEqual(1);
+    } finally { await h.close(); }
+  });
+
+  it('FAILS OPEN: a metering outage never blocks generation', async () => {
+    const h = await mount(async () => sse('data: {"type":"done"}\n\n'), {
+      meter: async () => { throw new Error('database down'); },
+    });
+    try {
+      const res = await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody());
+      // Losing revenue on one request beats taking the product offline.
+      expect(res.status).toBe(200);
+    } finally { await h.close(); }
+  });
+
+  it('remains unmetered when no meter is configured', async () => {
+    const h = await mount(async () => sse('data: {"type":"done"}\n\n'));
+    try {
+      expect((await post(h.baseUrl, '/api/fullkonk/generate', validGenerateBody())).status).toBe(200);
     } finally { await h.close(); }
   });
 });

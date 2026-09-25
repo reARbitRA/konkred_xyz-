@@ -73,9 +73,15 @@ describe('portfolio routing', () => {
   });
 
   it('purged marketplace routes stay 404', () => {
-    for (const p of ['/checkout', '/wallet', '/seller-dashboard', '/buyer-dashboard', '/admin', '/dispute', '/affiliate', '/listing', '/wizard']) {
+    // '/checkout' is deliberately NOT in this list any more: it is now a real,
+    // implemented billing page backed by /api/payments/*, not a mock storefront.
+    for (const p of ['/wallet', '/seller-dashboard', '/buyer-dashboard', '/admin', '/dispute', '/affiliate', '/listing', '/wizard']) {
       expect(getPageFromPath(p).page, `${p} should 404`).toBe('not_found');
     }
+  });
+
+  it('/checkout resolves to the real billing page', () => {
+    expect(getPageFromPath('/checkout').page).toBe('checkout');
   });
 
   it('preserved flagship routes still resolve', () => {

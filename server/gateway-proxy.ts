@@ -31,12 +31,39 @@ const GENERATE_CONNECT_TIMEOUT_MS = 15_000;
 const GENERATE_IDLE_TIMEOUT_MS = 90_000;
 const GENERATE_OVERALL_TIMEOUT_MS = 280_000;      // below Vercel maxDuration 300
 const PROVIDER_CACHE_TTL_MS = 30_000;
+/** /api/ready probes the gateway; kept short so the health check never hangs. */
+const READY_PROBE_TIMEOUT_MS = 5_000;
 
 const BUILD_MODES = new Set(['fullstack', 'frontend', 'backend', 'review']);
 const ATTACHMENT_EXT = /\.(?:tsx?|jsx?|json|prisma|sql|ya?ml|sh|css|html?|md)$/i;
 const OWNER_REPO_RE = /^[A-Za-z0-9_.-]{1,100}$/;
 const BRANCH_RE = /^[A-Za-z0-9._/-]{1,200}$/;
 const FILE_PATH_RE = /^[\w@+.,()[\] /-]{1,240}$/;
+/**
+ * Repository paths an export may never write, even though the characters are
+ * individually legal.
+ *
+ * Found by the P8 audit: the character class alone allowed `/etc/passwd`,
+ * `.git/config` and `.github/workflows/ci.yml`. Writing into `.git/` can
+ * rewrite remotes or credential helpers, and a file under `.github/workflows/`
+ * is CODE THAT GITHUB EXECUTES on the owner's repository — a generated-content
+ * feature must never be able to place either.
+ */
+const FORBIDDEN_PATH_PREFIXES = ['.git/', '.github/workflows/', '.github/actions/'];
+const FORBIDDEN_PATH_EXACT = new Set(['.git', '.env', '.npmrc', '.netrc', '.gitmodules', '.git-credentials']);
+
+/** True when a validated-looking path is still unsafe to write. */
+function isUnsafeExportPath(candidate: string): boolean {
+  // Absolute paths escape the repository root entirely.
+  if (candidate.startsWith('/')) return true;
+  // Leading "./" and doubled slashes normalise away and can mask a prefix.
+  if (candidate.startsWith('./') || candidate.includes('//')) return true;
+  const lower = candidate.toLowerCase();
+  if (FORBIDDEN_PATH_EXACT.has(lower)) return true;
+  if (FORBIDDEN_PATH_PREFIXES.some((prefix) => lower.startsWith(prefix))) return true;
+  // Any path segment that is exactly ".env" or sits inside a .git directory.
+  return lower.split('/').some((segment) => segment === '.git' || segment === '.env');
+}
 
 export interface GatewayConfig {
   /** Root URL of the Konkred Gateway, e.g. https://gateway.example.com (env-only). */
@@ -66,6 +93,20 @@ export interface ProxyDeps {
   timeouts?: { jsonMs?: number; connectMs?: number; idleMs?: number; overallMs?: number };
   /** Fallback for every route not owned by the gateway (the legacy Express app). */
   fallback?: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>;
+  /**
+   * Optional quota hook for paid generation.
+   *
+   * Injected rather than imported so the proxy stays independent of the
+   * database: when it is absent (or the deployment has no DATABASE_URL)
+   * generation is simply unmetered instead of failing closed. Returning
+   * `allowed:false` makes the route answer 402 with `body`.
+   */
+  meter?: (req: IncomingMessage) => Promise<{
+    allowed: boolean;
+    body?: unknown;
+    /** Called when the generation produced nothing, so it is not charged. */
+    refund?: () => Promise<void>;
+  }>;
 }
 
 type RouteName = 'providers' | 'generate' | 'export' | 'ai';
@@ -296,7 +337,7 @@ function validateExport(body: Record<string, unknown> | null): ValidationResult 
     if (!item || typeof item !== 'object') return { ok: false, status: 400, error: 'Each file must be an object.' };
     const f = item as Record<string, unknown>;
     const fpath = asString(f.path, 240);
-    if (!fpath || !FILE_PATH_RE.test(fpath) || fpath.includes('..')) {
+    if (!fpath || !FILE_PATH_RE.test(fpath) || fpath.includes('..') || isUnsafeExportPath(fpath)) {
       return { ok: false, status: 400, error: `File path is not allowed: ${fpath || '(empty)'}.` };
     }
     if (typeof f.content !== 'string' || f.content.length > 1_000_000) {
@@ -423,6 +464,81 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     return false;
   }
 
+  /**
+   * Health / readiness.
+   *
+   *  GET /api/health → liveness. ALWAYS 200 when the serverless function can
+   *    execute at all. It reports which server-only variables are configured
+   *    (booleans only — never values) so an operator can diagnose a bad Vercel
+   *    environment from the browser without any secret leaking.
+   *
+   *  GET /api/ready → readiness. Additionally probes the gateway's own
+   *    /api/health with a short timeout. A gateway outage yields a controlled
+   *    503 JSON body, never an invocation crash and never a hanging request.
+   */
+  async function handleHealth(req: IncomingMessage, res: ServerResponse, deep: boolean): Promise<void> {
+    const configured = {
+      gatewayUrl: Boolean(gatewayUrl),
+      gatewayApiKey: Boolean(config.gatewayApiKey),
+      fullkonkKey: Boolean(config.fullkonkKey),
+    };
+    const base = {
+      status: 'ok' as string,
+      service: 'konkred-website',
+      runtime: 'vercel-node',
+      time: new Date().toISOString(),
+      configured,
+    };
+
+    if (!deep) {
+      sendJson(res, 200, base);
+      return;
+    }
+
+    if (!gatewayUrl) {
+      sendJson(res, 503, {
+        ...base,
+        status: 'degraded',
+        code: 'GATEWAY_NOT_CONFIGURED',
+        gateway: { reachable: false, reason: 'not_configured' },
+        error: 'The Konkred Gateway integration is not configured on this deployment.',
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = timers(READY_PROBE_TIMEOUT_MS, () => controller.abort());
+    if (typeof timer.unref === 'function') timer.unref();
+    const started = now();
+    try {
+      const upstream = await fetchImpl(`${gatewayUrl}/api/health`, {
+        method: 'GET',
+        headers: { accept: 'application/json', 'x-brain-key': config.fullkonkKey },
+        signal: controller.signal,
+      });
+      const ms = now() - started;
+      // The gateway's body is deliberately NOT echoed: it may contain provider
+      // or key-pool detail that is not safe for an unauthenticated browser.
+      if (!upstream.ok) {
+        log('health.gateway_unhealthy', { status: upstream.status, ms });
+        sendJson(res, 503, { ...base, status: 'degraded', code: 'GATEWAY_UNHEALTHY', gateway: { reachable: true, status: upstream.status, ms } });
+        return;
+      }
+      sendJson(res, 200, { ...base, gateway: { reachable: true, status: upstream.status, ms } });
+    } catch (error) {
+      const aborted = (error as Error)?.name === 'AbortError';
+      log('health.gateway_unreachable', { ms: now() - started, reason: aborted ? 'timeout' : 'network' });
+      sendJson(res, 503, {
+        ...base,
+        status: 'degraded',
+        code: aborted ? 'GATEWAY_TIMEOUT' : 'GATEWAY_UNREACHABLE',
+        gateway: { reachable: false, reason: aborted ? 'timeout' : 'network' },
+      });
+    } finally {
+      clearTimeout(timer as unknown as ReturnType<typeof setTimeout>);
+    }
+  }
+
   async function forwardJson(
     req: IncomingMessage,
     res: ServerResponse,
@@ -432,7 +548,16 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     validated: { body: string },
     timeoutMs: number,
     cacheable = false,
+    refund?: () => Promise<void>,
   ): Promise<void> {
+    // Refund at most once, and only when the caller received no completion.
+    let refunded = false;
+    const refundOnce = async (reason: string): Promise<void> => {
+      if (!refund || refunded) return;
+      refunded = true;
+      log('meter.refund', { route, reason });
+      try { await refund(); } catch { log('error.refund_failed', { route }); }
+    };
     const controller = new AbortController();
     const cancellation = bindCancellation(req, res, controller);
     const timer = timers(timeoutMs, () => controller.abort());
@@ -451,6 +576,7 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
       // Defense in depth: never relay our own gateway credentials.
       if (secrets.some((secret) => buffer.includes(Buffer.from(secret)))) {
         log('error.secret_in_upstream_body', { route, status: upstream.status });
+        await refundOnce('screening_failed');
         sendJson(res, 502, { error: 'The Konkred Gateway returned a response that failed safety screening.' });
         return;
       }
@@ -460,6 +586,8 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
         headers['cache-control'] = 'private, max-age=30';
         cache.set(upstreamPath, { expires: now() + PROVIDER_CACHE_TTL_MS, status: upstream.status, contentType, retryAfter, body: buffer });
       }
+      // The caller got no usable completion, so do not charge for it.
+      if (!upstream.ok) await refundOnce(`upstream_${upstream.status}`);
       if (res.writableEnded || res.destroyed) return;
       res.statusCode = upstream.status;
       res.setHeader('content-type', contentType);
@@ -527,7 +655,20 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     }
   }
 
-  async function handleGenerate(req: IncomingMessage, res: ServerResponse, validated: { body: string }): Promise<void> {
+  async function handleGenerate(
+    req: IncomingMessage,
+    res: ServerResponse,
+    validated: { body: string },
+    refund?: () => Promise<void>,
+  ): Promise<void> {
+    // Refund at most once, and only when the user received nothing of value.
+    let refunded = false;
+    const refundOnce = async (reason: string): Promise<void> => {
+      if (!refund || refunded) return;
+      refunded = true;
+      log('meter.refund', { route: 'generate', reason });
+      try { await refund(); } catch { log('error.refund_failed', { route: 'generate' }); }
+    };
     const controller = new AbortController();
     const cancellation = bindCancellation(req, res, controller);
     const clientGone = (): boolean => cancellation.isClientGone();
@@ -578,7 +719,14 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
       if (requestId) res.setHeader('x-request-id', requestId);
       res.flushHeaders?.();
       headWritten = true;
-      if (!upstream.body) { res.end(); return; }
+      // Upstream refused (4xx/5xx): the user got no generation, so refund.
+      if (!upstream.ok) await refundOnce(`upstream_${upstream.status}`);
+      if (!upstream.body) {
+        if (upstream.ok) await refundOnce('empty_body');
+        res.end();
+        return;
+      }
+      let streamedBytes = 0;
       const guard = makeSecretGuard(secrets);
       const reader = upstream.body.getReader();
       resetIdle();
@@ -594,12 +742,18 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
           break;
         }
         if (clientGone() || res.destroyed || res.writableEnded) { controller.abort(); break; }
+        streamedBytes += chunk.length;
         res.write(chunk);
       }
+      // A successful connection that produced no content is still a failure
+      // from the user's point of view; do not charge for it.
+      if (upstream.ok && streamedBytes === 0) await refundOnce('no_content');
       if (!clientGone() && !res.destroyed && !res.writableEnded) res.end();
       log('route.complete', { route: 'generate', status: upstream.status, ms: now() - started });
     } catch (error) {
       if (!headWritten) {
+        // Nothing was delivered at all — always refund.
+        await refundOnce('upstream_failure');
         handleUpstreamFailure(req, res, 'generate', error, controller, log, started, now);
       } else {
         // Mid-stream failure: terminate cleanly; the client treats a truncated
@@ -622,6 +776,16 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     const rawUrl = req.url || '/';
     const pathname = rawUrl.split('?')[0];
     const method = req.method || 'GET';
+
+    // ── Health contract (Phase 1) ───────────────────────────────────────────
+    // These routes are owned by the proxy itself and MUST NOT depend on the
+    // bundled legacy Express app, a database, Firebase, or the gateway being
+    // reachable. They are the only thing that can prove "the Vercel function is
+    // alive" during an incident, so they must never throw.
+    if (pathname === '/api/health' || pathname === '/api/ready') {
+      await handleHealth(req, res, pathname === '/api/ready');
+      return;
+    }
 
     const routeMatch =
       pathname === '/api/fullkonk/providers' ? { name: 'providers' as RouteName, method: 'GET', upstream: '/api/fullkonk/providers', kind: 'brain' as const, max: 0, validate: null }
@@ -679,10 +843,36 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
       return;
     }
     const safe = validation as { ok: true; body: string };
+
+    // Meter EVERY route that performs paid inference, before contacting the
+    // gateway, so an exhausted caller never consumes provider credit.
+    //
+    // /api/ai must be included: it forwards chat messages for real inference
+    // exactly like generate does, so metering only generate left an open
+    // bypass — a user who hit the 402 paywall could simply POST to /api/ai
+    // and keep going for free. Read-only routes (providers) and the export
+    // route are not inference and stay unmetered.
+    const METERED_ROUTES = new Set<RouteName>(['generate', 'ai']);
+    let refund: (() => Promise<void>) | undefined;
+    if (deps.meter && METERED_ROUTES.has(routeMatch.name)) {
+      try {
+        const decision = await deps.meter(req);
+        if (!decision.allowed) {
+          log('route.quota_exhausted', { route: routeMatch.name });
+          sendJson(res, 402, decision.body ?? { error: 'Quota exhausted.', code: 'QUOTA_EXHAUSTED', upgradeUrl: '/checkout' });
+          return;
+        }
+        refund = decision.refund;
+      } catch (error) {
+        // Fail open: a database blip must not take inference offline.
+        log('error.meter_failed', { name: (error as Error)?.name || 'Error' });
+      }
+    }
+
     if (routeMatch.name === 'generate') {
-      await handleGenerate(req, res, safe);
+      await handleGenerate(req, res, safe, refund);
     } else {
-      await forwardJson(req, res, routeMatch.name, routeMatch.upstream, routeMatch.kind, safe, timeouts.jsonMs);
+      await forwardJson(req, res, routeMatch.name, routeMatch.upstream, routeMatch.kind, safe, timeouts.jsonMs, false, refund);
     }
   };
 }

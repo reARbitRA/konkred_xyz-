@@ -35,3 +35,7 @@ dist-ssr
 test-results
 playwright-report
 blob-report
+
+# Python bytecode (created when running the Telegram client locally)
+__pycache__/
+*.pyc

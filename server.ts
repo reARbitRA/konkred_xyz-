@@ -33,12 +33,139 @@ const adminDb = getAdminFirestore();
 export async function createApp(): Promise<express.Express> {
   const app = express();
 
-  app.use(cors());
+  /**
+   * CORS policy.
+   *
+   * Previously `cors()` with no options, which emits
+   * `Access-Control-Allow-Origin: *` on every route. That was tolerable when
+   * the API was public read-only content, but the billing and quota endpoints
+   * added since are per-user state — any site could read a visitor's balance
+   * or start a purchase flow against their identity.
+   *
+   * Policy now:
+   *   * `/api/internal/*` — no CORS at all. Service-to-service only; a browser
+   *     must never be able to reach it, token or otherwise.
+   *   * `/api/quota`, `/api/payments/*` — same-origin only (no ACAO header),
+   *     since only our own pages call them.
+   *   * everything else — unchanged public access, so existing embeds and
+   *     integrations that read catalogue/demo endpoints keep working.
+   */
+  const PRIVATE_CORS_PREFIXES = ["/api/internal/", "/api/payments/", "/api/quota"];
+  const publicCors = cors();
+  app.use((req, res, next) => {
+    const isPrivate = PRIVATE_CORS_PREFIXES.some(
+      (prefix) => req.path === prefix || req.path.startsWith(prefix),
+    );
+    if (isPrivate) {
+      // Vary so a cached public response can never be reused for these paths.
+      res.setHeader("Vary", "Origin");
+      // A cross-origin preflight for a private route is refused outright.
+      if (req.method === "OPTIONS" && req.headers.origin) {
+        return res.status(403).json({ error: "Cross-origin requests are not allowed.", code: "CORS_DENIED" });
+      }
+      return next();
+    }
+    return publicCors(req, res, next);
+  });
+
+  // ── Billing / payments ────────────────────────────────────────────────────
+  // Mounted BEFORE express.json() because the NowPayments webhook signature is
+  // computed over the body, and these handlers read and parse the raw stream
+  // themselves. Letting body-parser consume it first would leave the webhook
+  // handler with an empty stream and break verification.
+  //
+  // Mirrors the Vercel function (api/index.ts) so local behaviour matches
+  // production. A deployment without DATABASE_URL gets a controlled 503.
+  const BILLING_PATHS = new Set([
+    "/api/quota",
+    "/api/payments/plans",
+    "/api/payments/create",
+    "/api/payments/status",
+    "/api/payments/nowpayments/webhook",
+  ]);
+  app.use(async (req, res, next) => {
+    // /api/internal/* is the bot's quota contract (service token authenticated).
+    if (!BILLING_PATHS.has(req.path) && !req.path.startsWith("/api/internal/")) return next();
+    try {
+      const { billingConfigured, getPaymentRoutes } = await import("./server/billing-runtime");
+      if (!billingConfigured()) {
+        return res.status(503).json({
+          error: "سرویس پرداخت هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.",
+          code: "BILLING_NOT_CONFIGURED",
+        });
+      }
+      const routes = await getPaymentRoutes();
+      if (!routes) {
+        return res.status(503).json({
+          error: "سرویس پرداخت موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.",
+          code: "BILLING_UNAVAILABLE",
+          retryable: true,
+        });
+      }
+      if (await routes(req, res)) return undefined;
+      return next();
+    } catch (error) {
+      console.error("[billing] event=error.mount name=" + ((error as Error)?.name || "Error"));
+      return res.status(503).json({ error: "سرویس پرداخت موقتاً در دسترس نیست.", code: "BILLING_UNAVAILABLE", retryable: true });
+    }
+  });
+
   app.use(express.json({ limit: "1mb" }));
 
   // API Routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", node: "KONKRED-PROD-01" });
+  //
+  // Health contract — kept deliberately identical in shape to the Vercel
+  // function (server/gateway-proxy.ts) so that what is verified locally is what
+  // runs in production. Both report liveness plus which server-only variables
+  // are present, as booleans only: a value is never echoed to the browser.
+  app.get(["/api/health", "/api/ready"], async (req, res) => {
+    const gatewayUrl = (process.env.KONKRED_GATEWAY_URL || process.env.BRAIN_URL || '').replace(/\/+$/, '');
+    const fullkonkKey = process.env.FULLKONK_KEY || process.env.BRAIN_KEY || '';
+    const base = {
+      status: "ok",
+      service: "konkred-website",
+      runtime: "node-express",
+      node: "KONKRED-PROD-01",
+      time: new Date().toISOString(),
+      configured: {
+        gatewayUrl: Boolean(gatewayUrl),
+        gatewayApiKey: Boolean(process.env.KONKRED_GATEWAY_API_KEY),
+        fullkonkKey: Boolean(fullkonkKey),
+      },
+    };
+
+    // Liveness: must succeed whenever the process can serve a request at all.
+    if (req.path !== "/api/ready") return res.json(base);
+
+    // Readiness: additionally prove the gateway is reachable, with a short
+    // timeout so this endpoint can never hang.
+    if (!gatewayUrl) {
+      return res.status(503).json({ ...base, status: "degraded", code: "GATEWAY_NOT_CONFIGURED", gateway: { reachable: false, reason: "not_configured" } });
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const started = Date.now();
+    try {
+      const upstream = await fetch(`${gatewayUrl}/api/health`, {
+        headers: { accept: "application/json", "x-brain-key": fullkonkKey },
+        signal: controller.signal,
+      });
+      const ms = Date.now() - started;
+      if (!upstream.ok) {
+        return res.status(503).json({ ...base, status: "degraded", code: "GATEWAY_UNHEALTHY", gateway: { reachable: true, status: upstream.status, ms } });
+      }
+      return res.json({ ...base, gateway: { reachable: true, status: upstream.status, ms } });
+    } catch (error) {
+      const aborted = (error as Error)?.name === "AbortError";
+      return res.status(503).json({
+        ...base,
+        status: "degraded",
+        code: aborted ? "GATEWAY_TIMEOUT" : "GATEWAY_UNREACHABLE",
+        gateway: { reachable: false, reason: aborted ? "timeout" : "network" },
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   });
 
   // GitHub OAuth: Get URL
@@ -846,6 +973,20 @@ export async function createApp(): Promise<express.Express> {
         message: redactSecrets(error instanceof Error ? error.message : 'Demo execution failed.'),
       });
     }
+  });
+
+  // ── Unknown API routes must answer JSON, never the SPA shell ──────────────
+  // Without this, /api/anything falls through to the Vite/static handler and
+  // returns 200 text/html. A JSON client then tries to parse "<!DOCTYPE html>"
+  // and reports a confusing syntax error instead of a clean 404, which is
+  // exactly the class of misleading failure that made the original incident
+  // hard to diagnose.
+  app.use("/api", (req, res) => {
+    res.status(404).json({
+      error: "The requested API route does not exist.",
+      code: "ROUTE_NOT_FOUND",
+      path: req.path,
+    });
   });
 
   // Serve REDAEYE sales checkout page

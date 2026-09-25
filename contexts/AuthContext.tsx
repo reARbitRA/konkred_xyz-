@@ -85,6 +85,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('message', handleOauthMessage);
 
+    // ── Never hang the whole site on Firebase ────────────────────────────────
+    // `onAuthStateChanged` only resolves when Firebase can reach its backend.
+    // If the network is blocked, the domain is not whitelisted, or the project
+    // is misconfigured, the callback NEVER fires — `isLoading` stays true and
+    // App.tsx renders <AuthLoadingScreen /> forever. That is the infinite
+    // "INITIALIZING_CORE / UPLINK: SECURE" screen seen in production.
+    //
+    // A watchdog resolves the boot as "signed out" so the public site always
+    // becomes usable. Signing in still works normally afterwards: if the real
+    // auth callback arrives later it simply supersedes this state.
+    let settled = false;
+    const settle = (): void => {
+      if (settled) return;
+      settled = true;
+      setIsLoading(false);
+    };
+    const authWatchdog = window.setTimeout(() => {
+      if (settled) return;
+      console.warn('[auth] Firebase did not respond within 8s; continuing as signed out.');
+      setUser(null);
+      settle();
+    }, 8000);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.emailVerified) {
         try {
@@ -122,10 +145,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setUser(null);
       }
-      setIsLoading(false);
+      settle();
+    },
+    // Error callback: without this an auth backend failure rejects silently and
+    // the boot never completes.
+    (error) => {
+      console.warn('[auth] Firebase auth listener failed; continuing as signed out.', error?.message || error);
+      setUser(null);
+      settle();
     });
 
     return () => {
+      window.clearTimeout(authWatchdog);
       window.removeEventListener('message', handleOauthMessage);
       unsubscribe();
     };

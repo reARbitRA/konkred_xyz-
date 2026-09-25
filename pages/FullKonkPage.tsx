@@ -148,13 +148,20 @@ export default function FullKonkPage() {
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const [saveState, setSaveState] = useState('SAVE AS PROJECT');
   const [providersLoaded, setProvidersLoaded] = useState(false);
+  /** Persian, user-facing reason the provider list could not be loaded. */
+  const [providersError, setProvidersError] = useState<string | null>(null);
+  /** Set when the server answers 402: the user is out of quota. */
+  const [paywalled, setPaywalled] = useState(false);
+  const [quota, setQuota] = useState<{ totalRemaining: number; trialRemaining: number; paidRemaining: number } | null>(null);
   const [retryable, setRetryable] = useState(false);
+  const providersAbortRef = useRef<AbortController | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
   const startTimeRef = useRef(0);
   const generationTextRef = useRef('');
   const baseFilesRef = useRef<GeneratedFile[]>([]);
   const latestPromptRef = useRef('');
+  const idempotencyRef = useRef('');
   const metricsRef = useRef<PipelineMetrics>({ tokensPerSecond: 0, totalTokens: 0, provider: '', elapsedMs: 0 });
 
   useEffect(() => {
@@ -176,18 +183,46 @@ export default function FullKonkPage() {
     try { localStorage.setItem('fk-byok', JSON.stringify(next)); } catch { /* private mode */ }
   };
 
-  useEffect(() => {
+  /**
+   * Provider discovery.
+   *
+   * Every outcome must be terminal: success, a controlled configuration error,
+   * a network error, or a timeout. The selector previously stayed on "LOADING…"
+   * forever whenever this request failed, which is one of the infinite spinners
+   * the brief calls out. A 12s abort guarantees the UI always settles, and
+   * `providersError` drives a visible Persian message plus a RETRY button.
+   */
+  const loadProviders = useCallback(() => {
+    providersAbortRef.current?.abort();
     const controller = new AbortController();
+    providersAbortRef.current = controller;
+    // Guarantees the UI leaves the loading state even if the network stalls.
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+
+    setProvidersError(null);
+    setProvidersLoaded(false);
+
     fetch('/api/fullkonk/providers', { signal: controller.signal })
       .then(async response => {
         if (!response.ok) {
           // Configuration/availability problem — never masquerade as "no providers".
+          const detail = (await response.json().catch(() => ({}))) as { error?: string; code?: string };
+          // Branch on the HTTP status only. Server-side error *codes* are never
+          // hard-coded in client JavaScript (see tests/client-bundle.test.ts):
+          // 503 = the deployment is not configured, anything else = transient.
+          const message = response.status === 503
+            ? 'سرویس هوش مصنوعی هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.'
+            : 'دریافت فهرست ارائه‌دهنده‌ها ممکن نشد. لطفاً دوباره تلاش کنید.';
+          // Diagnostic code stays in the console only; users see plain Persian.
+          console.warn('[fullkonk] providers failed', { status: response.status, code: detail.code });
+          setProvidersError(message);
           setProvidersLoaded(true);
           return { providers: [] as ProviderOption[] };
         }
         return (await response.json().catch(() => ({}))) as { providers?: ProviderOption[] };
       })
       .then(data => {
+        if (!mountedRef.current) return;
         setAllProviders(data.providers || []);
         setProvidersLoaded(true);
         const all = data.providers || [];
@@ -205,10 +240,30 @@ export default function FullKonkPage() {
       })
       // A failed probe says nothing about server configuration; never claim
       // "no providers" just because this request could not be completed.
-      .catch(() => undefined);
-    return () => controller.abort();
+      .catch((error: unknown) => {
+        if (!mountedRef.current) return;
+        const aborted = (error as Error)?.name === 'AbortError';
+        console.warn('[fullkonk] providers unreachable', { reason: aborted ? 'timeout' : 'network' });
+        setProvidersError(aborted
+          ? 'زمان دریافت فهرست ارائه‌دهنده‌ها به پایان رسید. لطفاً دوباره تلاش کنید.'
+          : 'ارتباط با سرور برقرار نشد. اتصال خود را بررسی و دوباره تلاش کنید.');
+        // Terminal state: the spinner must never persist.
+        setProvidersLoaded(true);
+      })
+      .finally(() => window.clearTimeout(timeout));
   }, []);
-  useEffect(() => () => { mountedRef.current = false; abortRef.current?.abort(); }, []);
+
+  useEffect(() => {
+    loadProviders();
+    return () => providersAbortRef.current?.abort();
+  }, [loadProviders]);
+  // Re-arm on mount: React StrictMode (and any remount) runs the cleanup once,
+  // and a ref that is only ever set to false would permanently suppress every
+  // subsequent setState — leaving the UI stuck in its loading state.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; abortRef.current?.abort(); };
+  }, []);
   useEffect(() => {
     if (!streaming) return;
     const timer = window.setInterval(() => setMetrics(value => ({ ...value, elapsedMs: Date.now() - startTimeRef.current })), 100);
@@ -226,18 +281,39 @@ export default function FullKonkPage() {
     });
   }, []);
 
-  const handleSend = useCallback(async (rawPrompt: string) => {
+  /** Read the authoritative balance from the server (never computed client-side). */
+  const refreshQuota = useCallback(async () => {
+    try {
+      const response = await fetch('/api/quota');
+      if (!response.ok) return;              // quota display is best-effort
+      const data = await response.json();
+      if (mountedRef.current) setQuota(data);
+    } catch {
+      /* Non-fatal: the balance strip simply stays hidden. */
+    }
+  }, []);
+
+  useEffect(() => { void refreshQuota(); }, [refreshQuota]);
+
+  const handleSend = useCallback(async (rawPrompt: string, reuseIdempotencyKey = false) => {
     const prompt = rawPrompt.trim();
     if (!prompt || streaming) return;
     const controller = new AbortController();
     abortRef.current = controller;
     startTimeRef.current = Date.now();
     latestPromptRef.current = prompt;
+    // One key per logical generation. A retry of the SAME generation reuses it
+    // so a reconnect is never billed twice (server-side dedup lives in
+    // server/metering.ts; the key is scoped under the server-derived identity).
+    if (!reuseIdempotencyKey || !idempotencyRef.current) {
+      idempotencyRef.current = crypto.randomUUID().replace(/-/g, '');
+    }
     generationTextRef.current = '';
     baseFilesRef.current = activeProject?.files || files;
     setPreviousFiles(baseFilesRef.current);
     setStreaming(true);
     setRetryable(false);
+    setPaywalled(false);
     setStage(mode === 'review' ? 'review' : 'architect');
     setStageText('INITIALIZING PIPELINE');
     metricsRef.current = { tokensPerSecond: 0, totalTokens: 0, provider: '', elapsedMs: 0 };
@@ -262,7 +338,7 @@ export default function FullKonkPage() {
       const byok = byokKeys[provider] ? { 'x-provider-key': byokKeys[provider] } : {};
       const response = await fetch('/api/fullkonk/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...byok, ...headers },
+        headers: { 'Content-Type': 'application/json', 'x-idempotency-key': idempotencyRef.current, ...byok, ...headers },
         body: JSON.stringify({ prompt, mode, provider, model, temperature, maxTokens, systemPrompt: systemPrompt || undefined, projectId: activeProject?.id, attachedFiles: attachments }),
         signal: controller.signal,
       });
@@ -336,12 +412,23 @@ export default function FullKonkPage() {
       if (userId) void logUsage({ userId, provider: metricsRef.current.provider || provider, model, mode, stage: 'done', tokens: metricsRef.current.totalTokens, durationMs: Date.now() - startTimeRef.current, success: true });
       setAttachments([]);
       setSidebarRefresh(value => value + 1);
+      void refreshQuota();   // reflect the message just consumed
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         // User STOP or unmount: leave no error banner behind.
         if (mountedRef.current) { setStage('idle'); setStageText(''); }
       } else if (mountedRef.current) {
         const message = error instanceof Error && error.message ? error.message : 'Unknown pipeline error';
+        // 402 is a business state, not a fault: show the paywall instead of an
+        // error the user cannot act on. Retrying would fail identically.
+        if (error instanceof GatewayError && error.status === 402) {
+          setPaywalled(true);
+          setRetryable(false);
+          setStage('idle');
+          setStageText('');
+          void refreshQuota();
+          return;
+        }
         // Exhausted failover, capacity (429/5xx) and network faults are
         // recoverable; validation/configuration faults are terminal.
         const retryable = error instanceof RetryablePipelineError
@@ -362,7 +449,8 @@ export default function FullKonkPage() {
     const prompt = latestPromptRef.current;
     if (!prompt || streaming) return;
     setRetryable(false);
-    void handleSend(prompt);
+    // Reuse the key: this is the same logical generation, retried.
+    void handleSend(prompt, true);
   }, [handleSend, streaming]);
 
   useEffect(() => {
@@ -407,9 +495,33 @@ export default function FullKonkPage() {
       <div style={{ display: 'flex', gap: 4 }}>{MODES.map(item => <button key={item.id} disabled={streaming} onClick={() => setMode(item.id)} className={`fk-btn${mode === item.id ? ' fk-btn-acc' : ''}`}>{item.label}</button>)}</div>
       <button onClick={() => setShowSettings(value => !value)} className="fk-btn">⚙ SETTINGS</button>
       <button onClick={() => setLiveEnv(value => !value)} className={`fk-btn${liveEnv ? ' fk-btn-acc' : ''}`}>▶ LIVE ENV</button>
-      <select className="fk-select" value={provider} disabled={streaming} onChange={event => { const next = providerOptions.find(option => option.id === event.target.value); setProvider(event.target.value); if (next?.models[0]) setModel(next.models[0].id); }}>{providerOptions.length ? providerOptions.map(option => <option key={option.id} value={option.id}>{option.name.toUpperCase()}</option>) : <option value={provider}>{providersLoaded ? 'NO KEY — PICK ONE, ADD KEY IN ⚙' : 'LOADING…'}</option>}</select>
+      <select className="fk-select" value={provider} disabled={streaming} onChange={event => { const next = providerOptions.find(option => option.id === event.target.value); setProvider(event.target.value); if (next?.models[0]) setModel(next.models[0].id); }}>{providerOptions.length ? providerOptions.map(option => <option key={option.id} value={option.id}>{option.name.toUpperCase()}</option>) : <option value={provider}>{!providersLoaded ? 'LOADING…' : providersError ? 'UNAVAILABLE — RETRY' : 'NO KEY — PICK ONE, ADD KEY IN ⚙'}</option>}</select>
       <select value={model} disabled={streaming} onChange={event => setModel(event.target.value)} className="fk-select">{(providerOptions.find(option => option.id === provider)?.models || [{ id: model, label: model }]).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
     </header>
+    {/* Terminal error state for provider discovery: Persian message + retry. */}
+    {providersError && <div
+      role="alert"
+      dir="rtl"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '8px 16px', background: '#2a1416', borderBottom: '2px solid #ff4d4f', color: '#ffd7d8', fontSize: 12 }}
+    >
+      <span>{providersError}</span>
+      <button type="button" onClick={loadProviders} className="fk-btn" style={{ background: '#ff4d4f', borderColor: '#000', color: '#fff' }}>
+        تلاش دوباره
+      </button>
+    </div>}
+    {paywalled && <div
+      role="alert"
+      dir="rtl"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '10px 16px', background: '#2a2413', borderBottom: '2px solid #ffb020', color: '#ffe0a3', fontSize: 12 }}
+    >
+      <span>
+        سهمیهٔ رایگان شما به پایان رسیده است. برای ادامه یکی از بسته‌ها را تهیه کنید.
+        {quota ? ` (باقی‌مانده: ${quota.totalRemaining})` : ''}
+      </span>
+      <a href="/checkout" className="fk-btn" style={{ background: '#ffb020', borderColor: '#000', color: '#0b0d10', textDecoration: 'none' }}>
+        ارتقای حساب
+      </a>
+    </div>}
     {showSettings && <div className="fk-settings" style={{ display: 'grid', gridTemplateColumns: '120px 160px 170px minmax(240px, 1fr)', gap: 10, alignItems: 'center', padding: '8px 16px' }}>
       <label>TEMPERATURE <input type="number" min={0} max={1} step={0.05} value={temperature} onChange={event => setTemperature(Number(event.target.value))} className="fk-select" style={{ width: 58, marginLeft: 5 }} /></label>
       <label>MAX TOKENS <select value={maxTokens} onChange={event => setMaxTokens(Number(event.target.value))} className="fk-select" style={{ marginLeft: 5 }}><option value={4096}>4096</option><option value={8192}>8192</option><option value={16384}>16384</option></select></label>
