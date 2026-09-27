@@ -372,6 +372,11 @@ describe('POST /api/workflows/:slug/demo', () => {
     expect(res.status).toBe(503);
     expect(res.json.error.code).toBe('DEMO_UNAVAILABLE');
     expect(gateway.requests).toHaveLength(0);
+    // This must be the DELIBERATE refusal, not an incidental crash that
+    // happens to produce the same code: a missing ledger is a configuration
+    // fact, so retrying cannot help, and the message must say why.
+    expect(res.json.error.retryable).toBe(false);
+    expect(res.json.error.message).toContain('not configured');
   });
 });
 
