@@ -20,14 +20,14 @@
 
 [![Site](https://img.shields.io/badge/konkred.xyz-D60019?style=for-the-badge&logoColor=F4F1EB&labelColor=0A0908)](https://konkred.xyz)
 [![Email](https://img.shields.io/badge/ari@konkred.xyz-0A0908?style=for-the-badge&logoColor=F4F1EB&labelColor=0A0908)](mailto:ari@konkred.xyz)
-[![Tests](https://img.shields.io/badge/tests-317_passing-D60019?style=for-the-badge&labelColor=0A0908)](#-quality-bar)
+[![Tests](https://img.shields.io/badge/tests-485_passing-D60019?style=for-the-badge&labelColor=0A0908)](#-quality-bar)
 [![License](https://img.shields.io/badge/license-proprietary-0A0908?style=for-the-badge&labelColor=0A0908)](#-licence)
 
 </div>
 
 <img src="./assets/divider.svg" alt="" width="100%">
 
-<img src="./assets/metrics.svg" alt="36 workflows shipped · 367 red-team techniques · 500+ enterprise prompts · 70% cost reduction · 317 automated tests" width="100%">
+<img src="./assets/metrics.svg" alt="36 workflows shipped · 367 red-team techniques · 500+ enterprise prompts · 70% cost reduction · 485 automated tests" width="100%">
 
 <img src="./assets/divider.svg" alt="" width="100%">
 
@@ -228,7 +228,7 @@ done
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server with HMR on `:3000` |
-| `npm test` | 317 tests |
+| `npm test` | 485 tests (6 skip without a database) |
 | `npm run lint` | `tsc --noEmit` |
 | `npm run build:vercel` | Client bundle + API bundle |
 | `bash scripts/setup-secrets.sh` | Generate secrets into a gitignored `0600` file |
@@ -307,7 +307,7 @@ the real handler and attacks it.
 ## `>` QUALITY BAR
 
 ```
-317 tests · 21 files · tsc clean · 27/27 live smoke checks
+485 tests · 25 files · tsc clean · 14/14 guards proven by reversion
 ```
 
 Three practices this project holds to, each of which caught a real bug:
