@@ -166,6 +166,52 @@ export async function getPaymentRoutes(env: BillingRuntimeEnv = process.env): Pr
 export function resetPaymentRoutes(): void {
   cached = undefined;
   cachedMeter = undefined;
+  cachedWorkflowDeps = undefined;
+}
+
+/**
+ * Build the workflow runner's database-backed dependencies (quota ledger +
+ * idempotency/demo store), or `undefined` when this deployment has no
+ * DATABASE_URL.
+ *
+ * Kept lazy and failure-contained for the same reason as everything else here:
+ * a bad database must degrade the feature, not kill the serverless function.
+ * Without it the runner still answers — unmetered for authenticated runs, and
+ * refusing anonymous demos outright, because the demo abuse ceiling is the one
+ * control that cannot safely fail open.
+ */
+let cachedWorkflowDeps:
+  | { billing: import('./billing').Billing; store: import('./workflow-store').WorkflowStore }
+  | null
+  | undefined;
+
+export async function getWorkflowDeps(env: BillingRuntimeEnv = process.env) {
+  if (cachedWorkflowDeps !== undefined) return cachedWorkflowDeps ?? undefined;
+  try {
+    if (!env.DATABASE_URL) { cachedWorkflowDeps = null; return undefined; }
+    const [{ Pool }, { WorkflowStore }] = await Promise.all([import('pg'), import('./workflow-store')]);
+    const pool = new Pool({
+      connectionString: env.DATABASE_URL,
+      max: 3,
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 10_000,
+      ssl: sslConfigFor(env.DATABASE_URL, env),
+    });
+    pool.on('error', () => undefined);
+
+    const trialEnabled = (env.TRIAL_ENABLED ?? 'true') !== 'false';
+    const billing = new Billing(pool, {
+      trialMessages: trialEnabled ? Number(env.TRIAL_MESSAGES || 10) : 0,
+      dailyFreeMessages: Number(env.DAILY_FREE_MESSAGES || 10),
+      dailyMode: env.DAILY_MODE === 'true',
+    });
+    cachedWorkflowDeps = { billing, store: new WorkflowStore(pool) };
+    return cachedWorkflowDeps;
+  } catch (error) {
+    console.error('[workflow] event=error.init name=' + ((error as Error)?.name || 'Error'));
+    cachedWorkflowDeps = null;
+    return undefined;
+  }
 }
 
 /**

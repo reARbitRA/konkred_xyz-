@@ -9,6 +9,7 @@ import type { PageView } from '../types.ts';
 import { getEntryBySlug, WORKFLOWS } from '../content/catalogue/portfolio.ts';
 import type { PortfolioEntry } from '../content/catalogue/types.ts';
 import type { ProductRecord } from '../catalog/types.ts';
+import { getProductBySlug } from '../catalog/products.ts';
 import { MicroTool } from '../components/catalog/MicroTool.tsx';
 import { Pattern } from '../components/portfolio/patterns/index.tsx';
 import { EvidenceLine } from '../components/portfolio/Evidence.tsx';
@@ -63,20 +64,21 @@ const WorkflowDetailPage: React.FC<Props> = ({ slug, onNavigate }) => {
   const dialA = useRef(0);
   const dragging = useRef(false);
 
-  const shim: ProductRecord | null = useMemo(() => {
-    if (!entry?.demo) return null;
-    return {
-      id: entry.id, slug: entry.slug, name: entry.title, category: entry.category,
-      status: 'PUBLIC_DEMO', risk: 'low', humanApprovalRequired: entry.humanApprovalRequired,
-      shortDescription: entry.jobToBeDone ?? '', description: entry.definition ?? '', buyer: entry.buyer ?? '',
-      prompt: entry.demo.prompt, inputSchema: entry.demo.inputSchema, outputSchema: entry.demo.outputSchema,
-      fixture: entry.demo.fixturePath ? { path: entry.demo.fixturePath, label: entry.demo.fixtureLabel ?? '', source: entry.demo.fixtureSource ?? '' } : null,
-      demoStatus: { available: entry.demo.available, fixturePath: entry.demo.fixturePath, note: '' },
-      validationReport: { status: 'available', path: entry.validationReport, note: '' },
-      pricing: (entry.demo.legacyPricing as unknown as ProductRecord['pricing']) ?? { kitUsd: null, validationSprintUsd: null, enterprisePilot: null, currency: 'USD', proposed: true },
-      limitations: entry.demo.legacyLimitations,
-    };
-  }, [entry?.id]);
+  /*
+   * The real manifest record, not a hand-built copy.
+   *
+   * This used to assemble a synthetic `ProductRecord` out of the portfolio
+   * entry's embedded `demo` block, which duplicated the manifest and reported
+   * a fixed `status: 'PUBLIC_DEMO'`, `risk: 'low'` and
+   * `validationReport.status: 'available'` for EVERY workflow — three claims
+   * that are false for most of them. Reading the manifest directly removes the
+   * duplication and the false claims in one move, and keeps the new runtime
+   * fields (taskType, creditsPerRun, runnable…) available to the UI.
+   */
+  const shim: ProductRecord | null = useMemo(
+    () => (entry?.legacySlug ? getProductBySlug(entry.legacySlug) ?? null : null),
+    [entry?.id],
+  );
 
   if (!entry || entry.type !== 'WORKFLOW' || !shim) {
     return (

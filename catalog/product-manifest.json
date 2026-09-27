@@ -1,7 +1,7 @@
 {
   "manifest": {
     "name": "KONKRED Product Catalogue",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "generatedAt": "2026-08-21",
     "purpose": "Canonical manifest for the 15 KONKRED workflow products. Single source of truth for the catalogue, product detail pages, demo layer, and monetization CTAs.",
     "statusLegend": {
@@ -17,7 +17,15 @@
       "STANDARD_KIT",
       "SUPERVISED_PILOT",
       "ENTERPRISE_INTEGRATION"
-    ]
+    ],
+    "creditPolicy": "creditsPerRun = 1 + ceil(maxInputTokens / 8000). One credit is the base cost of a metered run; each additional 8,000 tokens of accepted input adds one, because a long input costs the gateway a proportionally larger share of a shared token budget and may need more than one upstream call. The number is published on every catalogue and run response BEFORE the run so the price is never discovered after the fact.",
+    "privacyPolicy": "Every workflow product is sent to the gateway with privacy:'private'. The gateway excludes any provider flagged trainsOnData:true (currently gemini and mistral), so customer documents are never routed to a provider that trains on submitted data.",
+    "runnabilityLegend": {
+      "PUBLIC_DEMO": "runnable: true, runnableForAnon: true — fixture demo is open to anonymous callers.",
+      "STANDARD_KIT": "runnable: true, runnableForAnon: false — authenticated callers only.",
+      "SUPERVISED_PILOT": "runnable: true, runnableForAnon: false — authenticated callers only.",
+      "ENTERPRISE_INTEGRATION": "runnable: false — not self-serve; 403 CONTACT_REQUIRED."
+    }
   },
   "products": [
     {
@@ -32,6 +40,13 @@
       "description": "A structured review assistant that ingests a contract text, extracts key terms, identifies high-risk clauses (indemnity, liability caps, termination, auto-renewal, non-compete, data processing), and produces a clause-by-clause review with questions for counsel. It is a triage and drafting-support tool, not a substitute for legal advice.",
       "buyer": "Legal ops teams, founders, procurement and finance teams reviewing NDAs, MSAs, DPAs and vendor terms.",
       "prompt": "You are a contract review assistant. Extract and summarize key terms from the provided contract. For each clause, classify risk (LOW/MEDIUM/HIGH), quote the relevant text, and explain the exposure in plain language. Flag missing or unbalanced obligations, auto-renewal, indemnification and liability-cap issues, and data-processing obligations. Never state that a contract is 'compliant', 'binding' or 'enforceable'; always recommend review by qualified counsel. If the input is not contract text, respond with NEEDS_INPUT.",
+      "taskType": "architecture",
+      "privacy": "private",
+      "maxInputTokens": 24000,
+      "maxOutputTokens": 8192,
+      "creditsPerRun": 4,
+      "runnable": true,
+      "runnableForAnon": true,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -159,6 +174,13 @@
       "description": "Static-analysis copilot that reviews infrastructure-as-code for exposed secrets, overly permissive IAM, public buckets, missing encryption, and dangerous defaults. Produces a prioritized findings list with remediation guidance. It never executes plans or applies changes.",
       "buyer": "Platform engineering, DevOps and security teams maintaining Terraform/CloudFormation/K8s estates.",
       "prompt": "You are an infrastructure security review assistant. Analyze the provided IaC manifests. Identify security findings only (misconfigurations, exposed credentials, excessive permissions, missing encryption, unsafe defaults). For each finding output the file, line reference if available, severity (LOW/MEDIUM/HIGH/CRITICAL), and a remediation recommendation. Do not execute, apply, or destroy anything. If the input is not IaC, respond with NEEDS_INPUT. If the input contains live credentials, redact them before analysis.",
+      "taskType": "bug-fixing",
+      "privacy": "private",
+      "maxInputTokens": 16000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 3,
+      "runnable": true,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -280,6 +302,13 @@
       "description": "An enterprise workbench that indexes a structured data-room export, runs structured review playbooks across legal, financial, compliance and people domains, and produces an issue register with open questions for the deal team. Requires supervised integration with the buyer's data-room export and security review.",
       "buyer": "Corporate development, PE/VC deal teams and M&A advisors running structured diligence on targets.",
       "prompt": "You are an M&A due-diligence analyst assistant. Process the provided structured data-room documents and review playbook. For each document, extract facts relevant to the playbook categories, flag red flags and gaps, and output an issue register. Distinguish 'observed fact' from 'inference'. Never produce a valuation, purchase-price adjustment, or binding legal conclusion. If documents are missing or unreadable, output BLOCKED with the list of missing items.",
+      "taskType": "architecture",
+      "privacy": "private",
+      "maxInputTokens": 120000,
+      "maxOutputTokens": 8192,
+      "creditsPerRun": 16,
+      "runnable": false,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -404,7 +433,8 @@
         "Requires structured, redacted data-room exports; unstructured or scanned material is out of scope for v1.",
         "Never produces valuations, price adjustments or binding conclusions.",
         "High sensitivity: requires enterprise security review and data-processing agreement before any data is ingested.",
-        "All findings require deal-team and counsel verification."
+        "All findings require deal-team and counsel verification.",
+        "Inputs above the per-request context budget are split into ordered chunks, analysed with the same prompt, then merged in one synthesis pass. Cross-chunk relationships (a definition in chunk 1 qualifying a clause in chunk 4) can be lost in that merge; input is never silently truncated."
       ]
     },
     {
@@ -419,6 +449,13 @@
       "description": "Ingests a sanitized incident timeline, produces a structured timeline, root-cause hypotheses (with confidence qualifiers), impact assessment and action-item list. Designed for blameless review culture; outputs are a draft for the incident owner, not a final report.",
       "buyer": "SRE, DevOps and security incident-response teams running blameless post-incident reviews.",
       "prompt": "You are an incident post-mortem drafting assistant. From the provided sanitized timeline, produce a structured draft post-mortem: timeline of events, impact, root-cause hypotheses (each with a confidence qualifier), contributing factors, and action items with owners and due dates. Clearly mark hypotheses as hypotheses. If input lacks a timeline, respond NEEDS_INPUT.",
+      "taskType": "summarization",
+      "privacy": "private",
+      "maxInputTokens": 8000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 2,
+      "runnable": true,
+      "runnableForAnon": true,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -567,6 +604,13 @@
       "description": "Triage assistant for audit and compliance evidence requests (SOC 2, ISO 27001, PCI, customer security questionnaires). Classifies each request, suggests the control mapping and evidence artifacts, and drafts a response outline. Acceptance of evidence remains with the compliance owner.",
       "buyer": "GRC and security-compliance teams responding to audits and customer questionnaires.",
       "prompt": "You are a GRC evidence triage assistant. For each evidence request, classify the domain and control family, map to likely artifacts, propose an owner, and draft a response outline. Never assert that evidence 'satisfies' a control or that the organization 'is compliant'. If requests are ambiguous, output NEEDS_INPUT with clarifying questions.",
+      "taskType": "general",
+      "privacy": "private",
+      "maxInputTokens": 8000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 2,
+      "runnable": true,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -685,6 +729,13 @@
       "description": "Ingests bank/PSP statements and ledger exports, performs structured matching (amount, date window, reference), and explains variances with proposed dispositions. No journal entries are created automatically; every disposition requires accounting approval.",
       "buyer": "Finance operations and accounting teams reconciling cash, bank accounts and payment processors.",
       "prompt": "You are a reconciliation copilot. Match the provided bank/PSP transactions to ledger entries using amount and date proximity. Classify each item as MATCHED, TIMING_DIFFERENCE, MISSING_LEDGER, MISSING_BANK, or UNEXPLAINED. Explain variances and propose dispositions. Never post journal entries; every disposition must be approved by accounting. If required fields are missing, output NEEDS_INPUT.",
+      "taskType": "general",
+      "privacy": "private",
+      "maxInputTokens": 16000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 3,
+      "runnable": true,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -857,6 +908,13 @@
       "description": "Assembles response drafts for enterprise RFP/RFI questions using an organization's approved content library. Every claim cites its source; no external submission is ever performed. Human review is required before submission.",
       "buyer": "Sales engineering, proposal teams and BD organizations responding to enterprise RFPs.",
       "prompt": "You are an RFP response drafting assistant. Answer each RFP question using only the provided approved content library. Cite the source item for every claim. Do not invent capabilities, certifications, customers, or metrics. If the library lacks support for a question, respond with BLOCKED and list the missing evidence. Never submit or send anything.",
+      "taskType": "general",
+      "privacy": "private",
+      "maxInputTokens": 24000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 4,
+      "runnable": true,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -996,6 +1054,13 @@
       "description": "Parses solicitation documents into a requirements/compliance matrix: mandatory clauses, deliverables, evaluation criteria, submission deadlines and risks. Outputs are a draft matrix for capture and legal review; it never signs, submits, or certifies anything.",
       "buyer": "GovCon capture teams, proposal managers and small-business contractors responding to federal/state solicitations.",
       "prompt": "You are a government contracting compliance assistant. Parse the solicitation excerpt into a requirements matrix. Include mandatory clauses, deliverables, evaluation criteria, deadlines, and compliance risks. Distinguish 'mandatory' from 'informational'. Do not assert eligibility, certifications, or compliance status; never sign, submit, or certify. If the excerpt is ambiguous, output NEEDS_INPUT.",
+      "taskType": "architecture",
+      "privacy": "private",
+      "maxInputTokens": 40000,
+      "maxOutputTokens": 8192,
+      "creditsPerRun": 6,
+      "runnable": true,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1116,6 +1181,13 @@
       "description": "Ingests budget vs. actual data by line item, quantifies variances, proposes drivers and drafts management commentary. Output is decision-support for the FP&A team; no financial statements are produced.",
       "buyer": "FP&A teams preparing monthly budget-vs-actual commentary for management review.",
       "prompt": "You are an FP&A variance analysis assistant. Compare budget to actuals for each line item. Quantify variance (absolute and %), propose likely drivers (with reasoning), and draft concise management commentary. Distinguish data-driven statements from hypotheses. If data is incomplete, respond NEEDS_INPUT listing missing lines.",
+      "taskType": "general",
+      "privacy": "private",
+      "maxInputTokens": 8000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 2,
+      "runnable": true,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1239,6 +1311,13 @@
       "description": "Turns a set of structured metrics, headlines and notes into a skimmable daily brief (what changed, why it matters, what to watch). All claims are traceable to the input items; no external news is fabricated.",
       "buyer": "Founders, executives and operators who want a disciplined daily operating brief from their own data.",
       "prompt": "You are an executive brief assistant. From the provided structured items, produce a tight daily brief: KEY MOVES (what changed), WHY IT MATTERS (one line each), WATCH LIST (one line each). Cite item IDs for every claim. Do not add facts not present in the input. If input is empty, respond NEEDS_INPUT.",
+      "taskType": "summarization",
+      "privacy": "private",
+      "maxInputTokens": 4000,
+      "maxOutputTokens": 2048,
+      "creditsPerRun": 2,
+      "runnable": true,
+      "runnableForAnon": true,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1360,6 +1439,13 @@
       "description": "Abstraction assistant for commercial leases: extracts rent schedule, escalations, term/options, use restrictions, maintenance and insurance obligations, assignment/subletting, and termination rights into a structured abstract with page references. Outputs are a draft for real-estate counsel review.",
       "buyer": "Real-estate portfolio managers, accounting and legal teams abstracting commercial lease portfolios.",
       "prompt": "You are a commercial lease abstraction assistant. Extract the requested terms from the lease text into a structured abstract with page/section references. Flag ambiguous or missing terms as UNSPECIFIED. Do not state legal conclusions about enforceability. If input is not a lease, respond NEEDS_INPUT.",
+      "taskType": "architecture",
+      "privacy": "private",
+      "maxInputTokens": 40000,
+      "maxOutputTokens": 8192,
+      "creditsPerRun": 6,
+      "runnable": true,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1475,6 +1561,13 @@
       "description": "Takes a keyword/topic list and a content library summary, scores opportunities by relevance, search-intent fit and effort, and outputs a prioritized editorial plan with brief outlines. Rankings are heuristics, not guarantees.",
       "buyer": "Content marketers and SEO teams planning editorial calendars from keyword research.",
       "prompt": "You are an SEO content planning assistant. From the keyword list and content summary, score each opportunity for relevance, intent fit, and effort, then produce a prioritized plan with one-line briefs. Mark scores as heuristic estimates. Do not claim guaranteed rankings or traffic.",
+      "taskType": "general",
+      "privacy": "private",
+      "maxInputTokens": 8000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 2,
+      "runnable": true,
+      "runnableForAnon": true,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1591,6 +1684,13 @@
       "description": "Builds a PRD draft from problem statements, user research notes, and constraints. Every requirement links to the evidence item it came from; unsupported requirements are flagged as assumptions. Draft only — product owners own the final document.",
       "buyer": "Product managers drafting PRDs from research and stakeholder notes.",
       "prompt": "You are a PRD drafting assistant. From the provided evidence items, draft a PRD: problem, users, goals, requirements (each linked to evidence item IDs), non-goals, open questions, and assumptions. Flag requirements without evidence as assumptions. Do not invent metrics or market data.",
+      "taskType": "general",
+      "privacy": "private",
+      "maxInputTokens": 8000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 2,
+      "runnable": true,
+      "runnableForAnon": true,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1719,6 +1819,13 @@
       "description": "Combines structured usage, support-ticket and sentiment signals into account health scores with risk briefs and suggested plays. All scores are model estimates requiring CSM validation; no automated outreach is performed.",
       "buyer": "Customer success teams monitoring account health across usage, support and churn signals.",
       "prompt": "You are a customer health analyst. From the provided signals, score each account's health (0-100) with a risk level, summarize the drivers, and recommend plays. Mark scores as estimates requiring CSM validation. Do not send any message. If signals are missing, output NEEDS_INPUT.",
+      "taskType": "general",
+      "privacy": "private",
+      "maxInputTokens": 8000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 2,
+      "runnable": true,
+      "runnableForAnon": false,
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1848,6 +1955,13 @@
       "description": "Takes experiment summary statistics, checks them against stated assumptions, and produces a plain-language interpretation with significance caveats, guardrail checks and follow-up recommendations. It never declares a winner on its own.",
       "buyer": "Growth, product and data teams interpreting A/B test results responsibly.",
       "prompt": "You are an experiment interpretation assistant. From the provided test statistics and hypotheses, explain the results in plain language. State the significance caveats (sample size, multiple comparisons, novelty effects), check guardrail metrics, and suggest follow-ups. Do not declare a winner unless the evidence supports it; otherwise recommend further data collection.",
+      "taskType": "general",
+      "privacy": "private",
+      "maxInputTokens": 4000,
+      "maxOutputTokens": 4096,
+      "creditsPerRun": 2,
+      "runnable": true,
+      "runnableForAnon": true,
       "inputSchema": {
         "type": "object",
         "properties": {

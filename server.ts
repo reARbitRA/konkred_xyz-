@@ -16,6 +16,7 @@ import { getKeyedModels, getOrchestratorHealth, hasProviderApiKey, MODEL_REGISTR
 import productManifest from './catalog/product-manifest.json';
 import portfolioManifest from './content/catalogue/portfolio-36.json';
 import { validateDemoInput, validateDemoOutput } from './catalog/validate.ts';
+import { apiJsonErrorHandler } from './server/api-error-handler.ts';
 import type { ProductRecord } from './catalog/types.ts';
 import type { PortfolioEntry } from './content/catalogue/types.ts';
 
@@ -975,6 +976,55 @@ export async function createApp(): Promise<express.Express> {
     }
   });
 
+  // ── Workflow catalogue + runner ───────────────────────────────────────────
+  //
+  // Mounted on the legacy Express app deliberately. On Vercel every /api path
+  // the gateway proxy does not own falls through to this app, so mounting here
+  // makes the four routes behave identically on both deploy targets without
+  // touching vercel.json, api/index.ts, or the proxy's security boundary.
+  //
+  // Dependencies are resolved once, lazily, and every one of them is optional:
+  // a deployment with no DATABASE_URL runs unmetered and refuses anonymous
+  // demos; a deployment with no gateway configured answers a controlled 503.
+  // Nothing here can crash the app at import time.
+  {
+    const { createWorkflowRouter } = await import('./server/workflow-routes.ts');
+    const { workflowGatewayFromEnv, createGatewayCaller } = await import('./server/workflow-gateway.ts');
+    const { getWorkflowDeps } = await import('./server/billing-runtime.ts');
+
+    const dbDeps = await getWorkflowDeps().catch(() => undefined);
+    const gatewayConfig = workflowGatewayFromEnv();
+    const workflowLog = (event: string, meta?: Record<string, unknown>) => {
+      const line = [`[workflow] event=${event}`];
+      for (const [k, v] of Object.entries(meta || {})) line.push(`${k}=${String(v)}`);
+      if (event.startsWith('error')) console.error(line.join(' '));
+      else console.log(line.join(' '));
+    };
+
+    app.use(
+      '/api/workflows',
+      createWorkflowRouter({
+        billing: dbDeps?.billing,
+        store: dbDeps?.store,
+        anonSalt: process.env.ANON_SALT || 'konkred-default-anon-salt',
+        verifyIdToken: async (token: string) => {
+          try {
+            const decoded = await adminAuth.verifyIdToken(token);
+            return decoded.uid || null;
+          } catch {
+            return null;
+          }
+        },
+        callGateway: gatewayConfig
+          ? createGatewayCaller({ ...gatewayConfig, log: workflowLog })
+          : undefined,
+        demoIpMax: Number(process.env.WORKFLOW_DEMO_IP_HOURLY_MAX || 5),
+        demoGlobalMax: Number(process.env.WORKFLOW_DEMO_DAILY_MAX || 200),
+        log: workflowLog,
+      }),
+    );
+  }
+
   // ── Unknown API routes must answer JSON, never the SPA shell ──────────────
   // Without this, /api/anything falls through to the Vite/static handler and
   // returns 200 text/html. A JSON client then tries to parse "<!DOCTYPE html>"
@@ -999,6 +1049,13 @@ export async function createApp(): Promise<express.Express> {
     }
     return res.sendFile(devFile);
   });
+
+  // ── Terminal JSON error handler for /api/* ────────────────────────────────
+  // Registered last so it is reachable from every earlier layer, including
+  // express.json(). Without it a malformed request body is answered by
+  // Express's default handler with an HTML error page — see
+  // server/api-error-handler.ts for the full reasoning.
+  app.use(apiJsonErrorHandler);
 
   return app;
 }

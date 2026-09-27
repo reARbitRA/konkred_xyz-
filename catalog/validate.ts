@@ -230,6 +230,20 @@ export function validateDemoOutput(product: ProductRecord, output: unknown): str
     if (prop.type === 'array' && Array.isArray(value[key]) && prop.items && typeof prop.items === 'object') {
       const itemSchema = prop.items as { type?: string; required?: string[]; properties?: Record<string, any>; enum?: unknown[] };
       (value[key] as unknown[]).forEach((item, index) => {
+        // Scalar item schemas are checked as scalars. Treating every declared
+        // item schema as an object made string arrays such as
+        // ab-experiment-interpretation.significanceCaveats impossible to
+        // satisfy: a correct ["..."] was rejected as "must be an object".
+        if (itemSchema.type === 'string' || itemSchema.type === 'number' || itemSchema.type === 'boolean') {
+          if (typeof item !== itemSchema.type) {
+            errors.push(`Output field "${key}[${index}]" must be a ${itemSchema.type}.`);
+            return;
+          }
+          if (itemSchema.type === 'string' && Array.isArray(itemSchema.enum) && !itemSchema.enum.includes(item)) {
+            errors.push(`Output field "${key}[${index}]" has unsupported value.`);
+          }
+          return;
+        }
         if (typeof item !== 'object' || item === null) {
           errors.push(`Output field "${key}[${index}]" must be an object.`);
           return;
