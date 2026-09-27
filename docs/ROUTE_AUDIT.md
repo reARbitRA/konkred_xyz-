@@ -64,7 +64,74 @@ AI gateway service · **Legacy** = the bundled Express app (`lib/fullkonk-server
 ## Deployment gap
 
 The "After" column reflects the code on branch
-`arena/01a0cb39-konkred-xyz`, verified locally. **Production still returns the
+`arena/01a0e3f5-konkred-xyz`, verified locally. **Production still returns the
 "Before" column** until the branch is deployed with `DATABASE_URL`,
 `KONKRED_GATEWAY_URL`, `KONKRED_GATEWAY_API_KEY`, `FULLKONK_KEY` and the
 NowPayments variables set. See `docs/INCIDENT_AND_DEPLOYMENT.md` §5.
+
+---
+
+# P5 route audit — workflow execution surface
+
+Added by the workflow-execution work. This section covers the routes that make
+the 36 catalogue items executable, and re-audits the existing AI routes for one
+column the earlier audit did not have: **metered**.
+
+"Metered" means a paid inference call is reserved against a quota ledger before
+it is made. An unmetered route that reaches a provider is a route where an
+anonymous caller can spend the owner's money.
+
+Status values are measured by `npm test` against the real router in
+`tests/helpers/workflow-harness.ts` (pg-mem + a stub gateway). They are **not**
+measured against production, because nothing has been deployed.
+
+## New: catalogue and execution
+
+| Route | Status | Body | Owner | Auth | Metered | Root cause / why it exists | Fix |
+|---|---|---|---|---|---|---|---|
+| `GET /api/workflows` | 200 | JSON `{ok,data:{count,items[]}}` — all **36** items | Vercel (Express router) | public | n/a (no inference) | The catalogue existed only as a bundled JSON file in the browser; there was no server view of what is runnable | `server/workflow-routes.ts`; supports `?category=` and `?q=` |
+| `GET /api/workflows/:slug` | 200 / **404** `PRODUCT_NOT_FOUND` | JSON, includes `inputSchema`, `creditsPerRun`, `runnable`, `runnableForAnon` | Vercel | public | n/a | — | both slug forms resolve (`contract-review` and `contract-review-copilot`) |
+| `POST /api/workflows/:slug/run` | 200 / 400 / 401 / 402 / 403 / 404 / 502 / 503 | JSON envelope always | Vercel → Gateway | Firebase ID token; anonymous allowed only for PUBLIC_DEMO | **yes** — `creditsPerRun` reserved before the call, refunded on any failure | No route existed to run a catalogue item at all | `server/workflow-routes.ts` + `server/workflow-run.ts` |
+| `POST /api/workflows/:slug/demo` | 200 / 403 / 429 / 502 / 503 | JSON, `demo:true`, fixture input | Vercel → Gateway | anonymous by design | **no** — 0 credits, bounded instead by SQL per-IP and global ceilings | Public proof without a login, without handing out the provider budget | fails **closed** without a database (D-2) |
+| any `/api/*` with a malformed body | **400** `INVALID_JSON` | JSON | Vercel | — | n/a | **Express's default error handler returned `text/html`** for a body-parser failure, on every API route in the app | `server/api-error-handler.ts`, registered last in `createApp()` |
+
+### Failure codes on `/run`
+
+| Code | Status | Meaning | Charged? |
+|---|---|---|---|
+| `PRODUCT_NOT_FOUND` | 404 | no such slug | no |
+| `CONTACT_REQUIRED` | 403 | ENTERPRISE_INTEGRATION, not self-serve | no |
+| `AUTH_REQUIRED` | 401 | anonymous caller on a non-public product | no |
+| `INVALID_INPUT` | 400 | fails the product's `inputSchema` | no |
+| `INPUT_TOO_LARGE` | 400 | above `maxInputTokens`; nothing is truncated for you | no |
+| `QUOTA_EXHAUSTED` | 402 | balance below `creditsPerRun`; includes `upgradeUrl` | no |
+| `METERING_UNAVAILABLE` | 503 | the ledger threw; nothing charged | no |
+| `GATEWAY_NOT_CONFIGURED` | 503 | no gateway on this deployment | no (not reserved) |
+| `UPSTREAM_UNAVAILABLE` | 503 | gateway unreachable or 5xx | **refunded** |
+| `MODEL_OUTPUT_UNPARSEABLE` | 502 | no JSON object after one repair attempt | **refunded** |
+| `OUTPUT_SCHEMA_VIOLATION` | 502 | output failed `outputSchema`; discarded, not returned | **refunded** |
+
+## Re-audit: unmetered paid inference (pre-existing, reported not fixed)
+
+These three routes reach a paid provider without reserving anything. They are
+**outside this brief's scope** (they belong to the FULLKONK surface and the
+legacy demo path, neither of which this work may refactor), but an audit that
+omitted them would be dishonest.
+
+| Route | Source | Auth | Metered | Exposure | Recommended fix |
+|---|---|---|---|---|---|
+| `POST /api/ai/generate` | `server.ts:343` | **none** | **no** | 13 providers reachable by anyone who finds the path | route through `Meter.identify` + `reserve`, or delete if superseded by `/api/workflows/:slug/run` |
+| `POST /api/demo/run` | `server.ts:823` | none | **no** | real Gemini calls, gated only by `ENABLE_PRODUCT_DEMOS` and the presence of a key | superseded by `POST /api/workflows/:slug/demo`, which has SQL-backed ceilings; retire it |
+| `POST /api/fullkonk/optimize-prompt` | `server.ts:523` | authenticated | **no** | a signed-in caller can spend without limit | reserve 1 credit, matching `/api/fullkonk/generate` |
+
+`POST /api/fullkonk/generate` is metered (1 credit, `server/metering.ts`) and
+was left exactly as-is: `Meter.reserve` hardcodes a spend of 1, and the
+workflow routes call `Billing.spend` directly with `creditsPerRun` rather than
+changing shared behaviour that the existing tests pin.
+
+## Deployment gap (unchanged)
+
+Still nothing deployed. The workflow routes additionally require
+`src/db/migrations/0002_workflows.sql` to be applied before public demos will
+run; without it they fail closed with `503 DEMO_UNAVAILABLE`. Commands are in
+`docs/PHASE_STATUS.md`.
