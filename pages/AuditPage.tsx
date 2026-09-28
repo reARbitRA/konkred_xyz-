@@ -16,7 +16,7 @@ const AuditPage: React.FC<AuditPageProps> = ({ onNavigate }) => {
   const AuditTool = React.lazy(() => import('../components/audit/AuditTool.tsx'));
 
   return (
-    <div className="min-h-screen bg-[#070A0F] text-white selection:bg-cyan-500 selection:text-black font-sans pb-24 pt-6">
+    <div className="min-h-screen bg-[#0a0908] text-white selection:bg-cyan-500 selection:text-black font-sans pb-24 pt-6">
       {/* Top Banner Navigation */}
       <div className="max-w-7xl mx-auto px-6 md:px-12 pt-2 pb-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <button

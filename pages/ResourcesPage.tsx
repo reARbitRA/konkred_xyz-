@@ -92,7 +92,7 @@ const ResourcesPage: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onN
         </section>
 
         <section className="bg-void-300/30 concrete-card rounded-[3rem] p-16 text-center border-white/5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+            <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(201,196,187,0.05)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
             <h2 className="text-4xl font-display font-bold text-white mb-6 relative z-10">Logic Contribution</h2>
             <p className="text-ghost-light text-xl max-w-3xl mx-auto mb-10 font-light leading-relaxed relative z-10">
                 Architects are encouraged to submit high-fidelity templates and guides. Contributions are reviewed before publication.

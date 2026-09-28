@@ -72,8 +72,8 @@ const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      {/* Solid Caution Accent Top Line */}
-      <div className="fixed top-0 left-0 right-0 h-1.5 bg-signal z-50 pointer-events-none" />
+      {/* Hazard boundary cap */}
+      <div className="fixed top-0 left-0 right-0 h-1.5 k-hazard z-50 pointer-events-none" aria-hidden="true" />
 
       {/* Primary Sticky Header */}
       <motion.nav
@@ -118,16 +118,18 @@ const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
-          {/* Search Trigger Input (Desktop) */}
+          {/* Search Trigger (Desktop) — recessed command well */}
           {!user && onOpenCmd && (
-            <div 
+            <button
+              type="button"
               onClick={onOpenCmd}
-              className="hidden lg:flex items-center gap-2.5 bg-black hover:bg-void-200 border-2 border-black rounded-none px-3 py-1.5 select-none cursor-pointer transition-all duration-150 w-44 xl:w-52 text-left ml-4"
+              className="hidden lg:flex items-center gap-2.5 k-well hover:border-signal border-2 border-void-300 rounded-none px-3 py-1.5 select-none cursor-pointer transition-all duration-150 w-44 xl:w-52 text-left ml-4"
+              aria-label="Open command palette"
             >
               <Search size={11} className="text-void-550 shrink-0" />
               <span className="text-[9px] font-mono text-void-500 tracking-wider truncate">SEARCH CORE_</span>
-              <span className="text-[8px] px-1 bg-void-100 border border-void-300 rounded-none font-mono text-void-600 ml-auto select-none shrink-0 font-bold">⌘K</span>
-            </div>
+              <kbd className="k-keycap ml-auto shrink-0">⌘K</kbd>
+            </button>
           )}
 
           {/* Public Menu Links (Desktop) */}
@@ -143,11 +145,11 @@ const Navbar: React.FC<NavbarProps> = ({
               }}
               className={`relative flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest font-black border-2 transition-all duration-200 group/redaeye ${
                 currentPage === 'redaeye'
-                  ? 'bg-[#FF003C] text-white border-[#FF003C] shadow-[4px_4px_0_#000]'
-                  : 'bg-black text-[#FF003C] border-[#FF003C]/80 hover:bg-[#FF003C] hover:text-white hover:shadow-[4px_4px_0_#000]'
+                  ? 'bg-signal text-white border-signal-hot shadow-[4px_4px_0_#060505]'
+                  : 'bg-black text-signal-hot border-signal-deep hover:bg-signal hover:text-white hover:border-signal-hot hover:shadow-[4px_4px_0_#060505,0_0_16px_rgba(214,0,25,0.35)]'
               }`}
             >
-              <Shield size={12} className="shrink-0 animate-pulse text-[#FF003C] group-hover/redaeye:text-white" />
+              <Shield size={12} className="shrink-0 animate-pulse text-signal-hot group-hover/redaeye:text-white" />
               <span>REDAEYE</span>
             </a>
 
@@ -163,9 +165,9 @@ const Navbar: React.FC<NavbarProps> = ({
                       handleNav(item.page);
                     }
                   }}
-                  className="relative text-[10px] font-mono uppercase tracking-widest py-1.5 hover:text-signal font-black transition-all duration-150 group/link"
+                  className="relative text-[10px] font-mono uppercase tracking-widest py-1.5 font-black transition-all duration-150 group/link signal-item"
                 >
-                  <span className={isActive ? 'text-signal font-black underline underline-offset-4 decoration-2' : 'text-void-500 group-hover/link:text-white'}>
+                  <span className={isActive ? 'text-signal-hot font-black underline underline-offset-4 decoration-2' : 'text-void-500 group-hover/link:text-signal-hot group-focus-visible/link:text-signal-hot transition-colors duration-150'}>
                     {item.label}
                   </span>
                 </a>
@@ -185,7 +187,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       handleNav('enter');
                     }
                   }}
-                  className="text-[10px] font-mono uppercase tracking-widest font-black text-void-500 hover:text-white py-2 px-3 transition-colors"
+                  className="text-[10px] font-mono uppercase tracking-widest font-black text-void-500 hover:text-signal-hot py-2 px-3 transition-colors"
                 >
                   Sign In
                 </a>
@@ -197,9 +199,9 @@ const Navbar: React.FC<NavbarProps> = ({
                       handleNav('join_network');
                     }
                   }}
-                  className="relative overflow-hidden px-4 py-2.5 bg-signal text-black text-[10px] font-mono tracking-widest font-black rounded-none border-2 border-black shadow-brutalist hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-brutalist-hover transition-all"
+                  className="relative overflow-hidden px-4 py-2.5 bg-void-100 text-clinical-light text-[10px] font-mono tracking-widest font-black rounded-none border-2 border-void-400 shadow-brutalist hover:bg-signal hover:border-signal-hot hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[6px_6px_0_#060505,0_0_16px_rgba(214,0,25,0.35)] transition-all"
                 >
-                  JOIN_WAITLIST_
+                  JOIN_WAITLIST_ ▸
                 </a>
               </>
             ) : (
@@ -210,14 +212,16 @@ const Navbar: React.FC<NavbarProps> = ({
                     <span className="text-[9px] font-black text-white uppercase tracking-wider">{user.name}</span>
                     <span className="text-[9px] font-mono text-signal font-bold uppercase">{user.tier} TIER</span>
                   </div>
-                  <div 
-                    className="w-7 h-7 rounded-none bg-signal p-[1px] cursor-pointer hover:opacity-80 transition-opacity" 
+                  <button
+                    type="button"
+                    className="w-7 h-7 rounded-none bg-void-400 p-[1px] cursor-pointer hover:bg-signal transition-colors"
                     onClick={() => handleNav('account')}
+                    aria-label="Open account"
                   >
                     <div className="w-full h-full bg-void-100 rounded-none flex items-center justify-center font-bold text-white text-[9px] border border-black">
                       {user.name.substring(0, 2).toUpperCase()}
                     </div>
-                  </div>
+                  </button>
                 </div>
                 <button 
                   onClick={onLogout}
@@ -257,7 +261,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
             {/* Sliding Drawer Body Container */}
             <motion.div 
-              className="fixed top-0 right-0 h-full w-full max-w-sm bg-zinc-950 border-l border-zinc-900 z-50 flex flex-col shadow-2xl p-6 overflow-y-auto"
+              className="fixed top-0 right-0 h-full w-full max-w-sm bg-void-100 border-l-2 border-void-300 z-50 flex flex-col shadow-2xl p-6 overflow-y-auto"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -279,10 +283,10 @@ const Navbar: React.FC<NavbarProps> = ({
 
               {/* User Info inside Mobile Drawer */}
               {user && (
-                <div className="p-4 bg-zinc-900/40 border border-zinc-905 rounded-xl my-5 space-y-3">
+                <div className="p-4 bg-void-200 border border-void-300 rounded-none my-5 space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-500 p-[1px]">
-                      <div className="w-full h-full bg-zinc-950 rounded-[7px] flex items-center justify-center font-bold text-white text-[10px]">
+                    <div className="w-9 h-9 rounded-none bg-void-400 p-[1px]">
+                      <div className="w-full h-full bg-void-200 rounded-none flex items-center justify-center font-bold text-white text-[10px]">
                         {user.name.substring(0, 2).toUpperCase()}
                       </div>
                     </div>
@@ -315,21 +319,21 @@ const Navbar: React.FC<NavbarProps> = ({
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => { handleNav('enter'); }}
-                      className="py-2.5 border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-850 rounded-lg text-[10px] font-mono font-bold uppercase tracking-widest text-[#fafafa] transition-all"
+                      className="py-2.5 border-2 border-void-300 hover:border-signal bg-void-200 rounded-none text-[10px] font-mono font-bold uppercase tracking-widest text-clinical hover:text-signal-hot transition-all"
                     >
                       Sign In
                     </button>
                     <button
                       onClick={() => { handleNav('join_network'); }}
-                      className="py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-black font-black rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all"
+                      className="py-2.5 bg-void-200 border-2 border-void-400 text-clinical-light font-black rounded-none text-[10px] font-mono uppercase tracking-widest hover:bg-signal hover:border-signal-hot transition-all"
                     >
-                      Join Waitlist
+                      Join Waitlist ▸
                     </button>
                   </div>
                 ) : (
                   <button
                     onClick={async () => { await onLogout(); setIsOpen(false); }}
-                    className="w-full py-2.5 bg-red-950/20 hover:bg-red-900 border border-red-900/30 hover:border-red-600 text-red-400 hover:text-black font-bold text-[10px] font-mono uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-2 group"
+                    className="w-full py-2.5 bg-signal-wash hover:bg-signal border-2 border-signal-line hover:border-signal-hot text-signal-hot hover:text-white font-bold text-[10px] font-mono uppercase tracking-widest rounded-none transition-all flex items-center justify-center gap-2 group"
                   >
                     <LogOut size={12} className="group-hover:-translate-x-0.5 transition-transform" />
                     SIGN OUT
@@ -355,17 +359,17 @@ interface DrawerLinkProps {
 const DrawerLink: React.FC<DrawerLinkProps> = ({ icon: Icon, label, onClick, active }) => (
   <button 
     onClick={onClick}
-    className={`w-full flex items-center justify-between p-2.5 rounded-lg transition-all font-mono group text-left ${
+    className={`w-full flex items-center justify-between p-2.5 rounded-none transition-all font-mono group text-left ${
       active 
-        ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
-        : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60 border border-transparent'
+        ? 'bg-signal-wash text-signal-hot border border-signal-line' 
+        : 'text-zinc-400 hover:text-signal-hot hover:bg-void-200 border border-transparent hover:border-void-300'
     }`}
   >
     <div className="flex items-center gap-2.5">
-      <Icon size={12} className={active ? 'text-cyan-455 animate-pulse' : 'text-zinc-550 group-hover:text-zinc-350 transition-colors'} />
+      <Icon size={12} className={active ? 'text-signal-hot animate-pulse' : 'text-zinc-550 group-hover:text-signal-hot transition-colors'} />
       <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
     </div>
-    <ChevronRight size={10} className={`text-zinc-650 transition-transform ${active ? 'translate-x-0.5 text-cyan-400' : 'group-hover:translate-x-1 text-zinc-500'}`} />
+    <ChevronRight size={10} className={`transition-transform ${active ? 'translate-x-0.5 text-signal-hot' : 'group-hover:translate-x-1 group-hover:text-signal-hot text-zinc-500'}`} />
   </button>
 );
 
