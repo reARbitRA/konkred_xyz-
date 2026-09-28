@@ -83,7 +83,13 @@ light theme.
 
 New primitives — `components/system/primitives.tsx`:
 `SectionHead`, `GhostNumber`, `Keycap`, `SignalButton`, `Stamp`, `StatusDot`,
-`DataRow`, `HazardTape`, `Panel`, `MachineLabel`.
+`DataRow`, `HazardTape`, `Panel`, `MachineLabel`, `SystemTicker`, `Frame`,
+`Rail`, `CommandCard`, `InputWell`, `EmptyState`. The landing page consumes
+`CommandCard` + `SystemTicker` directly; the StyleGuide (`/style-guide`)
+renders the full library as living documentation.
+`SignalCursor` was evaluated and deliberately not shipped: a custom cursor
+adds touch/reduced-motion special-casing for zero informational value; the
+ignition hover law already provides the interaction feedback.
 CSS primitives — `styles/brutal.css`: `.signal-item`, `.k-panel-plate`,
 `.k-chamfer`, `.k-hazard`, `.k-keycap`, `.k-stamp-box`, `.k-well`,
 `.k-blueprint`, `.k-scanlines`, `.ghost-num`, `.hollow`, `.k-rivet`.

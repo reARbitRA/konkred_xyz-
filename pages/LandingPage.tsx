@@ -12,7 +12,7 @@ import type { PageView } from '../types.ts';
 import { ENTRIES } from '../content/catalogue/portfolio.ts';
 import { Typewriter } from '../components/brand/Typewriter.tsx';
 import { track } from '../utils/analytics.ts';
-import { ArrowRight } from 'lucide-react';
+import { CommandCard, SystemTicker } from '../components/system/primitives.tsx';
 
 interface Props {
   onNavigate: (page: PageView, slug?: string) => void;
@@ -32,46 +32,6 @@ const useTheme = () => {
 const DISPLAY = { fontFamily: "'Archivo Black','Archivo',sans-serif" } as const;
 const MONO = { fontFamily: "'JetBrains Mono','IBM Plex Mono',monospace" } as const;
 const PROSE = { fontFamily: "'Special Elite','Courier New',serif" } as const;
-
-/* ── command module: ID/STATUS → TITLE → description → IO → ACTION ── */
-const Module: React.FC<{
-  onClick: () => void; n: string; title: string; desc: string; cta: string;
-  io: [string, string]; live?: boolean; wide?: boolean; delay: number;
-  testId?: string; btnText?: string;
-}> = ({ onClick, n, title, desc, cta, io, live, wide, delay, testId, btnText }) => (
-  <button
-    onClick={onClick}
-    data-testid={testId}
-    className={`k-slab k-scanhost k-rivet brutal-rise text-left p-6 sm:p-7 flex flex-col gap-4 cursor-pointer group ${wide ? 'sm:col-span-2' : ''}`}
-    style={{ ['--slab-c' as string]: 'var(--k-red)', animationDelay: `${delay}s` }}
-  >
-    {/* ID / STATUS strip */}
-    <span className="flex items-center justify-between gap-3 w-full">
-      <span className="flex items-center gap-3">
-        <span className="font-black text-4xl sm:text-5xl leading-none" style={{ ...DISPLAY, WebkitTextStroke: '1.5px var(--k-mut)', color: 'transparent' }}>{n}</span>
-        <span className="text-[9px] font-bold tracking-[0.26em] uppercase border px-2.5 py-1" style={{ ...MONO, borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}>{cta}</span>
-      </span>
-      <span className="flex items-center gap-2 shrink-0" aria-hidden="true">
-        <span className={`w-2 h-2 ${live ? 'k-dot-live' : ''}`} style={{ background: live ? 'var(--k-red)' : 'var(--k-line)' }} />
-        <span className="text-[8px] font-bold tracking-[0.3em]" style={{ ...MONO, color: live ? 'var(--k-red)' : 'var(--k-mut)' }}>{live ? 'LIVE' : 'READY'}</span>
-      </span>
-    </span>
-
-    <h3 className="uppercase leading-[1.02] text-xl sm:text-2xl tracking-tight transition-colors duration-200 group-hover:text-[var(--k-red)]" style={DISPLAY}>{title}</h3>
-    <p className="text-[13px] leading-relaxed" style={{ ...PROSE, color: 'var(--k-mut)' }}>{desc}</p>
-
-    {/* INPUT → OUTPUT */}
-    <span className="flex items-center gap-2 text-[9px] font-bold tracking-[0.14em] uppercase border-t pt-3" style={{ ...MONO, borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}>
-      <span>{io[0]}</span>
-      <span aria-hidden="true" style={{ color: 'var(--k-red)' }}>▸</span>
-      <span>{io[1]}</span>
-    </span>
-
-    <span className="font-bold text-xs tracking-[0.2em] flex items-center gap-2 transition-colors duration-200 group-hover:text-[var(--k-red)]" style={MONO}>
-      {btnText ?? 'ENTER'} <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-    </span>
-  </button>
-);
 
 const LandingPage: React.FC<Props> = ({ onNavigate }) => {
   const { light, toggle } = useTheme();
@@ -115,26 +75,8 @@ const LandingPage: React.FC<Props> = ({ onNavigate }) => {
       </header>
 
       {/* ── DUAL SYSTEM TICKER ── */}
-      <div aria-hidden="true">
-        <div className="overflow-hidden whitespace-nowrap" style={{ background: 'var(--k-amber)', borderBottom: '2px solid var(--k-edge)' }}>
-          <div className="brutal-marquee py-1.5">
-            {[0, 1].map((k) => (
-              <span key={k} className="flex shrink-0 font-black uppercase tracking-[0.25em] text-[11px] py-1" style={{ color: 'var(--k-on-acc)', ...DISPLAY }}>
-                {tickerFwd.map((w, i) => <span key={i} className="mx-4">{w}</span>)}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="overflow-hidden whitespace-nowrap" style={{ background: 'var(--k-floor)', borderBottom: '2px solid var(--k-line)' }}>
-          <div className="brutal-marquee-rev py-1">
-            {[0, 1].map((k) => (
-              <span key={k} className="flex shrink-0 font-bold uppercase tracking-[0.3em] text-[8px] py-0.5" style={{ color: 'var(--k-mut)', ...MONO }}>
-                {tickerRev.map((w, i) => <span key={i} className="mx-4">{w}</span>)}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      <SystemTicker items={tickerFwd} variant="signal" />
+      <SystemTicker items={tickerRev} variant="meta" />
 
       {/* ── HERO ── */}
       <section className="relative px-5 sm:px-10 pt-12 sm:pt-20 pb-10 max-w-6xl mx-auto overflow-hidden">
@@ -188,7 +130,7 @@ const LandingPage: React.FC<Props> = ({ onNavigate }) => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-          <Module
+          <CommandCard
             testId="landing-slab-catalogue"
             onClick={() => onNavigate('catalogue')}
             n="01" delay={0.05} wide
@@ -198,7 +140,7 @@ const LandingPage: React.FC<Props> = ({ onNavigate }) => {
             io={['CATALOGUE', 'RUNNING TOOL']}
             btnText="WALK THE FLOOR"
           />
-          <Module
+          <CommandCard
             testId="landing-slab-auditor"
             onClick={() => onNavigate('forge_audit')}
             n="02" delay={0.12}
@@ -208,7 +150,7 @@ const LandingPage: React.FC<Props> = ({ onNavigate }) => {
             io={['FILE', 'EVIDENCE REPORT']}
             btnText="Open AUDITOR"
           />
-          <Module
+          <CommandCard
             testId="landing-slab-fullkonk"
             onClick={() => onNavigate('fullkonk')}
             n="03" delay={0.19}
@@ -218,7 +160,7 @@ const LandingPage: React.FC<Props> = ({ onNavigate }) => {
             io={['SPEC', 'REVIEWED BUILD']}
             btnText="Open fullKONK_&gt;"
           />
-          <Module
+          <CommandCard
             testId="landing-slab-redaeye"
             onClick={() => onNavigate('redaeye')}
             n="04" delay={0.26} wide live

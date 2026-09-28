@@ -9,6 +9,7 @@ import { ShoppingBag } from 'lucide-react';
 import {
   SectionHead, GhostNumber, Keycap, Stamp, StatusDot,
   SignalButton, DataRow, HazardTape, Panel, MachineLabel,
+  SystemTicker, Frame, Rail, InputWell, EmptyState,
 } from '../components/system/primitives.tsx';
 
 const SWATCHES: Array<[string, string]> = [
@@ -130,14 +131,36 @@ const StyleGuide: React.FC = () => {
             </section>
 
             <section className="space-y-8">
-                <SectionHead index="06" label="STATES" title="Empty States" />
-                <div className="p-12 sm:p-20 border border-dashed border-void-400 concrete-card text-center">
-                    <div className="w-16 h-16 bg-void-300 flex items-center justify-center mx-auto mb-4 text-ghost">
-                        <ShoppingBag size={24} aria-hidden="true" />
-                    </div>
-                    <h3 className="text-lg font-display text-clinical-light mb-2">No Transactions Found</h3>
-                    <p className="text-ghost font-prose text-sm max-w-xs mx-auto">Acquire your first asset to see your transaction history populate here.</p>
+                <SectionHead index="06" label="STRUCTURE" title="Frames, Rails & Tickers" />
+                <Frame label="REGISTRATION FRAME" className="p-8">
+                    <p className="font-prose text-sm text-void-500 max-w-lg">
+                        Technical container with corner registration brackets and a stamped label.
+                        Used for diagrams, evidence attachments and inspection zones.
+                    </p>
+                </Frame>
+                <Rail />
+                <div className="border border-void-300 overflow-hidden">
+                    <SystemTicker variant="signal" items={['SYSTEM TICKER', '◆', 'FORWARD OPERATIONAL BAND', '◆', 'SIGNAL VARIANT', '◆']} />
+                    <SystemTicker variant="meta" items={['REVERSE METADATA BAND', '///', 'META VARIANT', '///', 'MONO 8PX 0.3EM', '///']} />
                 </div>
+            </section>
+
+            <section className="space-y-8">
+                <SectionHead index="07" label="FORMS" title="Input Wells" />
+                <div className="grid sm:grid-cols-2 gap-6 max-w-2xl">
+                    <InputWell id="sg-node" label="NODE_ID" placeholder="0xA4F2C9" hint="Recessed technical well" />
+                    <InputWell id="sg-freq" label="FREQUENCY" defaultValue="88.1" error="Value outside operating range" />
+                </div>
+            </section>
+
+            <section className="space-y-8">
+                <SectionHead index="08" label="STATES" title="Empty States" />
+                <EmptyState
+                    icon={<ShoppingBag size={24} />}
+                    title="No Transactions Found"
+                    description="Acquire your first asset to see your transaction history populate here."
+                    action={<SignalButton arrow>OPEN CATALOGUE</SignalButton>}
+                />
             </section>
         </div>
     );
