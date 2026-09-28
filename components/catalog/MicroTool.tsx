@@ -148,7 +148,7 @@ export const MicroTool: React.FC<MicroToolProps> = ({ product, fixtureKey }) => 
   return (
     <section
       aria-label={`${product.name} tool`}
-      className="border-2 border-black bg-[#0E1319] rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_#000000]"
+      className="border-2 border-black bg-[#171514] rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_#000000]"
     >
       {/* Tool header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black bg-[#181F2A] px-5 py-3">

@@ -1,7 +1,7 @@
 /* ============================================================
-   KONKRED BRUTAL MOTION SYSTEM
+   KONKRED BRUTAL MOTION + HARDWARE SYSTEM — OBSIDIAN SIGNAL
    Hard steps, stamps, slabs and wipes. No soft fades.
-   Respects prefers-reduced-motion.
+   One accent: machine-signal red. Respects prefers-reduced-motion.
    ============================================================ */
 
 /* ── keyframes ─────────────────────────────────────────── */
@@ -39,6 +39,11 @@
   100% { transform: translateX(-50%); }
 }
 
+@keyframes k-marquee-rev {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
 @keyframes k-panel-slam {
   0%   { transform: scaleY(0); transform-origin: top; }
   35%  { transform: scaleY(1); transform-origin: top; }
@@ -56,11 +61,21 @@
   100% { transform: translateY(1000%); }
 }
 
+@keyframes k-scan-beam {
+  0%   { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(320%) skewX(-18deg); }
+}
+
 @keyframes k-shake {
   0%, 100% { transform: translate(0, 0); }
   25% { transform: translate(-2px, 1px); }
   50% { transform: translate(2px, -1px); }
   75% { transform: translate(-1px, -2px); }
+}
+
+@keyframes k-signal-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(255, 26, 46, 0.7); }
+  50% { opacity: 0.55; box-shadow: 0 0 2px rgba(255, 26, 46, 0.3); }
 }
 
 /* ── utilities ─────────────────────────────────────────── */
@@ -81,9 +96,10 @@
 .brutal-stagger > *:nth-child(n+11) { animation-delay: 0.52s; }
 
 .brutal-press { transition: transform 0.06s steps(2), box-shadow 0.06s steps(2); }
-.brutal-press:active { transform: translate(3px, 3px); box-shadow: 0 0 0 0 #000 !important; }
+.brutal-press:active { transform: translate(3px, 3px); box-shadow: 0 0 0 0 #060505 !important; }
 
 .brutal-marquee { display: flex; width: max-content; animation: k-marquee 28s linear infinite; }
+.brutal-marquee-rev { display: flex; width: max-content; animation: k-marquee-rev 34s linear infinite; }
 
 .brutal-stamp { animation: k-stamp 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
 
@@ -92,10 +108,37 @@
 /* blueprint grid texture — exposed structure, brutalist staple */
 .brutal-grid-bg {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    linear-gradient(rgba(244, 241, 235, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 241, 235, 0.02) 1px, transparent 1px);
   background-size: 44px 44px;
 }
+
+/* red technical grid — diagrams, command surfaces, system maps */
+.k-blueprint {
+  background-image:
+    linear-gradient(rgba(214, 0, 25, 0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(214, 0, 25, 0.10) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* scanlines — hero regions / terminal plates only, never body copy */
+.k-scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.22) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* hazard tape — structural boundaries only */
+.k-hazard {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--signal, #d60019) 0 12px,
+    #0d0c0b 12px 24px
+  );
+}
+.k-hazard-thin { height: 6px; }
 
 /* letter-by-letter wordmark reveal */
 .brutal-word { display: inline-flex; overflow: hidden; }
@@ -111,137 +154,224 @@
   display: flex; pointer-events: none;
 }
 .k-transition-overlay .k-panel {
-  flex: 1; background: #05070a;
+  flex: 1; background: #060505;
   animation: k-panel-slam 0.62s cubic-bezier(0.85, 0, 0.15, 1) both;
 }
-.k-transition-overlay .k-panel:nth-child(2) { animation-delay: 0.05s; background: #0b0f14; }
-.k-transition-overlay .k-panel:nth-child(3) { animation-delay: 0.10s; background: #05070a; }
-.k-transition-overlay .k-panel:nth-child(4) { animation-delay: 0.15s; background: #0b0f14; }
+.k-transition-overlay .k-panel:nth-child(2) { animation-delay: 0.05s; background: #0d0c0b; }
+.k-transition-overlay .k-panel:nth-child(3) { animation-delay: 0.10s; background: #060505; }
+.k-transition-overlay .k-panel:nth-child(4) { animation-delay: 0.15s; background: #0d0c0b; }
 .k-transition-overlay .k-mark {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
 }
 .k-transition-overlay .k-mark > * { animation: k-stamp 0.5s 0.18s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
 .k-transition-overlay .k-bar {
-  position: absolute; left: 0; right: 0; height: 3px; background: #f59e0b;
+  position: absolute; left: 0; right: 0; height: 3px; background: #d60019;
   animation: k-flash-bar 0.62s steps(1) both;
 }
 
 /* ── accessibility: kill all motion ────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .brutal-rise, .brutal-stagger > *, .brutal-stamp, .brutal-word > span,
-  .brutal-marquee, .k-transition-overlay .k-panel,
+  .brutal-marquee, .brutal-marquee-rev, .k-transition-overlay .k-panel,
   .k-transition-overlay .k-mark > *, .k-transition-overlay .k-bar,
   .brutal-cursor { animation: none !important; }
 }
 
 /* ============================================================
-   FUSION BUILD — B slabs / E floor / G television
-   Shared theme tokens (dark default, light = B paper mode)
+   OBSIDIAN SIGNAL — shared theme tokens
+   Dark default = chalk-black machine floor.
+   Light = warm evidence-paper mode (stamped documentation).
    ============================================================ */
 
 /* ── disciplined token system ─────────────────────────────
    --k-bg / --k-floor / --k-panel  : surfaces (theme-varied)
    --k-ink / --k-mut / --k-line    : text + hairlines (theme-varied)
-   accents (amber/cyan/violet/lime/red/ph) : CONSTANTS, never themed —
-   text sitting ON an accent is always #0b0d10. A foreground token is
-   never used as a background for colored text.
+   Accents collapse to ONE signal-red ladder plus warm bone.
+   Legacy accent slots (amber/cyan/violet/lime/red/ph) are kept as
+   names but remapped: red family = signal, cool slots = warm bone.
+   Text sitting ON an accent is always --k-on-acc.
    ──────────────────────────────────────────────────────── */
 :root{
-  --k-bg:#101014; --k-floor:#121319; --k-panel:#17171d; --k-line:#2b2b34;
-  --k-ink:#f2efe9; --k-mut:#8a8a99;
-  --k-amber:#ffb400; --k-cyan:#19d3c5; --k-violet:#8b6bff; --k-lime:#a9e838;
-  --k-red:#ff5252; --k-ph:#3dff9a;
-  --k-on-acc:#0b0d10;                       /* text on any accent */
-  --k-hard:rgba(0,0,0,.5);                  /* hard shadow, dark mode */
-  --k-edge:#0b0d10;                         /* border edge, dark mode */
+  --k-bg:#0a0908; --k-floor:#0d0c0b; --k-panel:#171514; --k-line:#2a2624;
+  --k-ink:#f4f1eb; --k-mut:#8a857d;
+  --k-amber:#d60019; --k-cyan:#c9c4bb; --k-violet:#8f0010; --k-lime:#b7b2a9;
+  --k-red:#ff1a2e; --k-ph:#ff5a63;
+  --k-on-acc:#f4f1eb;                       /* text on signal red */
+  --k-on-bone:#0a0908;                      /* text on bone surfaces */
+  --k-hard:rgba(0,0,0,.55);                 /* hard shadow, dark mode */
+  --k-edge:#060505;                         /* border edge, dark mode */
 }
 html.theme-light{
-  --k-bg:#efece5; --k-floor:#f4f1ea; --k-panel:#ffffff; --k-line:#d8d2c4;
-  --k-ink:#14161b; --k-mut:#5d6672;
-  --k-hard:rgba(20,20,25,.22);
-  --k-edge:#14161b;
+  --k-bg:#e9e4d8; --k-floor:#efe9dd; --k-panel:#f7f2e7; --k-line:#c8c0af;
+  --k-ink:#171310; --k-mut:#5c5852;
+  --k-cyan:#5c5852; --k-lime:#7a756d;
+  --k-on-acc:#f4f1eb;
+  --k-on-bone:#171310;
+  --k-hard:rgba(23,19,16,.28);
+  --k-edge:#171310;
 }
 /* selection + focus */
 ::selection{background:var(--k-amber);color:var(--k-on-acc)}
 html.theme-light ::selection{background:var(--k-ink);color:var(--k-bg)}
-:focus-visible{outline:3px solid var(--k-amber);outline-offset:2px}
+:focus-visible{outline:2px solid var(--k-red);outline-offset:2px}
 
 /* primitives */
 .k-badge{display:inline-block;background:var(--k-amber);color:var(--k-on-acc);
-  font-weight:700;font-size:10px;letter-spacing:.28em;padding:6px 12px;border:2px solid var(--k-edge)}
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:10px;letter-spacing:.28em;padding:6px 12px;border:2px solid var(--k-edge)}
 .k-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  font-weight:800;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
-  padding:13px 26px;border:3px solid var(--k-edge);cursor:pointer;
-  box-shadow:6px 6px 0 var(--k-hard);transition:transform .06s steps(2),box-shadow .06s steps(2)}
+  font-family:'JetBrains Mono',monospace;font-weight:800;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  padding:13px 26px;border:2px solid var(--k-edge);cursor:pointer;
+  box-shadow:6px 6px 0 var(--k-hard);transition:transform .06s steps(2),box-shadow .06s steps(2),background .18s ease,color .18s ease,border-color .18s ease}
 .k-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--k-hard)}
-.k-btn-acc{background:var(--k-amber);color:var(--k-on-acc)}
-.k-btn-ghost{background:var(--k-panel);color:var(--k-ink)}
-.k-title{font-family:'Archivo Black','IBM Plex Mono',ui-monospace,monospace;
+.k-btn-acc{background:var(--k-panel);color:var(--k-ink);border-color:var(--k-line)}
+.k-btn-acc:hover,.k-btn-acc:focus-visible{background:var(--k-amber);color:var(--k-on-acc);border-color:var(--k-red);
+  box-shadow:6px 6px 0 var(--k-hard),0 0 18px rgba(214,0,25,.35)}
+.k-btn-ghost{background:transparent;color:var(--k-mut);border-color:var(--k-line)}
+.k-btn-ghost:hover,.k-btn-ghost:focus-visible{color:var(--k-red);border-color:var(--k-red)}
+.k-title{font-family:'Archivo Black','Archivo',sans-serif;
   text-transform:uppercase;letter-spacing:-.01em;line-height:.95}
-.k-mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.k-mono{font-family:'JetBrains Mono','IBM Plex Mono',ui-monospace,monospace}
 .k-hair{border:2px solid var(--k-line)}
 
-/* B-style slab */
-.k-slab{background:var(--k-panel);border:4px solid var(--k-ink);color:var(--k-ink);
-  box-shadow:10px 10px 0 var(--slab-c,var(--k-amber));transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s cubic-bezier(.34,1.56,.64,1)}
-.k-slab:hover{transform:rotate(0deg) scale(1.02) translateY(-5px)!important;box-shadow:16px 18px 0 var(--slab-c,var(--k-amber))!important;z-index:2}
+/* panel plate: vertical-gradient dark surface with hard shadow */
+.k-panel-plate{
+  background:linear-gradient(180deg,#161311,#0c0b0a);
+  border:1.5px solid var(--k-line);
+  box-shadow:4px 4px 0 var(--k-hard);
+}
+html.theme-light .k-panel-plate{background:var(--k-panel)}
+
+/* chamfered plate corners — major containers */
+.k-chamfer{
+  clip-path: polygon(
+    16px 0, calc(100% - 16px) 0, 100% 16px,
+    100% calc(100% - 16px), calc(100% - 16px) 100%,
+    16px 100%, 0 calc(100% - 16px), 0 16px
+  );
+}
+.k-chamfer-sm{
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, 100% 8px,
+    100% calc(100% - 8px), calc(100% - 8px) 100%,
+    8px 100%, 0 calc(100% - 8px), 0 8px
+  );
+}
+
+/* keycap control */
+.k-keycap{
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;padding:2px 7px;
+  color:var(--k-mut);background:linear-gradient(180deg,#1d1a18,#100e0d);
+  border:1px solid var(--k-line);border-bottom-width:3px;
+}
+
+/* rotated rubber stamp */
+.k-stamp-box{
+  display:inline-block;transform:rotate(-3deg);
+  font-family:'JetBrains Mono',monospace;font-weight:800;font-size:10px;
+  letter-spacing:.24em;text-transform:uppercase;padding:5px 12px;
+  color:var(--k-red);border:2px solid var(--k-red);
+  box-shadow:0 0 0 1px rgba(255,26,46,.12) inset;
+}
+
+/* recessed input well */
+.k-well{
+  background:var(--well,#100e0d);color:var(--k-ink);
+  border:1.5px solid var(--k-line);
+  box-shadow:inset 2px 2px 0 rgba(0,0,0,.6);
+}
+.k-well:focus{border-color:var(--k-red);outline:2px solid var(--k-red);outline-offset:0}
+
+/* status dot — red = live/armed only */
+.k-dot{width:8px;height:8px;display:inline-block;background:var(--k-mut)}
+.k-dot-live{background:var(--k-red);animation:k-signal-pulse 1.6s ease-in-out infinite}
+
+/* rivet corner marks */
+.k-rivet{position:relative}
+.k-rivet::before,.k-rivet::after{
+  content:"";position:absolute;width:5px;height:5px;background:var(--edge,#33302e);
+  pointer-events:none;
+}
+.k-rivet::before{top:6px;left:6px}
+.k-rivet::after{bottom:6px;right:6px}
+
+/* diagonal scan beam on hover (cards) */
+.k-scanhost{position:relative;overflow:hidden}
+.k-scanhost::after{
+  content:"";position:absolute;top:-20%;bottom:-20%;left:0;width:34%;
+  background:linear-gradient(90deg,transparent,rgba(255,26,46,.07),transparent);
+  transform:translateX(-120%) skewX(-18deg);pointer-events:none;
+}
+.k-scanhost:hover::after,.k-scanhost:focus-visible::after{
+  animation:k-scan-beam .6s cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* B-style slab — machine module */
+.k-slab{background:linear-gradient(180deg,#161311,#0c0b0a);border:2px solid var(--k-line);color:var(--k-ink);
+  box-shadow:8px 8px 0 var(--k-hard);
+  transition:transform .2s cubic-bezier(.2,.9,.2,1),box-shadow .2s cubic-bezier(.2,.9,.2,1),border-color .2s ease}
+.k-slab:hover,.k-slab:focus-visible{transform:rotate(0deg) translate(-2px,-2px)!important;
+  border-color:var(--slab-c,var(--k-amber));
+  box-shadow:10px 10px 0 var(--k-hard),0 0 22px rgba(214,0,25,.16)!important;z-index:2}
+html.theme-light .k-slab{background:var(--k-panel)}
 
 /* E floor */
 .k-floor-stage{position:relative;width:100%;height:100%;overflow:hidden;cursor:grab;touch-action:none;
   background-color:var(--k-floor);
-  background-image:linear-gradient(rgba(255,180,0,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,180,0,.05) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(214,0,25,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(214,0,25,.045) 1px,transparent 1px);
   background-size:80px 80px}
 .k-floor-stage.dragging{cursor:grabbing}
 .k-world{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
 .k-floor-stage .k-grid-big{position:absolute;inset:0;pointer-events:none;
-  background-image:linear-gradient(var(--gl,rgba(255,180,0,.1)) 1px,transparent 1px),linear-gradient(90deg,var(--gl,rgba(255,180,0,.1)) 1px,transparent 1px);
+  background-image:linear-gradient(var(--gl,rgba(214,0,25,.09)) 1px,transparent 1px),linear-gradient(90deg,var(--gl,rgba(214,0,25,.09)) 1px,transparent 1px);
   background-size:400px 400px}
-.k-station{position:absolute;background:var(--k-panel);border:2px solid var(--k-line);color:var(--k-ink);
-  box-shadow:6px 6px 0 var(--k-slab-shadow);cursor:pointer;user-select:none;min-width:212px;
+.k-station{position:absolute;background:linear-gradient(180deg,#161311,#0c0b0a);border:1.5px solid var(--k-line);color:var(--k-ink);
+  box-shadow:6px 6px 0 var(--k-slab-shadow,rgba(0,0,0,.55));cursor:pointer;user-select:none;min-width:212px;
   transition:box-shadow .15s,border-color .15s}
-.k-station:hover{border-color:var(--k-amber);transform:translate(-2px,-2px);box-shadow:9px 9px 0 var(--k-slab-shadow)}
+.k-station:hover{border-color:var(--k-amber);transform:translate(-2px,-2px);box-shadow:9px 9px 0 var(--k-slab-shadow,rgba(0,0,0,.55)),0 0 16px rgba(214,0,25,.18)}
 .k-station.hub{border-color:color-mix(in srgb,var(--k-violet) 55%,var(--k-line))}
-.k-station.open{border-color:var(--k-amber);z-index:30;transform:none;min-width:360px;cursor:default;box-shadow:14px 14px 0 var(--k-slab-shadow)}
+.k-station.open{border-color:var(--k-amber);z-index:30;transform:none;min-width:360px;cursor:default;box-shadow:14px 14px 0 var(--k-slab-shadow,rgba(0,0,0,.55))}
 .k-district{position:absolute;font-weight:900;text-transform:uppercase;color:transparent;pointer-events:none;user-select:none;
-  -webkit-text-stroke:1.5px var(--k-line);letter-spacing:.04em;font-family:'Archivo Black','IBM Plex Mono',monospace}
+  -webkit-text-stroke:1.5px var(--k-line);letter-spacing:.04em;font-family:'Archivo Black','JetBrains Mono',monospace}
 
 /* G television */
-.k-tv{background:#15161c;border:3px solid #000;border-radius:26px;
-  box-shadow:0 24px 80px rgba(0,0,0,.7),inset 0 2px 0 rgba(255,255,255,.06)}
-.k-screen{position:relative;background:#020503;border-radius:14px;overflow:hidden;border:2px solid #000;box-shadow:inset 0 0 60px rgba(0,0,0,.8)}
+.k-tv{background:#100e0d;border:3px solid #060505;border-radius:26px;
+  box-shadow:0 24px 80px rgba(0,0,0,.7),inset 0 2px 0 rgba(244,241,235,.05)}
+.k-screen{position:relative;background:#050302;border-radius:14px;overflow:hidden;border:2px solid #060505;box-shadow:inset 0 0 60px rgba(0,0,0,.8)}
 .k-screen::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:20;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,.26) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.5))}
 .k-noise{position:absolute;inset:0;width:100%;height:100%;z-index:18;pointer-events:none;transition:opacity .18s}
-.k-osd{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--k-ph,#3dff9a);opacity:.9}
+.k-osd{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--k-ph,#ff5a63);opacity:.9}
 .k-dial{position:relative;border-radius:50%;cursor:grab;touch-action:none;
-  background:radial-gradient(circle at 35% 30%,#2c2d36,#101117 70%);border:3px solid #000;
-  box-shadow:0 6px 18px rgba(0,0,0,.6),inset 0 2px 3px rgba(255,255,255,.08)}
+  background:radial-gradient(circle at 35% 30%,#2a2624,#100e0d 70%);border:3px solid #060505;
+  box-shadow:0 6px 18px rgba(0,0,0,.6),inset 0 2px 3px rgba(244,241,235,.07)}
 .k-dial:active{cursor:grabbing}
-.k-led{width:10px;height:10px;border-radius:50%;background:#ff4d4d;box-shadow:0 0 12px #ff4d4d}
+.k-led{width:10px;height:10px;border-radius:50%;background:#ff1a2e;box-shadow:0 0 12px #ff1a2e}
 
 @keyframes k-wire{to{stroke-dashoffset:-48}}
 
 /* ── fullKONK console (dark always — it's a tool, not a page) ── */
-.fk-root{background:#0b0d10;color:#f2efe9}
+.fk-root{background:#0a0908;color:#f4f1eb}
 .fk-scan{background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px)}
-.fk-btn{background:#121319;border:2px solid #2b2b34;color:#8a8a99;padding:5px 10px;
-  font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:8px;font-weight:700;letter-spacing:.12em;
+.fk-btn{background:#100e0d;border:2px solid #2a2624;color:#8a857d;padding:5px 10px;
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:8px;font-weight:700;letter-spacing:.12em;
   cursor:pointer;white-space:nowrap;text-transform:uppercase;transition:border-color .12s,color .12s,transform .05s,box-shadow .05s}
-.fk-btn:hover:not(:disabled){border-color:#ffb400;color:#f2efe9}
+.fk-btn:hover:not(:disabled){border-color:#ff1a2e;color:#f4f1eb}
 .fk-btn:active{transform:translate(1px,1px)}
 .fk-btn:disabled{opacity:.5;cursor:default}
-.fk-btn-acc{background:#ffb400;border-color:#000;color:#0b0d10;box-shadow:3px 3px 0 #000}
-.fk-btn-acc:hover:not(:disabled){background:#ffc531;color:#0b0d10;border-color:#000}
-.fk-brand{font-family:'Archivo Black','IBM Plex Mono',monospace;color:#ffb400;letter-spacing:2px;white-space:nowrap;
-  text-transform:uppercase;text-shadow:3px 3px 0 #000}
-.fk-select{appearance:none;-webkit-appearance:none;background:#121319;border:2px solid #2b2b34;color:#8a8a99;
-  padding:5px 8px;font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:700;letter-spacing:.1em;cursor:pointer;outline:none}
-.fk-select:hover{border-color:#ffb400;color:#f2efe9}
-.fk-head{border-bottom:4px solid #000;background:#0e0f14}
-.fk-settings{background:#0e0f14;border-bottom:2px solid #26262e;
-  font-family:'IBM Plex Mono',monospace;font-size:8px;color:#8a8a99}
-.fk-led{width:9px;height:9px;background:#ff4d4d;box-shadow:none;animation:k-blink 1.4s steps(1) infinite}
+.fk-btn-acc{background:#d60019;border-color:#060505;color:#f4f1eb;box-shadow:3px 3px 0 #060505}
+.fk-btn-acc:hover:not(:disabled){background:#ff1a2e;color:#f4f1eb;border-color:#060505}
+.fk-brand{font-family:'Archivo Black','JetBrains Mono',monospace;color:#ff1a2e;letter-spacing:2px;white-space:nowrap;
+  text-transform:uppercase;text-shadow:3px 3px 0 #060505}
+.fk-select{appearance:none;-webkit-appearance:none;background:#100e0d;border:2px solid #2a2624;color:#8a857d;
+  padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:.1em;cursor:pointer;outline:none}
+.fk-select:hover{border-color:#ff1a2e;color:#f4f1eb}
+.fk-head{border-bottom:4px solid #060505;background:#0d0c0b}
+.fk-settings{background:#0d0c0b;border-bottom:2px solid #262221;
+  font-family:'JetBrains Mono',monospace;font-size:8px;color:#8a857d}
+.fk-led{width:9px;height:9px;background:#ff1a2e;box-shadow:none;animation:k-blink 1.4s steps(1) infinite}
 
 /* touch devices (tablets/phones): bigger hit targets for the console */
 @media (pointer: coarse) {

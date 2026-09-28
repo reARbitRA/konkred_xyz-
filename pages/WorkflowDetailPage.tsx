@@ -136,7 +136,7 @@ const WorkflowDetailPage: React.FC<Props> = ({ slug, onNavigate }) => {
               <Pattern entry={entry} />
               {/* oscilloscope corner */}
               <svg viewBox="0 0 200 60" className="w-40 h-12 opacity-50 pointer-events-none absolute right-4 bottom-3 hidden sm:block" aria-hidden="true">
-                <polyline points="0,30 20,30 28,6 36,54 44,30 80,30 88,14 96,46 104,30 150,30 158,10 166,50 174,30 200,30" fill="none" stroke="#3dff9a" strokeWidth="2" />
+                <polyline points="0,30 20,30 28,6 36,54 44,30 80,30 88,14 96,46 104,30 150,30 158,10 166,50 174,30 200,30" fill="none" stroke="#ff5a63" strokeWidth="2" />
               </svg>
             </div>
           </div>

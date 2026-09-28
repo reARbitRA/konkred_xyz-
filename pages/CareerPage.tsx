@@ -91,7 +91,7 @@ const CareerPage: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavi
         </section>
 
         <section className="bg-neon-purple/5 concrete-card rounded-[3rem] p-16 text-center border-neon-purple/20 relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(143,0,16,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
             <h2 className="text-4xl font-display font-bold text-white mb-6 relative z-10">Network Manifesto</h2>
             <p className="text-ghost-light text-xl max-w-3xl mx-auto mb-12 font-light leading-relaxed relative z-10">
                 At KONKRED, we foster a culture of relentless rigor, high agency, and radical transparency. We are not just building software; we are building the infrastructure of future intelligence.

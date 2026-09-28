@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -6,77 +5,141 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KONKRED | Controlled Enterprise Workflow Products</title>
     <meta name="description" content="KONKRED — a data-driven catalogue of 15 AI workflow products plus the AUDITOR neural audit engine, REDAEYE adversarial diagnostics and the fullKONK_&gt; product builder." />
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◆</text></svg>">
-       <!-- Fonts -->
+    <meta name="theme-color" content="#0a0908" />
+
+    <!-- Favicon: signal diamond -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0908'/><rect x='30' y='30' width='40' height='40' transform='rotate(45 50 50)' fill='%23d60019'/></svg>">
+
+    <!-- Fonts: Archivo Black (display) / Archivo (UI) / JetBrains Mono (machine) / Special Elite (prose) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Special+Elite&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        /* ════════════════════════════════════════════════════════════════
+           OBSIDIAN SIGNAL — token remap.
+           One accent: machine-signal red. Everything else is a warm
+           neutral ladder on a chalk-black canvas. Legacy palette names
+           (void / clinical / metal / neon-cyan / amber / cyan / …) are
+           remapped here so every route inherits the system.
+           ════════════════════════════════════════════════════════════ */
+        const SIGNAL = {
+            50:'#fff0f0', 100:'#ffd9db', 200:'#ffb0b4', 300:'#ff5a63',
+            400:'#ff1a2e', 500:'#d60019', 600:'#b30015', 700:'#8f0010',
+            800:'#5c0a10', 900:'#3a0f12', 950:'#250a0c'
+        };
+        const DEEPSIGNAL = {
+            50:'#fdeef0', 100:'#f6d4d7', 200:'#e8a9ae', 300:'#d4737b',
+            400:'#c4515b', 500:'#8f0010', 600:'#7a000e', 700:'#63000b',
+            800:'#4a0a0e', 900:'#3a0f12', 950:'#250a0c'
+        };
+        const BONE = {
+            50:'#f7f4ee', 100:'#f4f1eb', 200:'#eae7e1', 300:'#d8d4cc',
+            400:'#c9c4bb', 500:'#b7b2a9', 600:'#a8a39a', 700:'#8a857d',
+            800:'#5c5852', 900:'#3d3835', 950:'#262221'
+        };
+        const WARMGREY = {
+            50:'#f4f1eb', 100:'#eae7e1', 200:'#d8d4cc', 300:'#b7b2a9',
+            350:'#a8a39a', 400:'#a8a39a', 450:'#948f87', 500:'#8a857d',
+            550:'#7a756d', 600:'#7a756d', 650:'#6b6660', 700:'#5c5852',
+            750:'#4c4843', 800:'#3d3835', 850:'#332f2c', 855:'#332f2c',
+            900:'#262221', 905:'#262221', 950:'#171514'
+        };
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['IBM Plex Mono', 'monospace'],
-                        display: ['IBM Plex Mono', 'monospace'],
-                        vazir: ['Vazirmatn', 'Inter', 'sans-serif'],
+                        sans: ['Archivo', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'IBM Plex Mono', 'monospace'],
+                        display: ['Archivo Black', 'Archivo', 'sans-serif'],
+                        prose: ['Special Elite', 'Courier New', 'serif'],
+                        vazir: ['Vazirmatn', 'Archivo', 'sans-serif'],
                     },
                     colors: {
+                        /* never-pure poles */
+                        white: '#f4f1eb',
+                        black: '#060505',
+
+                        /* core canvas ladder (legacy name: void) */
                         'void': {
-                            DEFAULT: '#0B0F14',   // Void-1
-                            50: '#0B0F14',
-                            100: '#0E1319',  // Void-2 / Card
-                            200: '#0D1218',  // Card / alt / Tool rows
-                            300: '#1A212B',  // Line / Border
-                            400: '#222B36',  // Line-2 / Hover
-                            500: '#9AA0A8',  // Muted secondary text
-                            600: '#6B717A',  // Mid / Meta
+                            DEFAULT: '#0a0908',   // obsidian
+                            50: '#0a0908',
+                            100: '#171514',  // ash surface / card
+                            200: '#100e0d',  // well / alt rows
+                            300: '#2a2624',  // line / border
+                            400: '#33302e',  // edge / hover line
+                            500: '#a8a39a',  // muted secondary text
+                            550: '#8a857d',
+                            600: '#7a756d',  // meta
                         },
                         'clinical': {
-                            DEFAULT: '#D7D9DD', // Light Gray
-                            light: '#E8E9EC',   // Concrete Light / Cube top
-                            shadow: '#C1C4C9',  // Concrete Shadow / Cube right
+                            DEFAULT: '#eae7e1', // body warm white
+                            light: '#f4f1eb',   // ink
+                            shadow: '#c9c4bb',
                         },
+                        /* SIGNAL RED — the only core accent */
                         'signal': {
-                            DEFAULT: '#D98A2E', // Signal Amber / Accent
-                            accent: '#D98A2E',
-                            hover: '#C2751E',
+                            DEFAULT: '#d60019',
+                            accent: '#d60019',
+                            hover: '#ff1a2e',
+                            hot: '#ff1a2e',
+                            deep: '#8f0010',
+                            wash: '#1a1010',
+                            line: '#3a201f',
+                            critical: '#5c0a10',
                         },
                         'caution': {
-                            DEFAULT: '#D98A2E', // Alias of signal accent
-                            accent: '#D98A2E',
-                            hover: '#C2751E',
+                            DEFAULT: '#d60019',
+                            accent: '#d60019',
+                            hover: '#ff1a2e',
                         },
                         'metal': {
-                            light: '#D7D9DD',
-                            DEFAULT: '#9AA0A8',
-                            dark: '#6B717A',
-                            darker: '#222B36',
+                            light: '#eae7e1',
+                            DEFAULT: '#b7b2a9',
+                            dark: '#8a857d',
+                            darker: '#33302e',
                         },
                         'ghost': {
-                            DEFAULT: '#9AA0A8',
-                            light: '#D7D9DD',
-                            lighter: '#E8E9EC',
+                            DEFAULT: '#8a857d',
+                            light: '#b7b2a9',
+                            lighter: '#eae7e1',
                         },
+                        /* legacy accent aliases → signal / warm ladder */
+                        'neon-cyan': '#ff3b49',
+                        'neon-red': '#ff1a2e',
+                        'neon-gold': '#d60019',
+                        'neon-green': '#b7b2a9',
+                        'neon-purple': '#8f0010',
+
+                        /* built-in palettes remapped to the system:
+                           hot families → signal red; cool families → warm
+                           bone (rest/ash); violets → deep signal; greys →
+                           warm neutral ladder. */
+                        amber: SIGNAL, yellow: SIGNAL, orange: SIGNAL,
+                        red: SIGNAL, rose: SIGNAL,
+                        purple: DEEPSIGNAL, violet: DEEPSIGNAL,
+                        fuchsia: DEEPSIGNAL, pink: DEEPSIGNAL,
+                        cyan: BONE, teal: BONE, sky: BONE,
+                        blue: BONE, indigo: BONE,
+                        emerald: BONE, green: BONE, lime: BONE,
+                        zinc: WARMGREY, gray: WARMGREY, slate: WARMGREY,
+                        neutral: WARMGREY, stone: WARMGREY,
                     },
                     boxShadow: {
-                        'brutalist': '4px 4px 0px 0px #000000',
-                        'brutalist-hover': '6px 6px 0px 0px #000000',
-                        'brutalist-lg': '8px 8px 0px 0px #000000',
-                        'brutalist-yellow': '4px 4px 0px 0px #D98A2E',
-                        'brutalist-yellow-lg': '8px 8px 0px 0px #D98A2E',
-                        'neon-cyan': '0 0 15px rgba(217, 138, 46, 0.4)',
+                        'brutalist': '4px 4px 0px 0px #060505',
+                        'brutalist-hover': '6px 6px 0px 0px #060505',
+                        'brutalist-lg': '8px 8px 0px 0px #060505',
+                        'brutalist-yellow': '4px 4px 0px 0px #8f0010',
+                        'brutalist-yellow-lg': '8px 8px 0px 0px #8f0010',
+                        'neon-cyan': '0 0 15px rgba(214, 0, 25, 0.35)',
                     },
                     animation: {
-                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'fade-in': 'fadeIn 0.5s ease-out forwards',
-                        'zoom-in': 'zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'slide-up': 'slideUp 0.45s cubic-bezier(0.2, 0.9, 0.2, 1) forwards',
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                        'zoom-in': 'zoomIn 0.22s cubic-bezier(0.2, 0.9, 0.2, 1) forwards',
                         'float': 'float 3s ease-in-out infinite',
                         'glow-pulse': 'glowPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'shimmer': 'shimmer 1.5s linear infinite',
@@ -93,7 +156,7 @@
                             '100%': { opacity: '1' },
                         },
                         zoomIn: {
-                            '0%': { transform: 'scale(0.95)', opacity: '0' },
+                            '0%': { transform: 'scale(0.97)', opacity: '0' },
                             '100%': { transform: 'scale(1)', opacity: '1' },
                         },
                         float: {
@@ -120,77 +183,135 @@
             }
         }
     </script>
-    
+
     <style>
+        /* ═══ OBSIDIAN SIGNAL — canvas + base hardware ═══ */
         :root {
-            --color-void: #0B0F14;
-            --color-caution: #D98A2E;
-            --color-neon-cyan: #D98A2E;
-            --transition-normal: 150ms;
+            /* core canvas */
+            --obsidian: #0a0908;
+            --carbon: #0d0c0b;
+            --ash-surface: #171514;
+            --panel-top: #161311;
+            --panel-bottom: #0c0b0a;
+            --well: #100e0d;
+            --raised: #1d1a18;
+
+            /* signal red — primary and only core accent */
+            --signal: #d60019;
+            --signal-hot: #ff1a2e;
+            --signal-deep: #8f0010;
+            --signal-wash: #1a1010;
+            --signal-line: #3a201f;
+            --signal-critical: #5c0a10;
+
+            /* warm neutral ladder */
+            --ink: #f4f1eb;
+            --body: #eae7e1;
+            --rest: #b7b2a9;
+            --dim: #8a857d;
+            --meta: #7a756d;
+            --faint: #5c5852;
+            --ghost: #3d3835;
+            --line: #2a2624;
+            --line-inner: #262221;
+            --edge: #33302e;
+
+            /* rare severity states */
+            --high: #ff8a3c;
+            --medium: #e8a46c;
+
+            /* legacy aliases */
+            --color-void: var(--obsidian);
+            --color-caution: var(--signal);
+            --color-neon-cyan: var(--signal-hot);
+            --transition-normal: 180ms;
         }
+
         body {
-            background: var(--color-void);
-            color: #D7D9DD;
-            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(120% 90% at 15% 10%, rgba(255,255,255,0.028), transparent 55%),
+                radial-gradient(100% 80% at 90% 90%, rgba(214,0,25,0.045), transparent 60%),
+                var(--obsidian);
+            color: var(--body);
+            font-family: 'Archivo', 'Inter', sans-serif;
             overflow-x: hidden;
         }
+
         .bg-void-gradient {
-            background-color: #0B0F14;
-            background-image: 
-                radial-gradient(ellipse 60% 40% at 50% 0%, rgba(217, 138, 46, 0.03) 0%, transparent 60%),
-                linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px), 
-                linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
-            background-size: 100% 100%, 30px 30px, 30px 30px;
+            background:
+                radial-gradient(120% 90% at 15% 10%, rgba(255,255,255,0.028), transparent 55%),
+                radial-gradient(100% 80% at 90% 90%, rgba(214,0,25,0.045), transparent 60%),
+                var(--obsidian);
         }
+
+        /* chalk grain — inline SVG turbulence, no external assets */
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: 2147483000;
+            pointer-events: none;
+            opacity: 0.05;
+            mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+            background-size: 160px 160px;
+        }
+
         .preserve-3d { transform-style: preserve-3d; }
         .perspective-1000 { perspective: 1000px; }
-        
+
+        /* machine-control primary CTA: ash at rest, ignites on interaction */
         .btn-primary {
-            background: #D98A2E;
-            color: #000000;
+            background: var(--ash-surface);
+            color: var(--ink);
+            font-family: 'JetBrains Mono', monospace;
             font-weight: 800;
             text-transform: uppercase;
+            letter-spacing: 0.18em;
             padding: 12px 24px;
-            border: 3px solid #000000;
+            border: 2px solid var(--edge);
             border-radius: 0px !important;
-            box-shadow: 4px 4px 0px 0px #000000;
-            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 4px 4px 0px 0px #060505;
+            transition: all 0.18s cubic-bezier(0.2, 0.9, 0.2, 1);
         }
-        .btn-primary:hover {
+        .btn-primary:hover, .btn-primary:focus-visible {
+            background: var(--signal);
+            border-color: var(--signal-hot);
+            color: var(--ink);
             transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0px 0px #000000;
+            box-shadow: 6px 6px 0px 0px #060505, 0 0 18px rgba(214,0,25,0.35);
         }
         .btn-primary:active {
             transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0px 0px #000000;
+            box-shadow: 1px 1px 0px 0px #060505;
         }
-        
+
         /* Brutalist classes */
         .brutalist-border {
-            border: 3px solid #1A212B !important;
+            border: 2px solid var(--line) !important;
             border-radius: 0px !important;
         }
-        
+
         .brutalist-card {
-            background-color: #0E1319;
-            border: 3px solid #1A212B !important;
-            border-radius: 0 tracking-tight;
-            box-shadow: 4px 4px 0px 0px #000000;
-            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+            background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+            border: 1.5px solid var(--line) !important;
+            border-radius: 0;
+            box-shadow: 4px 4px 0px 0px #060505;
+            transition: all 0.18s cubic-bezier(0.2, 0.9, 0.2, 1);
         }
-        
         .brutalist-card:hover {
             transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0px 0px #000000;
+            border-color: var(--signal) !important;
+            box-shadow: 6px 6px 0px 0px #060505, 0 0 20px rgba(214,0,25,0.18);
         }
-        
+
         .gradient-text {
-            color: #D98A2E;
+            color: var(--signal-hot);
             font-weight: 900;
             text-transform: uppercase;
         }
         .logo-3d-effect {
-            text-shadow: 2px 2px 0px #000, 4px 4px 0px #D98A2E;
+            text-shadow: 2px 2px 0px #060505, 4px 4px 0px var(--signal-deep);
         }
 
         @keyframes grid-flow {
@@ -198,14 +319,14 @@
             100% { transform: perspective(500px) rotateX(60deg) translateY(40px); }
         }
         .grid-plane {
-            background-image: linear-gradient(rgba(217, 138, 46, 0.05) 1px, transparent 1px), 
-                              linear-gradient(90deg, rgba(217, 138, 46, 0.05) 1px, transparent 1px);
+            background-image: linear-gradient(rgba(214, 0, 25, 0.06) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(214, 0, 25, 0.06) 1px, transparent 1px);
             background-size: 40px 40px;
             animation: grid-flow 2s linear infinite;
         }
         .grid-bg {
-             background-image: linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px), 
-                              linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+             background-image: linear-gradient(rgba(244, 241, 235, 0.012) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(244, 241, 235, 0.012) 1px, transparent 1px);
             background-size: 30px 30px;
         }
 
@@ -217,32 +338,34 @@
             width: 100%;
             height: 120px;
             z-index: 99;
-            background: linear-gradient(to bottom, transparent 0%, rgba(217, 138, 46, 0.02) 50%, transparent 100%);
+            background: linear-gradient(to bottom, transparent 0%, rgba(214, 0, 25, 0.025) 50%, transparent 100%);
             position: fixed;
             pointer-events: none;
             animation: scanline 6s linear infinite;
         }
-        
-        .fill-mode-forwards {
-            animation-fill-mode: forwards;
-        }
+
+        .fill-mode-forwards { animation-fill-mode: forwards; }
         .delay-100 { animation-delay: 100ms; }
         .delay-200 { animation-delay: 200ms; }
         .delay-300 { animation-delay: 300ms; }
         .delay-500 { animation-delay: 500ms; }
 
         .concrete-card {
-            background-color: #0E1319;
-            border: 3px solid #1A212B !important;
+            background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+            border: 2px solid var(--line) !important;
             border-radius: 0px !important;
-            box-shadow: 4px 4px 0px 0px #000000;
+            box-shadow: 4px 4px 0px 0px #060505;
         }
-        
+
         .brutalist-bg {
-            background-color: #0B0F14;
-            background-image: url('https://www.transparenttextures.com/patterns/concrete-wall.png');
+            background-color: var(--obsidian);
             position: relative;
             overflow: hidden;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::after { animation: none; }
+            .scanline, .grid-plane { animation: none !important; }
         }
     </style>
 <script type="importmap">
@@ -257,7 +380,6 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-void-gradient">
     <div id="root"></div>

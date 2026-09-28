@@ -179,7 +179,7 @@ export default function LiveEnvironment({ files, streaming }: Props) {
         {streaming ? (
           <>
             <div className="fk-brand" style={{ fontSize: 30, animation: 'spin 2s linear infinite' }}>◎</div>
-            <div style={{ ...mono, fontSize: 10, letterSpacing: 3, color: '#8a8a99' }}>BUILDING ENVIRONMENT…</div>
+            <div style={{ ...mono, fontSize: 10, letterSpacing: 3, color: '#8a857d' }}>BUILDING ENVIRONMENT…</div>
             <div style={{ ...mono, fontSize: 9, color: '#555' }}>Preview appears as code is generated</div>
           </>
         ) : (
@@ -207,10 +207,10 @@ export default function LiveEnvironment({ files, streaming }: Props) {
       </div>
 
       {/* body */}
-      <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', justifyContent: 'center', background: '#0b0d10' }}>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', justifyContent: 'center', background: '#0a0908' }}>
         {streaming && (
-          <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 100, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,.85)', border: '2px solid #000', padding: '4px 10px', ...mono, fontSize: 9, color: '#ffb400', letterSpacing: 2 }}>
-            <span className="fk-led" style={{ background: '#ffb400' }} />
+          <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 100, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,.85)', border: '2px solid #000', padding: '4px 10px', ...mono, fontSize: 9, color: '#d60019', letterSpacing: 2 }}>
+            <span className="fk-led" style={{ background: '#d60019' }} />
             LIVE BUILD
           </div>
         )}
@@ -242,12 +242,12 @@ export default function LiveEnvironment({ files, streaming }: Props) {
         ) : (
           /* honest fallback: no browser-previewable output */
           <div style={{ padding: 22, overflowY: 'auto', width: '100%' }}>
-            <p style={{ ...mono, fontSize: 10, color: '#8a8a99', letterSpacing: 2, marginBottom: 12 }}>OUTPUT NOT PREVIEWABLE IN BROWSER — FILE SUMMARY</p>
+            <p style={{ ...mono, fontSize: 10, color: '#8a857d', letterSpacing: 2, marginBottom: 12 }}>OUTPUT NOT PREVIEWABLE IN BROWSER — FILE SUMMARY</p>
             <ul style={{ listStyle: 'none' }}>
               {files.map((f) => (
                 <li key={f.path} style={{ ...mono, fontSize: 10, color: '#555', padding: '6px 0', borderBottom: '1px solid #1a1c22', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                   <span style={{ color: '#c8c4ba', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.path}</span>
-                  <span style={{ color: '#ffb400', flexShrink: 0 }}>{f.content.split('\n').length} ln · {f.language}</span>
+                  <span style={{ color: '#d60019', flexShrink: 0 }}>{f.content.split('\n').length} ln · {f.language}</span>
                 </li>
               ))}
             </ul>
@@ -261,8 +261,8 @@ export default function LiveEnvironment({ files, streaming }: Props) {
         <span style={{ color: '#555' }}>{metrics.fileCount} files</span>
         <span style={{ color: '#555' }}>{metrics.linesOfCode.toLocaleString()} lines</span>
         {metrics.renderTime > 0 && <span style={{ color: '#555' }}>render: {metrics.renderTime}ms</span>}
-        {metrics.hasErrors && <span style={{ color: '#ff4d4d' }}>⚠ errors</span>}
-        <span style={{ marginLeft: 'auto', color: streaming ? '#ffb400' : '#3dff9a' }}>
+        {metrics.hasErrors && <span style={{ color: '#ff1a2e' }}>⚠ errors</span>}
+        <span style={{ marginLeft: 'auto', color: streaming ? '#d60019' : '#ff5a63' }}>
           {streaming ? '● BUILDING' : '● READY'}
         </span>
       </div>

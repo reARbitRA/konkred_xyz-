@@ -260,7 +260,7 @@ const CheckoutPage: React.FC = () => {
 
       {/* ── Invoice ─────────────────────────────────────────────────────── */}
       {invoice && (
-        <section style={{ ...box, borderColor: '#19d3c5' }} aria-live="polite">
+        <section style={{ ...box, borderColor: '#c9c4bb' }} aria-live="polite">
           <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>صورت‌حساب شما</h2>
           <dl style={{ fontSize: 13, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 14px', marginBottom: 14 }}>
             <dt>بسته:</dt><dd>{invoice.plan.name}</dd>
@@ -293,7 +293,7 @@ const CheckoutPage: React.FC = () => {
 };
 
 const btn: React.CSSProperties = {
-  background: '#19d3c5', color: '#0b0d10', border: '2px solid #000', padding: '9px 16px',
+  background: '#c9c4bb', color: '#0a0908', border: '2px solid #000', padding: '9px 16px',
   fontWeight: 800, fontSize: 13, cursor: 'pointer',
 };
 const btnGhost: React.CSSProperties = {

@@ -85,7 +85,7 @@ export default function ChatPanel({ messages, streaming, attachments, onAttachme
     </header>
     {(attachments.length > 0 || attachmentError) && <div style={{ padding: '7px 10px', display: 'flex', flexWrap: 'wrap', gap: 5, borderBottom: '1px solid #111' }}>
       {attachments.map(file => <button key={file.path} onClick={() => onAttachmentsChange(attachments.filter(item => item.path !== file.path))} title="Remove attachment" style={{ ...buttonStyle, color: '#00FF88', borderColor: '#124b2b' }}>{file.path} ✕</button>)}
-      {attachmentError && <span style={{ color: '#FF003C', fontSize: 8, fontFamily: '"JetBrains Mono", monospace' }}>{attachmentError}</span>}
+      {attachmentError && <span style={{ color: '#ff1a2e', fontSize: 8, fontFamily: '"JetBrains Mono", monospace' }}>{attachmentError}</span>}
     </div>}
     <div style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
       {messages.length === 0 ? <div style={{ margin: 'auto', width: '100%', maxWidth: 330 }}>

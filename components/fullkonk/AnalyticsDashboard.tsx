@@ -168,7 +168,7 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
               LOADING...
             </div>
           ) : error ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#FF003C', fontSize: 11 }}>
+            <div style={{ textAlign: 'center', padding: 40, color: '#ff1a2e', fontSize: 11 }}>
               {error}
             </div>
           ) : !summary ? (
@@ -182,7 +182,7 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
                 <StatCard label="Generations"  value={summary.totalGenerations} color="#FFD700" />
                 <StatCard label="Total Tokens" value={summary.totalTokens.toLocaleString()} color="#00FF88" />
                 <StatCard label="Avg Duration" value={`${(summary.avgDurationMs / 1000).toFixed(1)}s`} color="#0055FF" />
-                <StatCard label="Providers Used" value={Object.keys(summary.byProvider).length} color="#FF003C" />
+                <StatCard label="Providers Used" value={Object.keys(summary.byProvider).length} color="#ff1a2e" />
               </div>
 
               {/* Provider breakdown */}
@@ -219,7 +219,7 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
                   <div style={{ display: 'flex', gap: 1 }}>
                     {Object.entries(summary.byMode).map(([mode, count]) => {
                       const pct = summary.totalGenerations > 0 ? Math.round((count / summary.totalGenerations) * 100) : 0;
-                      const modeColors: Record<string, string> = { fullstack: '#FFD700', frontend: '#0055FF', backend: '#00FF88', review: '#FF003C' };
+                      const modeColors: Record<string, string> = { fullstack: '#FFD700', frontend: '#0055FF', backend: '#00FF88', review: '#ff1a2e' };
                       return (
                         <div key={mode} style={{ flex: pct || 1, background: modeColors[mode] ?? '#333', padding: '10px 8px', minWidth: 40 }}>
                           <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, color: '#000', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>
@@ -251,7 +251,7 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
                         borderBottom:  i < recent.length - 1 ? '1px solid #0d0d0d' : 'none',
                         fontSize:       9,
                       }}>
-                        <div style={{ color: e.success ? '#00FF88' : '#FF003C', width: 8, flexShrink: 0 }}>
+                        <div style={{ color: e.success ? '#00FF88' : '#ff1a2e', width: 8, flexShrink: 0 }}>
                           {e.success ? '●' : '✕'}
                         </div>
                         <div style={{ color: PROVIDER_COLORS[e.provider] ?? '#555', width: 70, flexShrink: 0, letterSpacing: 1 }}>

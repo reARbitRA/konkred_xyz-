@@ -79,7 +79,7 @@ const AcademyPage: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNav
               <div className="text-[10px] text-ghost font-mono uppercase tracking-[0.2em] mb-1">Architect Tier</div>
               <div className="text-2xl font-black text-neon-purple font-mono">Lvl 4 / Senior</div>
             </div>
-            <div className="w-14 h-14 rounded-full border-2 border-neon-purple/30 flex items-center justify-center bg-neon-purple/5 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+            <div className="w-14 h-14 rounded-full border-2 border-neon-purple/30 flex items-center justify-center bg-neon-purple/5 shadow-[0_0_20px_rgba(143,0,16,0.2)]">
               <Award className="text-neon-purple" size={28} />
             </div>
           </div>

@@ -489,9 +489,9 @@ export default function FullKonkPage() {
       <strong className="fk-brand">fullKONK_&gt;</strong>
       <div style={{ flex: 1 }} />
       {userId && <button onClick={() => setShowSidebar(value => !value)} className="fk-btn">≡ WORKSPACE</button>}
-      {userId && files.length > 0 && <button onClick={() => { void handleSaveProject(); }} className="fk-btn" style={{ borderColor: '#ffb400', color: '#ffb400' }}>{saveState}</button>}
+      {userId && files.length > 0 && <button onClick={() => { void handleSaveProject(); }} className="fk-btn" style={{ borderColor: '#d60019', color: '#d60019' }}>{saveState}</button>}
       {userId && <button onClick={() => setShowAnalytics(true)} className="fk-btn">◎ ANALYTICS</button>}
-      {files.length > 0 && <button onClick={() => setShowGitHub(true)} className="fk-btn" style={{ background: '#19d3c5', borderColor: '#000', color: '#0b0d10' }}>↑ GITHUB</button>}
+      {files.length > 0 && <button onClick={() => setShowGitHub(true)} className="fk-btn" style={{ background: '#c9c4bb', borderColor: '#000', color: '#0a0908' }}>↑ GITHUB</button>}
       <div style={{ display: 'flex', gap: 4 }}>{MODES.map(item => <button key={item.id} disabled={streaming} onClick={() => setMode(item.id)} className={`fk-btn${mode === item.id ? ' fk-btn-acc' : ''}`}>{item.label}</button>)}</div>
       <button onClick={() => setShowSettings(value => !value)} className="fk-btn">⚙ SETTINGS</button>
       <button onClick={() => setLiveEnv(value => !value)} className={`fk-btn${liveEnv ? ' fk-btn-acc' : ''}`}>▶ LIVE ENV</button>
@@ -518,7 +518,7 @@ export default function FullKonkPage() {
         سهمیهٔ رایگان شما به پایان رسیده است. برای ادامه یکی از بسته‌ها را تهیه کنید.
         {quota ? ` (باقی‌مانده: ${quota.totalRemaining})` : ''}
       </span>
-      <a href="/checkout" className="fk-btn" style={{ background: '#ffb020', borderColor: '#000', color: '#0b0d10', textDecoration: 'none' }}>
+      <a href="/checkout" className="fk-btn" style={{ background: '#ffb020', borderColor: '#000', color: '#0a0908', textDecoration: 'none' }}>
         ارتقای حساب
       </a>
     </div>}
@@ -531,7 +531,7 @@ export default function FullKonkPage() {
       </select>
       <input value={systemPrompt} onChange={event => setSystemPrompt(event.target.value)} placeholder="Optional system prompt override (or load a playbook)" className="fk-select" style={{ width: '100%', boxSizing: 'border-box' }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ color: byokKeys[provider] ? '#ffb400' : '#666' }}>🔑 {(allProviders.find(o => o.id === provider)?.name || provider).toUpperCase()} KEY</span>
+        <span style={{ color: byokKeys[provider] ? '#d60019' : '#666' }}>🔑 {(allProviders.find(o => o.id === provider)?.name || provider).toUpperCase()} KEY</span>
         <input type="password" value={byokDraft} onChange={event => saveByok(event.target.value)} placeholder={byokKeys[provider] ? '●●●● saved in this browser' : 'paste a free-tier key'} className="fk-select" style={{ width: 190, marginLeft: 5 }} autoComplete="off" />
         {!byokKeys[provider] && PROVIDER_SIGNUP[provider] && (
           <a href={PROVIDER_SIGNUP[provider]} target="_blank" rel="noreferrer noopener" className="fk-btn fk-btn-acc" style={{ textDecoration: 'none' }}>GET FREE KEY ↗</a>
@@ -554,7 +554,7 @@ export default function FullKonkPage() {
             ['code', '◈ CODE'],
             ['live', '▶ LIVE'],
           ] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setPanel(id)} className={`fk-btn${panel === id ? ' fk-btn-acc' : ''}`} style={{ flex: 1, padding: '14px 0', fontSize: 10, border: 'none', borderBottom: panel === id ? '4px solid #ffb400' : '4px solid transparent' }}>
+            <button key={id} onClick={() => setPanel(id)} className={`fk-btn${panel === id ? ' fk-btn-acc' : ''}`} style={{ flex: 1, padding: '14px 0', fontSize: 10, border: 'none', borderBottom: panel === id ? '4px solid #d60019' : '4px solid transparent' }}>
               {label}{id === 'live' && !liveEnv ? ' (off)' : ''}
             </button>
           ))}

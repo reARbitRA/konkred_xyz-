@@ -36,7 +36,7 @@ export const ContractReview: React.FC<PatternProps> = ({ entry }) => {
           <Cap className="mb-1.5">Playbook risk review</Cap>
           <div className="space-y-1.5">
             {rules.map((r, i) => (
-              <div key={r} className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0B0F14]">
+              <div key={r} className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0d0c0b]">
                 <span className="text-[10px] text-zinc-300">{r}</span>
                 <Chip tone={i === 4 ? 'bad' : i % 2 ? 'warn' : 'ok'}>{i === 4 ? 'missing' : i % 2 ? 'review' : 'aligned'}</Chip>
               </div>
@@ -74,12 +74,12 @@ export const IacSecurity: React.FC<PatternProps> = ({ entry }) => {
           <Cap>Finding matrix</Cap>
           <div className="space-y-1.5">
             {[['open egress 0.0.0.0/0', 'high'], ['unencrypted at rest', 'high'], ['no state locking', 'medium']].map(([n, s]) => (
-              <div key={n} className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0B0F14]">
+              <div key={n} className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0d0c0b]">
                 <span className="text-[10px] text-zinc-300">{n}</span><Chip tone={s === 'high' ? 'bad' : 'warn'}>{s}</Chip>
               </div>
             ))}
           </div>
-          <details className="border border-zinc-800 rounded-lg px-2.5 py-2 bg-[#0B0F14]">
+          <details className="border border-zinc-800 rounded-lg px-2.5 py-2 bg-[#0d0c0b]">
             <summary className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 cursor-pointer">▸ Safe verification</summary>
             <p className="text-[10px] text-zinc-500 mt-1.5">Checks run read-only (static parse + plan inspection). No apply, no state mutation, no credentials.</p>
           </details>
@@ -103,7 +103,7 @@ export const MaDiligence: React.FC<PatternProps> = ({ entry }) => {
           <Cap className="mb-1.5">Workstream board</Cap>
           <div className="grid grid-cols-3 gap-2">
             {cats.map((c) => (
-              <div key={c} className="border border-zinc-800 rounded-lg bg-[#0B0F14] p-2 min-h-24 space-y-1.5">
+              <div key={c} className="border border-zinc-800 rounded-lg bg-[#0d0c0b] p-2 min-h-24 space-y-1.5">
                 <Cap>{c}</Cap>
                 {docs.filter((d) => d.category === c).map((d) => (
                   <button key={d.id} onClick={() => setSel(d.id)} className={`w-full text-left text-[9px] font-mono px-1.5 py-1 rounded cursor-pointer ${sel === d.id ? 'bg-cyan-500/15 text-cyan-200' : 'text-zinc-500 hover:text-zinc-300'}`}>{d.id}</button>
@@ -146,7 +146,7 @@ export const IncidentPostmortem: React.FC<PatternProps> = ({ entry }) => {
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[['Duration', `${(max + 1) * 23} min`, 'warn'], ['Users affected', '0 (degraded only)', 'ok'], ['Data loss', 'none detected', 'ok']].map(([k, v, t]) => (
-            <div key={k} className="border border-zinc-800 rounded-xl bg-[#0B0F14] p-3">
+            <div key={k} className="border border-zinc-800 rounded-xl bg-[#0d0c0b] p-3">
               <Cap>{k}</Cap>
               <p className="font-mono font-black text-sm mt-1 text-zinc-200">{v}</p>
               <Chip tone={t as 'ok'}>{t === 'ok' ? 'confirmed' : 'investigating'}</Chip>
@@ -155,7 +155,7 @@ export const IncidentPostmortem: React.FC<PatternProps> = ({ entry }) => {
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[['Triggering', 0, i], ['Contributing', 1, i], ['Amplifying', 2, i]].map(([label, lane, cur]) => (
-            <div key={label as string} className="border border-zinc-800 rounded-xl bg-[#0B0F14] p-2.5">
+            <div key={label as string} className="border border-zinc-800 rounded-xl bg-[#0d0c0b] p-2.5">
               <Cap>{label as string}</Cap>
               <p className="text-[10px] text-zinc-400 mt-1.5 leading-snug">{timeline[(cur as number) % max]?.event.slice(0, 60) ?? '—'}</p>
               <span className="block text-[9px] font-mono text-zinc-600 mt-1">hypothesis — blameless language</span>
@@ -178,11 +178,11 @@ export const GrcEvidence: React.FC<PatternProps> = ({ entry }) => {
     <Frame slug={entry.slug} kind="workflow">
       <div className="grid grid-cols-3 gap-2">
         {cols.map((c, ci) => (
-          <div key={c} className="border border-zinc-800 rounded-xl bg-[#0B0F14] p-2 min-h-40">
+          <div key={c} className="border border-zinc-800 rounded-xl bg-[#0d0c0b] p-2 min-h-40">
             <Cap>{c}</Cap>
             <div className="space-y-1.5 mt-1.5">
               {requests.filter((r) => (col[r.id] ?? 0) === ci).map((r) => (
-                <div key={r.id} className="border border-zinc-800 rounded-lg p-2 bg-[#0E1319]">
+                <div key={r.id} className="border border-zinc-800 rounded-lg p-2 bg-[#171514]">
                   <p className="text-[9px] font-mono text-zinc-500">{r.id}</p>
                   <p className="text-[10px] text-zinc-300 leading-snug">{r.text.slice(0, 64)}</p>
                   <div className="flex items-center gap-1.5 mt-1.5">
@@ -266,7 +266,7 @@ export const EnterpriseRfp: React.FC<PatternProps> = ({ entry }) => {
       <div className="space-y-2.5">
         <div className="grid grid-cols-3 gap-2">
           {(['ready', 'partial', 'gap'] as const).map((r) => (
-            <div key={r} className="border border-zinc-800 rounded-lg bg-[#0B0F14] p-2.5">
+            <div key={r} className="border border-zinc-800 rounded-lg bg-[#0d0c0b] p-2.5">
               <Cap>{r}</Cap>
               <p className="font-mono font-black text-lg text-zinc-200">{questions.filter((q) => readiness(q) === r).length}</p>
             </div>
@@ -346,7 +346,7 @@ export const FpaVariance: React.FC<PatternProps> = ({ entry }) => {
           </div>
         </div>
         {view === 'waterfall' ? (
-          <div className="flex items-end gap-3 h-36 border border-zinc-800 rounded-xl bg-[#0B0F14] p-3">
+          <div className="flex items-end gap-3 h-36 border border-zinc-800 rounded-xl bg-[#0d0c0b] p-3">
             {linesData.map((l) => {
               const v = l.actual - l.budget;
               return (
@@ -399,7 +399,7 @@ export const ExecutiveFlash: React.FC<PatternProps> = ({ entry }) => {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {items.map((it, i) => (
-            <div key={it.id} className={`border rounded-xl p-3 bg-[#0B0F14] ${i % 3 === 1 ? 'border-amber-500/40' : 'border-zinc-800'}`}>
+            <div key={it.id} className={`border rounded-xl p-3 bg-[#0d0c0b] ${i % 3 === 1 ? 'border-amber-500/40' : 'border-zinc-800'}`}>
               <Cap>{it.category}</Cap>
               <p className="font-mono font-black text-sm mt-1 text-zinc-100">{it.metric}</p>
               <p className="font-mono text-[11px] text-amber-300">{it.value}</p>
@@ -437,7 +437,7 @@ export const LeaseAbstraction: React.FC<PatternProps> = ({ entry }) => {
           <Cap className="mb-1.5">Term extraction sheet</Cap>
           <div className="space-y-1.5">
             {terms.map((t, i) => (
-              <div key={t} className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0B0F14]">
+              <div key={t} className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-zinc-800 bg-[#0d0c0b]">
                 <span className="text-[10px] text-zinc-300">{t}</span>
                 {i === 4 ? (
                   <Chip tone="bad">missing — flagged</Chip>
@@ -468,7 +468,7 @@ export const SeoPlanner: React.FC<PatternProps> = ({ entry }) => {
           <span className="font-mono font-bold uppercase tracking-wider text-[9px] text-amber-300">data sufficiency</span>
           <span className="text-[10px] text-zinc-300">{keywords.length} keywords · {existing.length} existing pages — thin clusters stay flagged, not scored</span>
         </div>
-        <div className="relative h-44 border border-zinc-800 rounded-xl bg-[#0B0F14] overflow-hidden">
+        <div className="relative h-44 border border-zinc-800 rounded-xl bg-[#0d0c0b] overflow-hidden">
           {keywords.map((k, i) => {
             const size = 26 + (k.volume / maxVol) * 44;
             const covered = existing.some((e) => k.keyword.split(' ')[0] && e.toLowerCase().includes(k.keyword.split(' ')[0]));
@@ -484,7 +484,7 @@ export const SeoPlanner: React.FC<PatternProps> = ({ entry }) => {
         </div>
         <div className="grid grid-cols-4 gap-1.5">
           {['W1', 'W2', 'W3', 'W4'].map((w) => (
-            <div key={w} className="border border-zinc-800 rounded-lg p-2 bg-[#0B0F14]">
+            <div key={w} className="border border-zinc-800 rounded-lg p-2 bg-[#0d0c0b]">
               <Cap>{w}</Cap>
               <p className="text-[9px] text-zinc-500 font-mono mt-1 truncate">{keywords[w.charCodeAt(1) - 49]?.keyword ?? '—'}</p>
             </div>
@@ -511,7 +511,7 @@ export const EvidenceBackedPrd: React.FC<PatternProps> = ({ entry }) => {
           <Cap className="mb-1.5">Traceability board</Cap>
           <div className="space-y-2">
             {reqs.map((r) => (
-              <div key={r.r} className="border border-zinc-800 rounded-xl bg-[#0B0F14] p-2.5">
+              <div key={r.r} className="border border-zinc-800 rounded-xl bg-[#0d0c0b] p-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono text-zinc-200">{r.r}</span>
                   <Chip tone={r.evs.length >= 2 ? 'ok' : r.evs.length === 1 ? 'warn' : 'bad'}>{r.evs.length >= 2 ? 'well-evidenced' : r.evs.length === 1 ? 'thin evidence' : 'no evidence — parked'}</Chip>
@@ -561,13 +561,13 @@ export const CustomerHealth: React.FC<PatternProps> = ({ entry }) => {
           <div className="md:col-span-4 space-y-1.5">
             <Cap>Account portfolio</Cap>
             {accounts.map((a, i) => (
-              <button key={a.id} onClick={() => setSel(i)} className={`w-full text-left px-2.5 py-2 rounded-lg border text-[10px] font-mono cursor-pointer ${sel === i ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-zinc-800 bg-[#0B0F14] text-zinc-400'}`}>{a.id}</button>
+              <button key={a.id} onClick={() => setSel(i)} className={`w-full text-left px-2.5 py-2 rounded-lg border text-[10px] font-mono cursor-pointer ${sel === i ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-zinc-800 bg-[#0d0c0b] text-zinc-400'}`}>{a.id}</button>
             ))}
           </div>
           <div className="md:col-span-8 space-y-2">
             <div className="grid grid-cols-2 gap-2">
               {acc?.signals.map((s) => (
-                <div key={s.signal} className="border border-zinc-800 rounded-xl p-2.5 bg-[#0B0F14]">
+                <div key={s.signal} className="border border-zinc-800 rounded-xl p-2.5 bg-[#0d0c0b]">
                   <Cap>{s.signal}</Cap>
                   <p className="text-[11px] font-mono text-zinc-200 mt-1">{s.value}</p>
                 </div>

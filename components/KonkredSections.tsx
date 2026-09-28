@@ -451,28 +451,28 @@ export const DynamicBlogSection: React.FC = () => {
           margin-bottom: 0.5rem !important;
         }
         .custom-rendered-html h1 { font-size: 1.5rem !important; }
-        .custom-rendered-html h2 { font-size: 1.25rem !important; border-bottom: 1px solid #1A212B; padding-bottom: 0.25rem; }
+        .custom-rendered-html h2 { font-size: 1.25rem !important; border-bottom: 1px solid #2a2624; padding-bottom: 0.25rem; }
         .custom-rendered-html h3 { font-size: 1.125rem !important; }
         .custom-rendered-html p {
-          color: #9AA0A8 !important;
+          color: #b7b2a9 !important;
           margin-bottom: 1rem !important;
         }
         .custom-rendered-html p.lead {
           font-size: 1.1rem !important;
-          color: #D7D9DD !important;
+          color: #eae7e1 !important;
           font-weight: 300 !important;
         }
         .custom-rendered-html blockquote {
-          border-left: 2px solid #D98A2E !important;
+          border-left: 2px solid #d60019 !important;
           padding-left: 1rem !important;
-          color: #D7D9DD !important;
+          color: #eae7e1 !important;
           font-style: italic !important;
           margin: 1.5rem 0 !important;
         }
         .custom-rendered-html ul, .custom-rendered-html ol {
           padding-left: 1.5rem !important;
           margin-bottom: 1rem !important;
-          color: #9AA0A8 !important;
+          color: #b7b2a9 !important;
           list-style-type: unset !important;
         }
         .custom-rendered-html li {
@@ -480,7 +480,7 @@ export const DynamicBlogSection: React.FC = () => {
         }
         .custom-rendered-html pre {
           background-color: #030712 !important;
-          border: 1px solid #1A212B !important;
+          border: 1px solid #2a2624 !important;
           padding: 1rem !important;
           border-radius: 0px !important;
           overflow-x: auto !important;
@@ -489,13 +489,13 @@ export const DynamicBlogSection: React.FC = () => {
         .custom-rendered-html code {
           font-family: 'IBM Plex Mono', 'Fira Code', monospace !important;
           font-size: 0.85em !important;
-          color: #D98A2E !important;
-          background-color: rgba(217,138,46,0.05) !important;
+          color: #d60019 !important;
+          background-color: rgba(214,0,25,0.05) !important;
           padding: 0.15em 0.3em !important;
           border-radius: 0px !important;
         }
         .custom-rendered-html pre code {
-          color: #D7D9DD !important;
+          color: #eae7e1 !important;
           background-color: transparent !important;
           padding: 0 !important;
           display: block !important;

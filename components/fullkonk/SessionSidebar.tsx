@@ -23,7 +23,7 @@ function timeAgo(ms: number): string {
 }
 
 const MODE_COLORS: Record<string, string> = {
-  fullstack: '#FFD700', frontend: '#0055FF', backend: '#00FF88', review: '#FF003C',
+  fullstack: '#FFD700', frontend: '#0055FF', backend: '#00FF88', review: '#ff1a2e',
 };
 
 export default function SessionSidebar({ userId, activeSessionId, activeProjectId, refreshKey, onSelect, onSelectProject, onNew }: Props) {
@@ -55,7 +55,7 @@ export default function SessionSidebar({ userId, activeSessionId, activeProjectI
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {loading && <div style={{ padding: 16, fontSize: 9, color: '#444', textAlign: 'center' }}>LOADING...</div>}
-        {error && <div style={{ margin: 10, padding: 8, border: '1px solid #FF003C', color: '#FF003C', fontSize: 8 }}>{error}</div>}
+        {error && <div style={{ margin: 10, padding: 8, border: '1px solid #ff1a2e', color: '#ff1a2e', fontSize: 8 }}>{error}</div>}
         {!loading && <>
           <div style={{ padding: '10px 12px 6px', color: '#FFD700', fontSize: 8, letterSpacing: 2 }}>PROJECTS</div>
           {projects.length === 0 && <div style={{ padding: '6px 12px 12px', color: '#292929', fontSize: 9 }}>No saved projects</div>}

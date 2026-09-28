@@ -174,15 +174,15 @@ export default function GitHubExportModal({ files, onClose }: Props) {
 
           {/* Error */}
           {error && (
-            <div style={{ fontSize: 10, color: '#FF003C', padding: '8px 10px', border: '1px solid #FF003C', background: '#0d0000' }}>
+            <div style={{ fontSize: 10, color: '#ff1a2e', padding: '8px 10px', border: '1px solid #ff1a2e', background: '#0d0000' }}>
               {error}
             </div>
           )}
 
           {/* Result */}
           {result && (
-            <div style={{ fontSize: 10, padding: '10px', border: `1px solid ${result.success ? '#00FF88' : '#FF003C'}`, background: result.success ? '#001a00' : '#0d0000' }}>
-              <div style={{ color: result.success ? '#00FF88' : '#FF003C', fontWeight: 700, marginBottom: 6 }}>
+            <div style={{ fontSize: 10, padding: '10px', border: `1px solid ${result.success ? '#00FF88' : '#ff1a2e'}`, background: result.success ? '#001a00' : '#0d0000' }}>
+              <div style={{ color: result.success ? '#00FF88' : '#ff1a2e', fontWeight: 700, marginBottom: 6 }}>
                 {result.success ? `✓ ${result.filesUploaded} files exported` : '✕ Export failed'}
               </div>
               {result.prUrl && (
@@ -191,7 +191,7 @@ export default function GitHubExportModal({ files, onClose }: Props) {
                 </a>
               )}
               {result.errors.length > 0 && (
-                <div style={{ marginTop: 6, color: '#FF003C', fontSize: 9 }}>
+                <div style={{ marginTop: 6, color: '#ff1a2e', fontSize: 9 }}>
                   {result.errors.map((e, i) => <div key={i}>{e}</div>)}
                 </div>
               )}
