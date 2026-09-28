@@ -1,345 +1,393 @@
 /**
- * The Workflow Floor (/catalogue) — E-style infinite zoomable catalogue.
- * All 36 products as stations; signal wires pulse suite → tool; stations
- * expand in place with typed specs. Pan (drag), zoom (wheel/pinch/buttons),
- * search flies the camera to a station. LIST view kept as an accessible
- * alternative (and for small screens).
+ * The Command Grid (/catalogue) — OBSIDIAN SIGNAL catalogue console.
+ *
+ * All 36 products as stations in one responsive grid: scored instant
+ * search ("/" to focus), live type filters, category districts, inline
+ * suite → tool links and an evidence-dense list view. No pan/zoom
+ * canvas, no pointer capture — plain CSS grid, real buttons, works on
+ * every viewport.
+ *
+ * Preserved contracts (e2e): h1 "36 workflow products", searchbox named
+ * "Search catalogue", buttons "All 36 / Suites N / Workflows N / list",
+ * catalogue-count text "X of 36 entries", station-{slug} and
+ * catalogue-card-{slug} test ids.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { PageView } from '../types.ts';
 import { ENTRIES, SUITES, WORKFLOWS, getChildren } from '../content/catalogue/portfolio.ts';
 import type { PortfolioEntry } from '../content/catalogue/types.ts';
-import { Typewriter } from '../components/brand/Typewriter.tsx';
 import { track } from '../utils/analytics.ts';
-import { Search, Layers, Wrench, X } from 'lucide-react';
+import { Search, X, Layers, Wrench } from 'lucide-react';
 
 interface Props {
   onNavigate: (page: PageView, slug?: string) => void;
 }
 
-/* ── deterministic floor layout ── */
-const COLS = 5, DX = 760, DY = 820, OX = 140, OY = 120;
-interface Placed { e: PortfolioEntry; x: number; y: number }
-const layout = (() => {
-  const placed: Placed[] = [];
-  const suitePos = new Map<string, { x: number; y: number }>();
-  SUITES.forEach((s, i) => {
-    const x = OX + (i % COLS) * DX, y = OY + Math.floor(i / COLS) * DY;
-    suitePos.set(s.id, { x, y });
-    placed.push({ e: s, x, y });
-  });
-  WORKFLOWS.forEach((w) => {
-    const p = suitePos.get(w.parentId as string);
-    if (!p) return;
-    const siblings = getChildren(w.parentId as string);
-    const idx = siblings.findIndex((sib) => sib.slug === w.slug);
-    placed.push({ e: w, x: p.x + idx * 265, y: p.y + 345 });
-  });
-  return placed;
-})();
-const WORLD_W = OX + COLS * DX + 300;
-const WORLD_H = OY + Math.ceil(SUITES.length / COLS) * DY + 600;
-/* district labels per category cluster */
-const districts = (() => {
-  const out: { name: string; x: number; y: number }[] = [];
-  let last = '';
-  SUITES.forEach((s, i) => {
-    if (s.category !== last) {
-      last = s.category;
-      out.push({ name: s.category, x: OX + (i % COLS) * DX - 30, y: OY + Math.floor(i / COLS) * DY - 92 });
-    }
-  });
-  return out;
-})();
+const MONO = { fontFamily: "'JetBrains Mono','IBM Plex Mono',monospace" } as const;
+const DISPLAY = { fontFamily: "'Archivo Black','Archivo',sans-serif" } as const;
+const PROSE = { fontFamily: "'Special Elite','Courier New',serif" } as const;
 
-const badge = (e: PortfolioEntry) => e.validationStatus === 'PASS' ? 'PREFLIGHT PASS' : e.validationStatus === 'CONDITIONAL' ? 'CONDITIONAL' : 'NOT RUN';
+const badge = (e: PortfolioEntry) =>
+  e.validationStatus === 'PASS' ? 'PREFLIGHT PASS' : e.validationStatus === 'CONDITIONAL' ? 'CONDITIONAL' : 'NOT RUN';
 
-const Station: React.FC<{
-  p: Placed; onOpen: (slug: string, type: 'SUITE' | 'WORKFLOW') => void; open: boolean; onClose: () => void;
-}> = ({ p, onOpen, open, onClose }) => {
-  const e = p.e;
-  const kids = e.type === 'SUITE' ? getChildren(e.id).length : 0;
+/* ── search intelligence ─────────────────────────────────────────── */
+
+/** Relevance score: title > category > job-to-be-done > modules. */
+const scoreEntry = (e: PortfolioEntry, q: string): number => {
+  if (!q) return 1;
+  const title = e.title.toLowerCase();
+  const job = (e.jobToBeDone ?? '').toLowerCase();
+  const cat = e.category.toLowerCase();
+  if (title.startsWith(q)) return 1000;
+  if (title.includes(q)) return 800;
+  let s = 0;
+  for (const tok of q.split(/\s+/).filter(Boolean)) {
+    if (title.includes(tok)) s += 120;
+    else if (cat.includes(tok)) s += 40;
+    else if (job.includes(tok)) s += 30;
+    else if (e.modules.some((m) => m.toLowerCase().includes(tok))) s += 15;
+  }
+  return s;
+};
+
+/** Trigram similarity — powers "closest stations" when nothing matches. */
+const trigrams = (s: string): Set<string> => {
+  const x = s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const g = new Set<string>();
+  for (let i = 0; i <= x.length - 3; i++) g.add(x.slice(i, i + 3));
+  return g;
+};
+const similarity = (a: string, b: string): number => {
+  const ga = trigrams(a), gb = trigrams(b);
+  let n = 0;
+  for (const t of ga) if (gb.has(t)) n++;
+  return n;
+};
+
+/** Highlight the first query match inside a text node. */
+const Highlight: React.FC<{ text: string; q: string }> = ({ text, q }) => {
+  const query = q.trim().toLowerCase();
+  if (!query) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(query);
+  if (idx === -1) return <>{text}</>;
   return (
-    <div
-      data-testid={`station-${e.slug}`}
-      className={`k-station${e.type === 'SUITE' ? ' hub' : ''}${open ? ' open' : ''}`}
-      style={{ left: p.x, top: p.y }}
-      onClick={(ev) => { ev.stopPropagation(); if (!open) onOpen(e.slug, e.type); }}
-    >
-      <span className="block border-b-2 px-3 py-2 flex items-center justify-between gap-3" style={{ borderColor: 'var(--k-line)' }}>
-        <b className="text-[10.5px] tracking-[0.1em]" style={{ color: e.type === 'SUITE' ? 'var(--k-violet)' : 'var(--k-ink)' }}>{e.title}</b>
-        <span className="text-[8px] tracking-[0.2em] shrink-0" style={{ color: 'var(--k-mut)' }}>{e.type === 'SUITE' ? `SUITE·${kids}T` : 'TOOL'}</span>
-      </span>
-      {!open && (
-        <span className="block px-3 py-2 text-[9px] tracking-[0.14em]" style={{ color: 'var(--k-amber)' }}>
-          {e.pricing.kitFromUsd != null ? `FROM $${e.pricing.kitFromUsd.toLocaleString()}` : e.pricing.sprintFromUsd != null ? `SPRINT $${e.pricing.sprintFromUsd.toLocaleString()}+` : 'CLICK TO OPEN'}
-        </span>
-      )}
-      {open && (
-        <div className="p-4 space-y-3">
-          <button onClick={(ev) => { ev.stopPropagation(); onClose(); }} className="absolute top-2 right-2 text-[9px] px-2 py-1 border cursor-pointer tracking-[0.2em]" style={{ borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}>CLOSE ✕</button>
-          <Typewriter text={e.jobToBeDone ?? ''} speed={12} className="text-[11px] leading-relaxed block min-h-[3.6em]" />
-          <div className="flex flex-wrap gap-1.5">
-            {[badge(e), `${e.staticDesignScore}/100 DESIGN`, e.status.replace(/_/g, ' ')].map((m) => (
-              <span key={m} className="text-[8px] tracking-[0.18em] border px-2 py-1" style={{ borderColor: 'var(--k-line)', color: 'var(--k-ph, #3dff9a)' }}>{m}</span>
-            ))}
-          </div>
-          <button
-            onClick={(ev) => { ev.stopPropagation(); onOpen(e.slug, e.type); }}
-            className="text-[10px] font-bold tracking-[0.2em] px-4 py-2.5 border-2 cursor-pointer"
-            style={{ background: 'var(--k-amber)', color: 'var(--k-bg)', borderColor: 'var(--k-ink)' }}
-          >
-            {e.type === 'SUITE' ? 'VIEW SUITE ▸' : 'WATCH CHANNEL ▸'}
-          </button>
-        </div>
-      )}
-    </div>
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-transparent underline decoration-2" style={{ color: 'var(--k-red)', textDecorationColor: 'var(--k-red)' }}>
+        {text.slice(idx, idx + query.length)}
+      </mark>
+      {text.slice(idx + query.length)}
+    </>
   );
 };
 
-const CataloguePage: React.FC<Props> = ({ onNavigate }) => {
-  useEffect(() => { track('catalogue_view'); }, []);
-  const [view, setView] = useState<'floor' | 'list'>('floor');
-  const [layer, setLayer] = useState<'all' | 'SUITE' | 'WORKFLOW'>('all');
-  const [openSlug, setOpenSlug] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-  const [zoomPct, setZoomPct] = useState(100);
+/* ── station card (grid view) ────────────────────────────────────── */
 
-  const stageRef = useRef<HTMLDivElement>(null);
-  const worldRef = useRef<HTMLDivElement>(null);
-  const cam = useRef({ x: 0, y: 0, z: 1 });
-  const raf = useRef(0);
-
-  const apply = () => {
-    if (worldRef.current) worldRef.current.style.transform = `translate(${cam.current.x}px,${cam.current.y}px) scale(${cam.current.z})`;
-  };
-  const clampZ = (z: number) => Math.min(2.4, Math.max(0.3, z));
-  const zoomAt = (sx: number, sy: number, f: number) => {
-    const nz = clampZ(cam.current.z * f);
-    cam.current.x = sx - (sx - cam.current.x) * nz / cam.current.z;
-    cam.current.y = sy - (sy - cam.current.y) * nz / cam.current.z;
-    cam.current.z = nz;
-    apply(); setZoomPct(Math.round(nz * 100));
-  };
-  const fit = () => {
-    const el = stageRef.current; if (!el) return;
-    const z = Math.min(el.clientWidth / WORLD_W, el.clientHeight / WORLD_H) * 1.08;
-    cam.current = { x: 24, y: 24, z };
-    apply(); setZoomPct(Math.round(z * 100));
-  };
-  const flyTo = (p: Placed, openIt: boolean) => {
-    const el = stageRef.current; if (!el) return;
-    const z = 1.35;
-    const tx = el.clientWidth / 2 - (p.x + 110) * z;
-    const ty = el.clientHeight / 2 - (p.y + 90) * z;
-    const from = { ...cam.current };
-    const t0 = performance.now();
-    cancelAnimationFrame(raf.current);
-    const step = (t: number) => {
-      const k = Math.min(1, (t - t0) / 550);
-      const e2 = 1 - Math.pow(1 - k, 3);
-      cam.current.x = from.x + (tx - from.x) * e2;
-      cam.current.y = from.y + (ty - from.y) * e2;
-      cam.current.z = from.z + (z - from.z) * e2;
-      apply();
-      if (k < 1) raf.current = requestAnimationFrame(step);
-      else { setZoomPct(Math.round(z * 100)); if (openIt) setOpenSlug(p.e.slug); }
-    };
-    raf.current = requestAnimationFrame(step);
-  };
-
-  /* camera pointer handling: drag pan, wheel zoom, pinch */
-  const ptrs = useRef(new Map<number, { x: number; y: number }>());
-  const last = useRef<{ x: number; y: number } | null>(null);
-  const moved = useRef(false);
-  const pinchD = useRef(0);
-  useEffect(() => {
-    const stage = stageRef.current; if (!stage) return;
-    fit();
-    const down = (e: PointerEvent) => {
-      if ((e.target as HTMLElement).closest('.k-station, .k-hud, button, input')) return;
-      stage.setPointerCapture(e.pointerId);
-      ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      moved.current = false; last.current = { x: e.clientX, y: e.clientY };
-      stage.classList.add('dragging');
-    };
-    const move = (e: PointerEvent) => {
-      if (!ptrs.current.has(e.pointerId)) return;
-      ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (ptrs.current.size === 2) {
-        const [a, b] = [...ptrs.current.values()];
-        const d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (pinchD.current) {
-          const r = stage.getBoundingClientRect();
-          zoomAt((a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, d / pinchD.current);
-        }
-        pinchD.current = d;
-        return;
-      }
-      if (last.current) {
-        const dx = e.clientX - last.current.x, dy = e.clientY - last.current.y;
-        if (Math.abs(dx) + Math.abs(dy) > 5) moved.current = true;
-        cam.current.x += dx; cam.current.y += dy;
-        last.current = { x: e.clientX, y: e.clientY };
-        apply();
-      }
-    };
-    const up = (e: PointerEvent) => {
-      ptrs.current.delete(e.pointerId);
-      if (ptrs.current.size < 2) pinchD.current = 0;
-      if (!ptrs.current.size) { stage.classList.remove('dragging'); last.current = null; }
-    };
-    const wheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const r = stage.getBoundingClientRect();
-      zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0013));
-    };
-    stage.addEventListener('pointerdown', down);
-    stage.addEventListener('pointermove', move);
-    stage.addEventListener('pointerup', up);
-    stage.addEventListener('pointercancel', up);
-    stage.addEventListener('wheel', wheel, { passive: false });
-    return () => {
-      stage.removeEventListener('pointerdown', down);
-      stage.removeEventListener('pointermove', move);
-      stage.removeEventListener('pointerup', up);
-      stage.removeEventListener('pointercancel', up);
-      stage.removeEventListener('wheel', wheel);
-      cancelAnimationFrame(raf.current);
-    };
-  }, []);
-
-  const visible = useMemo(() => layout.filter((p) => layer === 'all' || p.e.type === layer), [layer]);
-  const openEntry = openSlug ? ENTRIES.find((e) => e.slug === openSlug) : undefined;
-  const openPlaced = openEntry ? layout.find((p) => p.e.slug === openSlug) : undefined;
-
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return layout.filter((p) => p.e.title.toLowerCase().includes(q) || (p.e.jobToBeDone ?? '').toLowerCase().includes(q)).slice(0, 6);
-  }, [query]);
-
-  const go = (slug: string, type: 'SUITE' | 'WORKFLOW') => onNavigate(type === 'SUITE' ? 'suite_detail' : 'workflow_detail', slug);
+const StationCard: React.FC<{
+  e: PortfolioEntry;
+  q: string;
+  onOpen: (e: PortfolioEntry) => void;
+  onOpenSlug: (slug: string, type: 'SUITE' | 'WORKFLOW') => void;
+}> = ({ e, q, onOpen, onOpenSlug }) => {
+  const kids = e.type === 'SUITE' ? getChildren(e.id) : [];
+  const price =
+    e.pricing.kitFromUsd != null ? `FROM $${e.pricing.kitFromUsd.toLocaleString()}`
+    : e.pricing.sprintFromUsd != null ? `SPRINT $${e.pricing.sprintFromUsd.toLocaleString()}+`
+    : 'ON REQUEST';
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: 'var(--k-bg)', color: 'var(--k-ink)' }} data-testid="catalogue-floor">
-      {/* HUD */}
-      <div className="k-hud relative z-40 flex flex-wrap items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 border-b-4" style={{ background: 'var(--k-panel)', borderColor: 'var(--k-ink)' }}>
-        <button onClick={() => onNavigate('landing')} className="w-8 h-8 grid place-items-center font-black rotate-[-4deg] cursor-pointer shrink-0" style={{ background: 'var(--k-amber)', color: 'var(--k-bg)' }}>K</button>
-        <h1 className="text-sm sm:text-base font-black uppercase tracking-tight mr-2" style={{ fontFamily: "'Archivo Black',ui-monospace,monospace" }}>36 workflow products</h1>
-        <div className="relative flex-1 min-w-40">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search the floor — fly to a station…"
-            aria-label="Search catalogue"
-            className="w-full px-3 py-2 text-[11px] font-mono border-2 outline-none cursor-text"
-            style={{ background: 'var(--k-bg)', borderColor: 'var(--k-line)', color: 'var(--k-ink)' }}
-          />
-          {matches.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 border-2 z-50" style={{ background: 'var(--k-panel)', borderColor: 'var(--k-ink)' }}>
-              {matches.map((m) => (
-                <button key={m.e.slug} onClick={() => { setQuery(''); flyTo(m, true); }} className="w-full text-left px-3 py-2 text-[11px] hover:underline cursor-pointer flex items-center gap-2">
-                  {m.e.type === 'SUITE' ? <Layers size={11} style={{ color: 'var(--k-violet)' }} /> : <Wrench size={11} style={{ color: 'var(--k-cyan)' }} />} {m.e.title}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {(['all', 'SUITE', 'WORKFLOW'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setLayer(t)}
-            className={`px-3 py-2 font-black text-[9px] uppercase tracking-widest border-2 cursor-pointer ${layer === t ? '' : 'hover:border-[var(--k-amber)]'}`}
-            style={layer === t ? { background: 'var(--k-amber)', color: 'var(--k-bg)', borderColor: 'var(--k-ink)' } : { borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}
-          >
-            {t === 'all' ? `All ${ENTRIES.length}` : t === 'SUITE' ? `Suites ${SUITES.length}` : `Workflows ${WORKFLOWS.length}`}
-          </button>
-        ))}
-        <div className="flex border-2" style={{ borderColor: 'var(--k-line)' }}>
-          {(['floor', 'list'] as const).map((v) => (
-            <button key={v} onClick={() => setView(v)} className="px-3 py-2 font-black text-[9px] uppercase tracking-widest cursor-pointer"
-              style={view === v ? { background: 'var(--k-ink)', color: 'var(--k-bg)' } : { color: 'var(--k-mut)' }}>{v}</button>
-          ))}
-        </div>
-        <span className="hidden sm:inline text-[9px] tracking-[0.2em] w-20 text-right" style={{ color: 'var(--k-mut)' }}>{zoomPct}% · ZOOM</span>
-        <button onClick={fit} className="px-3 py-2 border-2 font-black text-[9px] tracking-[0.2em] cursor-pointer" style={{ borderColor: 'var(--k-line)' }}>FIT</button>
+    <article
+      data-testid={`station-${e.slug}`}
+      className="k-panel-plate k-scanhost flex flex-col text-left"
+      style={{ color: 'var(--k-ink)' }}
+    >
+      {/* ID / STATUS strip */}
+      <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5" style={{ borderColor: 'var(--k-line)' }}>
+        <span className="flex items-center gap-2 text-[8px] font-bold tracking-[0.22em] uppercase min-w-0" style={{ ...MONO, color: 'var(--k-mut)' }}>
+          {e.type === 'SUITE'
+            ? <Layers size={10} className="shrink-0" aria-hidden="true" />
+            : <Wrench size={10} className="shrink-0" aria-hidden="true" />}
+          <span className="truncate">{e.type === 'SUITE' ? `SUITE · ${kids.length} TOOLS` : 'TOOL'}</span>
+        </span>
+        <span
+          className="text-[8px] font-bold tracking-[0.18em] uppercase border px-1.5 py-0.5 shrink-0"
+          style={{ ...MONO, borderColor: e.validationStatus === 'PASS' ? 'var(--k-red)' : 'var(--k-line)', color: e.validationStatus === 'PASS' ? 'var(--k-red)' : 'var(--k-mut)' }}
+        >
+          {badge(e)}
+        </span>
       </div>
 
-      {view === 'floor' ? (
-        <>
-          <div ref={stageRef} className="k-floor-stage flex-1" data-testid="catalogue-count">
-            <span className="sr-only">{visible.length} of {ENTRIES.length} entries</span>
-            <div ref={worldRef} className="k-world" style={{ width: WORLD_W, height: WORLD_H }}>
-              <div className="k-grid-big" style={{ width: WORLD_W, height: WORLD_H }} />
-              {/* district labels */}
-              {districts.map((d) => (
-                <div key={d.name} className="k-district" style={{ left: d.x, top: d.y, fontSize: 46 }}>{d.name}
-                  <span className="block text-[9px] tracking-[0.4em]" style={{ WebkitTextStroke: '0px', color: 'var(--k-mut)', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 400 }}>DISTRICT</span>
-                </div>
-              ))}
-              {/* wires */}
-              <svg width={WORLD_W} height={WORLD_H} className="absolute inset-0 pointer-events-none overflow-visible">
-                {visible.filter((p) => p.e.type === 'WORKFLOW').map((p) => {
-                  const parent = layout.find((q) => q.e.id === p.e.parentId);
-                  if (!parent) return null;
-                  const x1 = parent.x + 106, y1 = parent.y + 92, x2 = p.x + 106, y2 = p.y;
-                  const mx = (x1 + x2) / 2;
-                  return <path key={p.e.slug} d={`M${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`} fill="none" stroke="var(--k-amber)" strokeWidth={2.5} opacity={0.5} strokeDasharray="10 14" style={{ animation: 'k-wire 1.2s linear infinite' }} />;
-                })}
-              </svg>
-              {/* stations */}
-              {visible.map((p) => (
-                <Station key={p.e.slug} p={p} open={openSlug === p.e.slug} onClose={() => setOpenSlug(null)} onOpen={(slug, type) => {
-                  if (openPlaced && openSlug === slug) go(slug, type); else setOpenSlug(slug);
-                }} />
-              ))}
-            </div>
-            {/* hint */}
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-3 text-[9px] tracking-[0.25em] px-4 py-2 border-2 pointer-events-none" style={{ background: 'var(--k-panel)', borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}>
-              DRAG TO PAN · WHEEL / PINCH TO ZOOM · CLICK A STATION TO OPEN IT IN PLACE
-            </div>
-            {openEntry && openPlaced && (
+      <div className="flex flex-col gap-2.5 p-4 flex-1">
+        <p className="text-[8px] font-bold tracking-[0.28em] uppercase" style={{ ...MONO, color: 'var(--k-mut)' }}>{e.category}</p>
+        <h3 className="uppercase leading-tight text-[15px] tracking-tight" style={DISPLAY}>
+          <Highlight text={e.title} q={q} />
+        </h3>
+        {e.jobToBeDone && (
+          <p className="text-[12px] leading-relaxed line-clamp-2" style={{ ...PROSE, color: 'var(--k-mut)' }}>
+            <Highlight text={e.jobToBeDone} q={q} />
+          </p>
+        )}
+
+        {/* suite → tool wiring, inline and tappable */}
+        {kids.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {kids.map((k) => (
               <button
-                onClick={() => go(openEntry.slug, openEntry.type)}
-                className="absolute right-4 bottom-3 px-5 py-3 font-black text-[10px] tracking-[0.2em] border-4 cursor-pointer"
-                style={{ background: 'var(--k-amber)', color: 'var(--k-bg)', borderColor: 'var(--k-ink)', boxShadow: '6px 6px 0 var(--k-slab-shadow)' }}
+                key={k.slug}
+                onClick={() => onOpenSlug(k.slug, 'WORKFLOW')}
+                className="text-[8px] font-bold tracking-[0.12em] uppercase border px-2 py-1 cursor-pointer transition-colors duration-150 hover:border-[var(--k-red)] hover:text-[var(--k-red)] focus-visible:border-[var(--k-red)] focus-visible:text-[var(--k-red)]"
+                style={{ ...MONO, borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}
+                title={`Open tool: ${k.title}`}
               >
-                {openEntry.type === 'SUITE' ? 'OPEN SUITE PAGE ▸' : `WATCH ${openEntry.title.toUpperCase()} ON AIR ▸`}
+                ▸ {k.title}
               </button>
-            )}
+            ))}
           </div>
-        </>
-      ) : (
-        /* LIST view — accessible alternative, same data */
-        <div className="flex-1 overflow-y-auto px-5 sm:px-10 py-8" style={{ background: 'var(--k-bg)' }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 brutal-stagger">
-            {visible.map((p) => (
+        )}
+
+        {/* telemetry + action */}
+        <div className="mt-auto pt-3 flex items-center justify-between gap-2 border-t" style={{ borderColor: 'var(--k-line)' }}>
+          <span className="flex flex-col gap-0.5 text-[8px] font-bold tracking-[0.14em] uppercase min-w-0" style={{ ...MONO, color: 'var(--k-mut)' }}>
+            <span style={{ color: 'var(--k-amber)' }}>{price}</span>
+            {e.staticDesignScore != null && <span>{e.staticDesignScore}/100 DESIGN</span>}
+          </span>
+          <button
+            onClick={() => onOpen(e)}
+            className="shrink-0 text-[9px] font-black tracking-[0.18em] uppercase border-2 px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-[var(--k-amber)] hover:text-[var(--k-on-acc)] hover:border-[var(--k-red)] focus-visible:bg-[var(--k-amber)] focus-visible:text-[var(--k-on-acc)]"
+            style={{ ...MONO, borderColor: 'var(--k-ink)', color: 'var(--k-ink)' }}
+          >
+            {e.type === 'SUITE' ? 'OPEN SUITE ▸' : 'OPEN TOOL ▸'}
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+};
+
+/* ── page ────────────────────────────────────────────────────────── */
+
+const CataloguePage: React.FC<Props> = ({ onNavigate }) => {
+  useEffect(() => { track('catalogue_view'); }, []);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [layer, setLayer] = useState<'all' | 'SUITE' | 'WORKFLOW'>('all');
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  /* "/" focuses search, Escape clears it — no other global key traps */
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      const target = ev.target as HTMLElement;
+      const typing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      if (ev.key === '/' && !typing) { ev.preventDefault(); searchRef.current?.focus(); }
+      if (ev.key === 'Escape' && target === searchRef.current) setQuery('');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const q = query.trim().toLowerCase();
+
+  const filtered = useMemo(() => {
+    const pool = ENTRIES.filter((e) => layer === 'all' || e.type === layer);
+    if (!q) return pool;
+    return pool
+      .map((e) => ({ e, s: scoreEntry(e, q) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s || a.e.title.localeCompare(b.e.title))
+      .map((x) => x.e);
+  }, [layer, q]);
+
+  /* category districts (search collapses to a single ranked section) */
+  const sections = useMemo(() => {
+    if (q) return [{ name: 'SEARCH RESULTS — RANKED BY RELEVANCE', items: filtered }];
+    const map = new Map<string, PortfolioEntry[]>();
+    for (const e of filtered) {
+      const list = map.get(e.category) ?? [];
+      list.push(e);
+      map.set(e.category, list);
+    }
+    return [...map.entries()].map(([name, items]) => ({ name, items }));
+  }, [filtered, q]);
+
+  /* closest stations when nothing matches */
+  const suggestions = useMemo(() => {
+    if (!q || filtered.length > 0) return [];
+    return ENTRIES
+      .map((e) => ({ e, s: similarity(e.title + ' ' + e.category, q) }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 3)
+      .map((x) => x.e);
+  }, [q, filtered]);
+
+  const go = (slug: string, type: 'SUITE' | 'WORKFLOW') =>
+    onNavigate(type === 'SUITE' ? 'suite_detail' : 'workflow_detail', slug);
+  const open = (e: PortfolioEntry) => go(e.slug, e.type);
+
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--k-bg)', color: 'var(--k-ink)' }} data-testid="catalogue-floor">
+      <div className="k-hazard k-hazard-thin" aria-hidden="true" />
+
+      {/* ── command header ── */}
+      <header className="sticky top-0 z-40 border-b-2" style={{ background: 'var(--k-panel)', borderColor: 'var(--k-line)' }}>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3">
+          <button
+            onClick={() => onNavigate('landing')}
+            aria-label="Back to home"
+            className="w-8 h-8 grid place-items-center font-black cursor-pointer shrink-0 transition-transform duration-150 hover:scale-110"
+            style={{ background: 'var(--k-amber)', color: 'var(--k-on-acc)' }}
+          >
+            K
+          </button>
+          <h1 className="text-sm sm:text-base font-black uppercase tracking-tight mr-1" style={DISPLAY}>
+            36 workflow products
+          </h1>
+
+          {/* search well */}
+          <div className="relative flex-1 min-w-[9rem] basis-full sm:basis-auto order-last sm:order-none">
+            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-mut)' }} aria-hidden="true" />
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(ev) => setQuery(ev.target.value)}
+              placeholder="SEARCH THE GRID_"
+              aria-label="Search catalogue"
+              className="w-full pl-8 pr-16 py-2 text-[11px] border-2 outline-none"
+              style={{ ...MONO, background: 'var(--k-bg)', borderColor: 'var(--k-line)', color: 'var(--k-ink)' }}
+            />
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              {query && (
+                <button onClick={() => setQuery('')} aria-label="Clear search" className="cursor-pointer p-0.5 transition-colors hover:text-[var(--k-red)]" style={{ color: 'var(--k-mut)' }}>
+                  <X size={11} />
+                </button>
+              )}
+              <kbd className="k-keycap hidden sm:inline-flex" aria-hidden="true">/</kbd>
+            </span>
+          </div>
+
+          {/* type filters */}
+          {(['all', 'SUITE', 'WORKFLOW'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setLayer(t)}
+              aria-pressed={layer === t}
+              className="px-3 py-2 font-black text-[9px] uppercase tracking-widest border-2 cursor-pointer transition-colors duration-150"
+              style={layer === t
+                ? { ...MONO, background: 'var(--k-amber)', color: 'var(--k-on-acc)', borderColor: 'var(--k-edge)' }
+                : { ...MONO, borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}
+            >
+              {t === 'all' ? `All ${ENTRIES.length}` : t === 'SUITE' ? `Suites ${SUITES.length}` : `Workflows ${WORKFLOWS.length}`}
+            </button>
+          ))}
+
+          {/* view toggle */}
+          <div className="flex border-2" style={{ borderColor: 'var(--k-line)' }}>
+            {(['grid', 'list'] as const).map((v) => (
               <button
-                key={p.e.slug}
-                data-testid={`catalogue-card-${p.e.slug}`}
-                onClick={() => go(p.e.slug, p.e.type)}
-                className="k-slab brutal-press text-left p-5 flex flex-col gap-3"
-                style={{ ['--slab-c' as string]: p.e.type === 'SUITE' ? 'var(--k-violet)' : 'var(--k-cyan)', transform: 'rotate(0deg)' }}
+                key={v}
+                onClick={() => setView(v)}
+                aria-pressed={view === v}
+                className="px-3 py-2 font-black text-[9px] uppercase tracking-widest cursor-pointer transition-colors duration-150"
+                style={view === v ? { ...MONO, background: 'var(--k-ink)', color: 'var(--k-bg)' } : { ...MONO, color: 'var(--k-mut)' }}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[8px] font-bold tracking-[0.25em] border px-1.5 py-0.5" style={{ borderColor: 'var(--k-ink)' }}>{p.e.type === 'SUITE' ? 'SUITE' : 'TOOL'}</span>
-                  <span className="text-[9px] font-mono" style={{ color: 'var(--k-mut)' }}>{badge(p.e)}</span>
-                </div>
-                <div>
-                  <p className="text-[9px] tracking-[0.2em] mb-1" style={{ color: 'var(--k-mut)' }}>{p.e.category}</p>
-                  <h3 className="font-black text-sm uppercase leading-snug" style={{ fontFamily: "'Archivo Black',ui-monospace,monospace" }}>{p.e.title}</h3>
-                  <p className="text-[11px] leading-snug mt-1.5 opacity-75 line-clamp-2">{p.e.jobToBeDone}</p>
-                </div>
-                <div className="flex items-center justify-between mt-auto pt-2 text-[9px] font-mono">
-                  <span style={{ color: 'var(--k-amber)' }}>{p.e.pricing.kitFromUsd != null ? `from $${p.e.pricing.kitFromUsd.toLocaleString()}` : 'suite'}</span>
-                  <span style={{ color: 'var(--k-mut)' }}>{p.e.type === 'SUITE' ? `${p.e.modules.length} modules` : 'tool'}</span>
-                </div>
+                {v}
               </button>
             ))}
           </div>
         </div>
-      )}
+
+        {/* telemetry strip */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 sm:px-6 py-1.5 border-t text-[9px] font-bold tracking-[0.22em] uppercase" style={{ ...MONO, borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}>
+          <span data-testid="catalogue-count">{filtered.length} of {ENTRIES.length} entries</span>
+          <span aria-hidden="true" style={{ color: 'var(--k-red)' }}>◆</span>
+          <span>{SUITES.length} SUITES · {WORKFLOWS.length} TOOLS</span>
+          {q && <span style={{ color: 'var(--k-red)' }}>QUERY: “{query.trim().toUpperCase()}”</span>}
+        </div>
+      </header>
+
+      {/* ── body ── */}
+      <main className="flex-1 px-4 sm:px-6 lg:px-10 py-8 space-y-12">
+        {filtered.length === 0 ? (
+          /* intelligent empty state */
+          <div className="max-w-xl mx-auto text-center border border-dashed p-10 sm:p-14" style={{ borderColor: 'var(--k-line)' }}>
+            <p className="text-[10px] font-bold tracking-[0.3em] uppercase mb-3" style={{ ...MONO, color: 'var(--k-red)' }}>NO STATION MATCHES “{query.trim().toUpperCase()}”</p>
+            <p className="text-[13px] leading-relaxed mb-6" style={{ ...PROSE, color: 'var(--k-mut)' }}>
+              Nothing on the grid answers that query. Closest stations by signal similarity:
+            </p>
+            <div className="flex flex-col gap-2 items-stretch">
+              {suggestions.map((e) => (
+                <button
+                  key={e.slug}
+                  onClick={() => { setQuery(''); open(e); }}
+                  className="flex items-center justify-between gap-3 border-2 px-4 py-3 cursor-pointer text-left transition-colors duration-150 hover:border-[var(--k-red)] group"
+                  style={{ borderColor: 'var(--k-line)' }}
+                >
+                  <span className="text-[11px] font-black uppercase tracking-tight transition-colors group-hover:text-[var(--k-red)]" style={DISPLAY}>{e.title}</span>
+                  <span className="text-[8px] font-bold tracking-[0.2em] uppercase shrink-0" style={{ ...MONO, color: 'var(--k-mut)' }}>{e.type === 'SUITE' ? 'SUITE' : 'TOOL'} ▸</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setQuery('')} className="mt-6 k-btn k-btn-ghost text-[10px]">CLEAR QUERY</button>
+          </div>
+        ) : view === 'grid' ? (
+          /* GRID — category districts */
+          sections.map((sec, i) => (
+            <section key={sec.name} className="relative">
+              <div className="flex items-center gap-3 mb-5">
+                <span className="text-[10px] font-bold tracking-[0.3em]" style={{ ...MONO, color: 'var(--k-red)' }}>{String(i + 1).padStart(2, '0')}</span>
+                <h2 className="text-[10px] font-bold tracking-[0.3em] uppercase" style={{ ...MONO, color: 'var(--k-mut)' }}>{sec.name}</h2>
+                <span className="h-px flex-1" style={{ background: 'var(--k-line)' }} aria-hidden="true" />
+                <span className="text-[9px] font-bold tracking-[0.2em]" style={{ ...MONO, color: 'var(--k-mut)' }}>{sec.items.length}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 brutal-stagger">
+                {sec.items.map((e) => (
+                  <StationCard key={e.slug} e={e} q={q} onOpen={open} onOpenSlug={go} />
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          /* LIST — dense evidence rows */
+          <div className="max-w-5xl mx-auto flex flex-col gap-2">
+            {filtered.map((e) => (
+              <article
+                key={e.slug}
+                data-testid={`catalogue-card-${e.slug}`}
+                className="k-panel-plate flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3"
+              >
+                <span className="flex items-center gap-2 sm:w-24 shrink-0 text-[8px] font-bold tracking-[0.2em] uppercase" style={{ ...MONO, color: 'var(--k-mut)' }}>
+                  {e.type === 'SUITE' ? <Layers size={10} aria-hidden="true" /> : <Wrench size={10} aria-hidden="true" />}
+                  {e.type === 'SUITE' ? 'SUITE' : 'TOOL'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[13px] font-black uppercase tracking-tight leading-tight" style={DISPLAY}>
+                    <Highlight text={e.title} q={q} />
+                  </h3>
+                  <p className="text-[9px] font-bold tracking-[0.18em] uppercase mt-0.5" style={{ ...MONO, color: 'var(--k-mut)' }}>
+                    {e.category} · {badge(e)}{e.staticDesignScore != null ? ` · ${e.staticDesignScore}/100` : ''}
+                  </p>
+                </div>
+                <span className="text-[9px] font-bold tracking-[0.14em] uppercase shrink-0" style={{ ...MONO, color: 'var(--k-amber)' }}>
+                  {e.pricing.kitFromUsd != null ? `from $${e.pricing.kitFromUsd.toLocaleString()}` : e.pricing.sprintFromUsd != null ? `sprint $${e.pricing.sprintFromUsd.toLocaleString()}+` : 'on request'}
+                </span>
+                <button
+                  onClick={() => open(e)}
+                  className="shrink-0 text-[9px] font-black tracking-[0.18em] uppercase border-2 px-3 py-2 cursor-pointer transition-all duration-150 hover:bg-[var(--k-amber)] hover:text-[var(--k-on-acc)] hover:border-[var(--k-red)]"
+                  style={{ ...MONO, borderColor: 'var(--k-ink)', color: 'var(--k-ink)' }}
+                >
+                  OPEN ▸
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* system boundary */}
+      <footer className="px-4 sm:px-6 py-4 border-t flex flex-wrap items-center justify-between gap-2 text-[9px] font-bold tracking-[0.22em] uppercase" style={{ ...MONO, borderColor: 'var(--k-line)', color: 'var(--k-mut)' }}>
+        <span>KONKRED COMMAND GRID — EVIDENCE-LINKED, HUMAN-SUPERVISED</span>
+        <button onClick={() => onNavigate('validation')} className="cursor-pointer transition-colors hover:text-[var(--k-red)]">VALIDATION RECORD ▸</button>
+      </footer>
     </div>
   );
 };
