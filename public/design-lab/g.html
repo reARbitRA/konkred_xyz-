@@ -7,13 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--amber:#ffb200;--ph:#3dff9a;--red:#ff4d4d}
+:root{--amber:#ffb200;--ph:#ff5a63;--red:#ff1a2e}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 body{background:#07080b;display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-family:'IBM Plex Mono',monospace;color:#c9e8d5;gap:14px;padding:12px}
 /* TV set */
-.tv{position:relative;width:min(96vw,1000px);aspect-ratio:16/9.6;background:#15161c;border-radius:26px;
+.tv{position:relative;width:min(96vw,1000px);aspect-ratio:16/9.6;background:#171514;border-radius:26px;
   border:3px solid #000;box-shadow:0 24px 80px rgba(0,0,0,.7),inset 0 2px 0 rgba(255,255,255,.06);
   padding:clamp(14px,2.6vw,30px);display:flex;gap:clamp(10px,1.8vw,22px)}
 .screen{position:relative;flex:1;background:#020503;border-radius:14px;overflow:hidden;border:2px solid #000;
@@ -106,7 +106,7 @@ CH.forEach((c,i)=>{
   const d=document.createElement("div");d.className="ch";d.id="ch"+i;
   d.innerHTML=`<div class="osd">CH ${c.n} · KONKRED BROADCAST · SIGNAL LOCKED</div><h2>${c.t}</h2>
    <p class="tw" data-d="${c.d.replace(/"/g,'&quot;')}"></p>
-   <svg class="wave" viewBox="0 0 200 60"><polyline points="0,30 20,30 28,6 36,54 44,30 80,30 88,14 96,46 104,30 150,30 158,10 166,50 174,30 200,30" fill="none" stroke="#3dff9a" stroke-width="2"/></svg>
+   <svg class="wave" viewBox="0 0 200 60"><polyline points="0,30 20,30 28,6 36,54 44,30 80,30 88,14 96,46 104,30 150,30 158,10 166,50 174,30 200,30" fill="none" stroke="#ff5a63" stroke-width="2"/></svg>
    <div class="row">${c.b.map((b,j)=>`<span class="badge ${j%2?'am':''}">${b}</span>`).join("")}
    ${c.p?`<button class="cta">${c.p}</button>`:""}</div>`;
   chsEl.appendChild(d);

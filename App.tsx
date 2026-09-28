@@ -12,6 +12,8 @@ import EnterGate from './components/EnterGate.tsx';
 import JoinNetwork from './components/JoinNetwork.tsx';
 import CommandPalette from './components/common/CommandPalette.tsx';
 import SystemFooter from './components/SystemFooter.tsx';
+import SignalCursor from './components/system/SignalCursor.tsx';
+import GlobalMenu from './components/system/GlobalMenu.tsx';
 import Loader from './components/common/Loader.tsx';
 
 // Eager Page for instant load
@@ -133,7 +135,14 @@ const App: React.FC = () => {
     const showFooter = !['enter', 'join_network', 'verify_email', 'redaeye', 'redaeye_sandbox', 'landing', 'catalogue'].includes(currentPage);
 
     return (
-        <div className="min-h-screen bg-void text-metal-light selection:bg-neon-cyan selection:text-black font-sans flex overflow-hidden">
+        <div className="min-h-screen bg-void text-metal-light selection:bg-signal selection:text-white font-sans flex overflow-hidden">
+            <SignalCursor />
+            <GlobalMenu
+                onNavigate={navigate}
+                currentPage={currentPage}
+                user={auth.user}
+                onLogout={async () => { await auth.logout(); navigate('landing'); }}
+            />
             <CommandPalette isOpen={isCmdOpen} onClose={() => setIsCmdOpen(false)} onNavigate={navigate} />
 
             <main className="flex-1 min-h-screen relative w-full overflow-y-auto custom-scrollbar">

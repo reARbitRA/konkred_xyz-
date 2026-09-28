@@ -24,11 +24,11 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
   );
 }
 
-function StatCard({ label, value, sub, color = '#FFD700' }: { label: string; value: string | number; sub?: string; color?: string }) {
+function StatCard({ label, value, sub, color = '#e8a46c' }: { label: string; value: string | number; sub?: string; color?: string }) {
   return (
     <div style={{
       padding:   '18px 20px',
-      border:    '1px solid #1a1a1a',
+      border:    '1px solid #1d1a18',
       background:'#050505',
       display:   'flex',
       flexDirection: 'column',
@@ -79,11 +79,11 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
   const maxCount  = providers[0]?.[1].count ?? 1;
 
   const PROVIDER_COLORS: Record<string, string> = {
-    groq:       '#FFD700',
-    deepseek:   '#0055FF',
-    cerebras:   '#00FF88',
-    sambanova:  '#FF6B00',
-    openrouter: '#9B00FF',
+    groq:       '#e8a46c',
+    deepseek:   '#c9c4bb',
+    cerebras:   '#b7b2a9',
+    sambanova:  '#ff5a63',
+    openrouter: '#c4515b',
   };
 
   return (
@@ -108,8 +108,8 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
         initial={{ scale: .96, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         style={{
-          background:  '#0a0a0a',
-          border:      '3px solid #1a1a1a',
+          background:  '#0a0908',
+          border:      '3px solid #1d1a18',
           width:       '100%',
           maxWidth:     900,
           maxHeight:   '88vh',
@@ -123,11 +123,11 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
           alignItems:    'center',
           justifyContent:'space-between',
           padding:        '14px 20px',
-          borderBottom:  '1px solid #1a1a1a',
+          borderBottom:  '1px solid #1d1a18',
           flexShrink:     0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 11, letterSpacing: 3, color: '#FFD700', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 11, letterSpacing: 3, color: '#e8a46c', textTransform: 'uppercase' }}>
               // ANALYTICS
             </span>
             <div style={{ display: 'flex', gap: 0 }}>
@@ -137,7 +137,7 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
                   onClick={() => setDays(d)}
                   style={{
                     padding:    '3px 10px',
-                    background: days === d ? '#FFD700' : 'transparent',
+                    background: days === d ? '#e8a46c' : 'transparent',
                     border:     '1px solid #222',
                     borderRight: 'none',
                     color:      days === d ? '#000' : '#444',
@@ -168,7 +168,7 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
               LOADING...
             </div>
           ) : error ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#FF003C', fontSize: 11 }}>
+            <div style={{ textAlign: 'center', padding: 40, color: '#ff1a2e', fontSize: 11 }}>
               {error}
             </div>
           ) : !summary ? (
@@ -179,10 +179,10 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
             <>
               {/* Stat cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 1, marginBottom: 1 }}>
-                <StatCard label="Generations"  value={summary.totalGenerations} color="#FFD700" />
-                <StatCard label="Total Tokens" value={summary.totalTokens.toLocaleString()} color="#00FF88" />
-                <StatCard label="Avg Duration" value={`${(summary.avgDurationMs / 1000).toFixed(1)}s`} color="#0055FF" />
-                <StatCard label="Providers Used" value={Object.keys(summary.byProvider).length} color="#FF003C" />
+                <StatCard label="Generations"  value={summary.totalGenerations} color="#e8a46c" />
+                <StatCard label="Total Tokens" value={summary.totalTokens.toLocaleString()} color="#b7b2a9" />
+                <StatCard label="Avg Duration" value={`${(summary.avgDurationMs / 1000).toFixed(1)}s`} color="#c9c4bb" />
+                <StatCard label="Providers Used" value={Object.keys(summary.byProvider).length} color="#ff1a2e" />
               </div>
 
               {/* Provider breakdown */}
@@ -219,7 +219,7 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
                   <div style={{ display: 'flex', gap: 1 }}>
                     {Object.entries(summary.byMode).map(([mode, count]) => {
                       const pct = summary.totalGenerations > 0 ? Math.round((count / summary.totalGenerations) * 100) : 0;
-                      const modeColors: Record<string, string> = { fullstack: '#FFD700', frontend: '#0055FF', backend: '#00FF88', review: '#FF003C' };
+                      const modeColors: Record<string, string> = { fullstack: '#e8a46c', frontend: '#c9c4bb', backend: '#b7b2a9', review: '#ff1a2e' };
                       return (
                         <div key={mode} style={{ flex: pct || 1, background: modeColors[mode] ?? '#333', padding: '10px 8px', minWidth: 40 }}>
                           <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, color: '#000', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>
@@ -248,10 +248,10 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
                         alignItems:    'center',
                         gap:            12,
                         padding:        '8px 12px',
-                        borderBottom:  i < recent.length - 1 ? '1px solid #0d0d0d' : 'none',
+                        borderBottom:  i < recent.length - 1 ? '1px solid #0d0c0b' : 'none',
                         fontSize:       9,
                       }}>
-                        <div style={{ color: e.success ? '#00FF88' : '#FF003C', width: 8, flexShrink: 0 }}>
+                        <div style={{ color: e.success ? '#b7b2a9' : '#ff1a2e', width: 8, flexShrink: 0 }}>
                           {e.success ? '●' : '✕'}
                         </div>
                         <div style={{ color: PROVIDER_COLORS[e.provider] ?? '#555', width: 70, flexShrink: 0, letterSpacing: 1 }}>

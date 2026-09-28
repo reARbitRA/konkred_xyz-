@@ -169,12 +169,12 @@ const CheckoutPage: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [invoice, paymentStatus, refreshPayment]);
 
-  const box: React.CSSProperties = { border: '2px solid var(--k-line, #2a2f3a)', padding: 18, background: 'rgba(255,255,255,0.02)' };
+  const box: React.CSSProperties = { border: '2px solid var(--k-line, #2a2624)', padding: 18, background: 'rgba(255,255,255,0.02)' };
 
   return (
     <div dir="rtl" style={{ maxWidth: 940, margin: '0 auto', padding: '28px 18px 80px', fontFamily: 'Vazirmatn, Tahoma, system-ui, sans-serif' }}>
       <h1 style={{ fontSize: 26, fontWeight: 900, marginBottom: 6 }}>خرید اعتبار KONKRED</h1>
-      <p style={{ color: 'var(--k-mut, #98a2b3)', fontSize: 13, marginBottom: 22 }}>
+      <p style={{ color: 'var(--k-mut, #a8a39a)', fontSize: 13, marginBottom: 22 }}>
         پرداخت غیرحضانتی با USDT روی شبکهٔ ترون. هیچ کلید خصوصی یا عبارت بازیابی در این سایت ذخیره نمی‌شود.
       </p>
 
@@ -184,7 +184,7 @@ const CheckoutPage: React.FC = () => {
         {quotaStatus === 'loading' && <p style={{ fontSize: 13 }}>در حال بارگذاری…</p>}
         {quotaStatus === 'error' && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: '#ffb4b6' }}>دریافت اعتبار ممکن نشد.</span>
+            <span style={{ fontSize: 13, color: '#ffb0b4' }}>دریافت اعتبار ممکن نشد.</span>
             <button type="button" onClick={() => void loadQuota()} style={btn}>تلاش دوباره</button>
           </div>
         )}
@@ -193,11 +193,11 @@ const CheckoutPage: React.FC = () => {
             <span>پیام‌های آزمایشی باقی‌مانده: <b>{quota.trialRemaining}</b></span>
             <span>پیام‌های خریداری‌شده: <b>{quota.paidRemaining}</b></span>
             <span>مجموع: <b>{quota.totalRemaining}</b></span>
-            <span style={{ color: 'var(--k-mut, #98a2b3)' }}>{quota.authenticated ? 'حساب کاربری تأیید شده' : 'کاربر مهمان'}</span>
+            <span style={{ color: 'var(--k-mut, #a8a39a)' }}>{quota.authenticated ? 'حساب کاربری تأیید شده' : 'کاربر مهمان'}</span>
           </div>
         )}
         {quotaStatus === 'ready' && quota?.exhausted && (
-          <p style={{ marginTop: 10, fontSize: 13, color: '#ffd28a' }}>
+          <p style={{ marginTop: 10, fontSize: 13, color: '#e8a46c' }}>
             سهمیهٔ رایگان شما به پایان رسیده است. برای ادامه، یکی از بسته‌های زیر را تهیه کنید.
           </p>
         )}
@@ -205,7 +205,7 @@ const CheckoutPage: React.FC = () => {
 
       {/* ── Network warning (must appear BEFORE payment) ────────────────── */}
       {warning && (
-        <div role="alert" style={{ ...box, borderColor: '#ffb020', background: 'rgba(255,176,32,0.08)', marginBottom: 20, fontSize: 13 }}>
+        <div role="alert" style={{ ...box, borderColor: '#ff8a3c', background: 'rgba(255,176,32,0.08)', marginBottom: 20, fontSize: 13 }}>
           ⚠ {warning}
         </div>
       )}
@@ -217,7 +217,7 @@ const CheckoutPage: React.FC = () => {
         {plansStatus === 'loading' && <p style={{ fontSize: 13 }}>در حال بارگذاری بسته‌ها…</p>}
 
         {plansStatus === 'error' && (
-          <div style={{ ...box, borderColor: '#ff4d4f' }}>
+          <div style={{ ...box, borderColor: '#ff1a2e' }}>
             <p style={{ fontSize: 13, marginBottom: 10 }}>{plansError}</p>
             <button type="button" onClick={() => void loadPlans()} style={btn}>تلاش دوباره</button>
           </div>
@@ -234,7 +234,7 @@ const CheckoutPage: React.FC = () => {
                 <h3 style={{ fontSize: 17, fontWeight: 900, marginBottom: 6 }}>{plan.name}</h3>
                 <p style={{ fontSize: 24, fontWeight: 900, marginBottom: 8 }}>${plan.priceUsd}</p>
                 <p style={{ fontSize: 13, marginBottom: 4 }}>{plan.messages} پیام</p>
-                <p style={{ fontSize: 11, color: 'var(--k-mut, #98a2b3)', marginBottom: 12 }}>
+                <p style={{ fontSize: 11, color: 'var(--k-mut, #a8a39a)', marginBottom: 12 }}>
                   {plan.currency} · {plan.network}
                 </p>
                 <button
@@ -251,7 +251,7 @@ const CheckoutPage: React.FC = () => {
         )}
 
         {invoiceStatus === 'error' && (
-          <div role="alert" style={{ ...box, borderColor: '#ff4d4f', marginTop: 14 }}>
+          <div role="alert" style={{ ...box, borderColor: '#ff1a2e', marginTop: 14 }}>
             <p style={{ fontSize: 13, marginBottom: 10 }}>{invoiceError}</p>
             <button type="button" onClick={() => void loadPlans()} style={btn}>تلاش دوباره</button>
           </div>
@@ -260,7 +260,7 @@ const CheckoutPage: React.FC = () => {
 
       {/* ── Invoice ─────────────────────────────────────────────────────── */}
       {invoice && (
-        <section style={{ ...box, borderColor: '#19d3c5' }} aria-live="polite">
+        <section style={{ ...box, borderColor: '#c9c4bb' }} aria-live="polite">
           <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>صورت‌حساب شما</h2>
           <dl style={{ fontSize: 13, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 14px', marginBottom: 14 }}>
             <dt>بسته:</dt><dd>{invoice.plan.name}</dd>
@@ -271,7 +271,7 @@ const CheckoutPage: React.FC = () => {
             <dt>وضعیت:</dt><dd>{statusLabel(paymentStatus)}</dd>
           </dl>
 
-          <div role="alert" style={{ border: '2px solid #ffb020', background: 'rgba(255,176,32,0.08)', padding: 12, fontSize: 12, marginBottom: 14 }}>
+          <div role="alert" style={{ border: '2px solid #ff8a3c', background: 'rgba(255,176,32,0.08)', padding: 12, fontSize: 12, marginBottom: 14 }}>
             ⚠ {invoice.warning}
           </div>
 
@@ -282,7 +282,7 @@ const CheckoutPage: React.FC = () => {
             <button type="button" onClick={() => void refreshPayment()} style={btnGhost}>بررسی وضعیت پرداخت</button>
           </div>
 
-          <p style={{ fontSize: 11, color: 'var(--k-mut, #98a2b3)', marginTop: 14, lineHeight: 1.9 }}>
+          <p style={{ fontSize: 11, color: 'var(--k-mut, #a8a39a)', marginTop: 14, lineHeight: 1.9 }}>
             پس از پرداخت، تأیید تراکنش ممکن است چند دقیقه طول بکشد. این صفحه به‌صورت خودکار وضعیت را بررسی می‌کند.
             اگر اعتبار شما پس از ۳۰ دقیقه اضافه نشد، شمارهٔ سفارش بالا را برای پشتیبانی ارسال کنید.
           </p>
@@ -293,11 +293,11 @@ const CheckoutPage: React.FC = () => {
 };
 
 const btn: React.CSSProperties = {
-  background: '#19d3c5', color: '#0b0d10', border: '2px solid #000', padding: '9px 16px',
+  background: '#c9c4bb', color: '#0a0908', border: '2px solid #000', padding: '9px 16px',
   fontWeight: 800, fontSize: 13, cursor: 'pointer',
 };
 const btnGhost: React.CSSProperties = {
-  background: 'transparent', color: 'inherit', border: '2px solid var(--k-line, #2a2f3a)',
+  background: 'transparent', color: 'inherit', border: '2px solid var(--k-line, #2a2624)',
   padding: '9px 16px', fontWeight: 800, fontSize: 13, cursor: 'pointer',
 };
 
