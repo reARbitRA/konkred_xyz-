@@ -93,7 +93,7 @@ const EnterGate: React.FC<EnterGateProps> = ({ onEnter, onBack, onVerificationNe
          <div className="animate-slide-up delay-200 opacity-0 fill-mode-forwards relative mb-12">
            <h1 className={`text-5xl md:text-7xl font-black tracking-tighter select-none relative z-10 transition-all duration-1000 ease-in-out ${
              isProcessing || isGoogleProcessing
-               ? 'text-orange-500 drop-shadow-[0_0_50px_rgba(249,115,22,0.8)] scale-110 blur-[1px]' 
+               ? 'text-orange-500 drop-shadow-[0_0_50px_rgba(214,0,25,0.8)] scale-110 blur-[1px]' 
                : 'text-white mix-blend-difference'
            }`}>
              KONKRED
