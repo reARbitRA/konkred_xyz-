@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520" role="img" aria-labelledby="title desc">
+<title id="title">KONKRED — Controlled AI Product Floor</title><desc id="desc">Build, break, audit and deploy AI systems.</desc>
+<defs>
+ <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#1d1b1a" stroke-width="1"/></pattern>
+ <filter id="glow"><feGaussianBlur stdDeviation="6" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <style>text{font-family:Arial,Helvetica,sans-serif}.mono{font-family:'Courier New',monospace}.pulse{animation:pulse 1.8s steps(1) infinite}@keyframes pulse{50%{opacity:.3}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}</style>
+</defs>
+<rect width="1400" height="520" fill="#0a0908"/><rect width="1400" height="520" fill="url(#grid)"/>
+<rect x="34" y="32" width="1332" height="456" fill="none" stroke="#302c2a" stroke-width="2"/><rect x="34" y="32" width="14" height="456" fill="#d60019"/>
+<circle cx="86" cy="78" r="7" fill="#d60019" filter="url(#glow)" class="pulse"/><text x="108" y="85" fill="#d60019" font-size="16" font-weight="700" letter-spacing="5" class="mono">KONKRED / SYSTEM ONLINE</text>
+<text x="76" y="197" fill="#f4f1eb" font-size="76" font-weight="900" letter-spacing="-3">CONTROLLED AI</text><text x="76" y="274" fill="#f4f1eb" font-size="76" font-weight="900" letter-spacing="-3">PRODUCT FLOOR</text>
+<text x="81" y="323" fill="#8b8580" font-size="18" letter-spacing="5" class="mono">BUILD · BREAK · AUDIT · DEPLOY</text>
+<path d="M82 386H1250" stroke="#403a36" stroke-width="2"/><path d="M82 386H975" stroke="#d60019" stroke-width="4" stroke-dasharray="18 12"/>
+<polygon points="1002,386 974,372 974,400" fill="#d60019"/>
+<text x="82" y="430" fill="#f4f1eb" font-size="14" font-weight="700" letter-spacing="3" class="mono">36 PRODUCTS</text><text x="300" y="430" fill="#f4f1eb" font-size="14" font-weight="700" letter-spacing="3" class="mono">367 RED-TEAM TECHNIQUES</text><text x="655" y="430" fill="#f4f1eb" font-size="14" font-weight="700" letter-spacing="3" class="mono">485 AUTOMATED TESTS</text>
+<text x="1325" y="449" fill="#d60019" font-size="13" text-anchor="end" letter-spacing="2" class="mono">KONKRED.XYZ</text>
+</svg>
