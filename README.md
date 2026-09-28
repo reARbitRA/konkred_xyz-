@@ -18,14 +18,18 @@
 <div align="center">
 
 <a href="https://konkred.xyz">
-  <img src="./assets/header.svg" width="100%" alt="KONKRED — Controlled AI Product Floor">
+  <img
+    src="https://raw.githubusercontent.com/reARbitRA/konkred_xyz-/main/assets/header.svg?v=2"
+    width="100%"
+    alt="KONKRED — Controlled AI Product Floor"
+  >
 </a>
 
 <br>
 
 # KONKRED.XYZ
 
-### CONTROLLED AI PRODUCT FLOOR  
+### CONTROLLED AI PRODUCT FLOOR
 ### BUILD · BREAK · AUDIT · DEPLOY
 
 <br>
