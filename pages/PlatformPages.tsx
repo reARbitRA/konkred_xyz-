@@ -17,18 +17,31 @@ interface PageProps {
   onNavigate: (page: PageView, slug?: string) => void;
 }
 
+/**
+ * Page grammar: system label → dominant title → human explanation →
+ * content (each page supplies its own primary action + evidence).
+ */
 const Shell: React.FC<{ eyebrow: string; title: string; lead: string; back?: () => void; children: React.ReactNode }> = ({ eyebrow, title, lead, back, children }) => (
   <div className="min-h-screen pb-24 pt-6" style={{ background: 'var(--k-bg)', color: 'var(--k-ink)' }}>
     <div className="max-w-6xl mx-auto px-5 sm:px-10">
       {back && (
-        <button onClick={back} className="inline-flex items-center gap-2 k-mono text-[11px] font-bold uppercase tracking-[0.2em] cursor-pointer mb-8" style={{ color: 'var(--k-amber)' }}>
+        <button onClick={back} className="inline-flex items-center gap-2 k-mono text-[11px] font-bold uppercase tracking-[0.2em] cursor-pointer mb-8 transition-colors hover:text-[var(--k-red)]" style={{ color: 'var(--k-mut)' }}>
           <ArrowLeft size={16} /> BACK
         </button>
       )}
-      <div className="pb-8 border-b-4 space-y-4 brutal-rise" style={{ borderColor: 'var(--k-edge)' }}>
-        <span className="k-badge">{eyebrow}</span>
-        <h1 className="k-title text-4xl sm:text-6xl max-w-3xl">{title}</h1>
-        <p className="text-[14px] leading-relaxed max-w-2xl" style={{ color: 'var(--k-mut)' }}>{lead}</p>
+      <div className="relative pb-8 border-b-4 space-y-4 brutal-rise overflow-hidden" style={{ borderColor: 'var(--k-edge)' }}>
+        {/* system context strip */}
+        <div className="flex items-center gap-3" aria-hidden="true">
+          <span className="w-2 h-2 rotate-45 shrink-0" style={{ background: 'var(--k-amber)' }} />
+          <span className="k-mono text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: 'var(--k-mut)' }}>
+            SYS // KONKRED.XYZ — {eyebrow}
+          </span>
+          <span className="h-px flex-1" style={{ background: 'var(--k-line)' }} />
+        </div>
+        <span aria-hidden="true" className="ghost-num right-0 -top-6 text-[10rem] sm:text-[13rem] hidden md:block" style={{ WebkitTextStroke: '1px var(--k-line)' }}>K</span>
+        <span className="k-badge relative z-10">{eyebrow}</span>
+        <h1 className="k-title text-4xl sm:text-6xl max-w-3xl relative z-10">{title}</h1>
+        <p className="text-[14px] leading-relaxed max-w-2xl relative z-10" style={{ color: 'var(--k-mut)', fontFamily: "'Special Elite','Courier New',serif" }}>{lead}</p>
       </div>
       <div className="pt-9">{children}</div>
     </div>
@@ -155,7 +168,7 @@ export const SprintPage: React.FC<PageProps> = ({ onNavigate }) => {
           ))}
         </div>
         <div className="space-y-3">
-          <div className="border-2 border-black bg-[#0E1319] rounded-2xl p-5 space-y-2">
+          <div className="border-2 border-black bg-[#171514] rounded-2xl p-5 space-y-2">
             <p className="font-mono font-black uppercase tracking-widest text-[10px] text-zinc-500">Sprint entry prices (from the catalogue)</p>
             <div className="space-y-1.5">
               {[...SUITES.filter((s) => s.pricing.sprintFromUsd).map((s) => [s.title, s.pricing.sprintFromUsd] as const),
@@ -180,7 +193,7 @@ export const EnterprisePage: React.FC<PageProps> = () => {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
         {caps.map((c) => <div key={c} className="border-2 px-3.5 py-3 k-mono text-[11px]" style={{ borderColor: 'var(--k-line)', background: 'var(--k-panel)' }}>{c}</div>)}
       </div>
-      <div className="mt-8 border border-zinc-800 rounded-2xl p-5 bg-[#0E1319] space-y-2">
+      <div className="mt-8 border border-zinc-800 rounded-2xl p-5 bg-[#171514] space-y-2">
         <h3 className="k-title text-lg">Controlled-pilot catalogue</h3>
         <p className="text-[11px] text-zinc-400 leading-relaxed">These products run only with a named human approver and a controlled environment:</p>
         <div className="flex flex-wrap gap-2 pt-1">
@@ -202,7 +215,7 @@ export const PartnersPage: React.FC<PageProps> = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {sectors.map((s) => <div key={s} className="border-2 px-3.5 py-4 k-mono text-[11px] text-center" style={{ borderColor: 'var(--k-line)', background: 'var(--k-panel)' }}>{s}</div>)}
       </div>
-      <div className="mt-8 border border-zinc-800 rounded-2xl p-5 bg-[#0E1319]">
+      <div className="mt-8 border border-zinc-800 rounded-2xl p-5 bg-[#171514]">
         <h3 className="k-title text-lg mb-2">What partners get</h3>
         <p className="text-[11px] text-zinc-400 leading-relaxed">Workflow kits at partner terms, joint validation sprints, and supervised pilots inside your delivery envelope. Partner contracts and margins are agreed directly — nothing automatic on this page.</p>
       </div>

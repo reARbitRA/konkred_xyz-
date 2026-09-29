@@ -31,7 +31,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onClose, onSuccess }) => {
         </button>
 
         <header className="text-center mb-12">
-           <div className={`w-20 h-20 mx-auto mb-6 rounded-3xl flex items-center justify-center transition-all duration-700 ${step === 3 ? 'bg-neon-green/20 text-neon-green shadow-[0_0_30px_rgba(16,185,129,0.3)]' : 'bg-neon-purple/10 text-neon-purple border border-neon-purple/20'}`}>
+           <div className={`w-20 h-20 mx-auto mb-6 rounded-3xl flex items-center justify-center transition-all duration-700 ${step === 3 ? 'bg-neon-green/20 text-neon-green shadow-[0_0_30px_rgba(183,178,169,0.3)]' : 'bg-neon-purple/10 text-neon-purple border border-neon-purple/20'}`}>
               {step === 1 && <User size={32} />}
               {step === 2 && <Shield size={32} />}
               {step === 3 && <Fingerprint size={32} className="animate-pulse" />}
@@ -81,7 +81,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onClose, onSuccess }) => {
         <button 
           onClick={step === 3 ? onSuccess : handleNext} 
           disabled={isLoading}
-          className={`w-full py-6 mt-10 rounded-2xl font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 text-xs transition-all ${step === 3 ? 'bg-neon-green text-black hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'bg-white text-black hover:bg-neon-purple shadow-xl'}`}
+          className={`w-full py-6 mt-10 rounded-2xl font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 text-xs transition-all ${step === 3 ? 'bg-neon-green text-black hover:shadow-[0_0_30px_rgba(183,178,169,0.4)]' : 'bg-white text-black hover:bg-neon-purple shadow-xl'}`}
         >
           {isLoading ? <Loader2 size={16} className="animate-spin" /> : step === 3 ? 'ACTIVATE NODE' : 'ADVANCE_SEQUENCE'}
           {!isLoading && <ChevronRight size={16} />}

@@ -12,12 +12,12 @@ const Hero: React.FC<HeroProps> = ({ data }) => {
       <div className="absolute inset-0 z-0 opacity-[0.15] grid-bg pointer-events-none" />
 
       {/* Status Indicator */}
-      <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-green-500/20 bg-green-900/10 backdrop-blur-sm">
+      <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-3 py-1 rounded-none border border-signal-line bg-signal-wash">
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-signal-hot opacity-75"></span>
+          <span className="relative inline-flex rounded-none h-2 w-2 bg-signal"></span>
         </span>
-        <span className="text-[10px] font-mono tracking-widest text-green-400">{data.status}</span>
+        <span className="text-[10px] font-mono tracking-widest text-signal-hot">{data.status}</span>
       </div>
 
       {/* Headlines */}

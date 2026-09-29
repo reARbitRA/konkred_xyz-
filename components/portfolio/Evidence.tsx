@@ -98,7 +98,7 @@ export const EvidenceLine: React.FC<{ entry: PortfolioEntry; onOpenValidation: (
 export const EvidencePanel: React.FC<{ entry: PortfolioEntry }> = ({ entry }) => {
   const v = entry.publicValidation;
   return (
-    <section aria-label="Public validation evidence" className="bg-[#0E1319] border-2 border-black rounded-2xl p-5 md:p-6 space-y-4">
+    <section aria-label="Public validation evidence" className="bg-[#171514] border-2 border-black rounded-2xl p-5 md:p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-mono font-black uppercase tracking-widest text-xs text-white">Public validation evidence</h3>
         <div className="flex items-center gap-3">

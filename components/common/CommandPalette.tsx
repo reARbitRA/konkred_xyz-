@@ -77,17 +77,19 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, onNavi
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[20vh] px-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       
-      <div className="relative w-full max-w-2xl bg-[#0a0a0c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 concrete-card">
-        <div className="p-4 border-b border-white/10 flex items-center gap-4">
-          <Search className="text-ghost" size={20} />
+      <div className="relative w-full max-w-2xl bg-[#0a0908] border-2 border-void-300 shadow-brutalist-lg overflow-hidden animate-in zoom-in-95 duration-200 concrete-card" role="dialog" aria-modal="true" aria-label="Command palette">
+        <div className="k-hazard k-hazard-thin" aria-hidden="true" />
+        <div className="p-4 border-b border-void-300 flex items-center gap-4">
+          <Search className="text-ghost" size={20} aria-hidden="true" />
           <input 
             ref={inputRef}
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
-            placeholder="Type a command or search..." 
-            className="flex-1 bg-transparent text-lg text-white placeholder-ghost/50 outline-none font-sans"
+            placeholder="TYPE A COMMAND OR SEARCH_" 
+            aria-label="Search commands"
+            className="flex-1 bg-transparent text-lg text-white placeholder-ghost/50 outline-none font-mono uppercase tracking-wide"
           />
-          <div className="px-2 py-1 rounded bg-white/10 text-[10px] font-mono text-ghost font-bold border border-white/5">ESC</div>
+          <kbd className="k-keycap">ESC</kbd>
         </div>
 
         <div className="max-h-[60vh] overflow-y-auto py-2">
@@ -95,22 +97,23 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, onNavi
             <div className="p-8 text-center text-ghost text-sm font-mono">No matching protocols found.</div>
           ) : (
             filteredCommands.map((cmd, i) => (
-              <div 
+              <button 
                 key={cmd.id}
+                type="button"
                 onClick={async () => { await cmd.action(); onClose(); }}
                 onMouseEnter={() => setSelectedIndex(i)}
-                className={`px-4 py-3 mx-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                  i === selectedIndex ? 'bg-neon-cyan/10 text-white' : 'text-ghost-light hover:bg-white/5'
+                className={`w-[calc(100%-16px)] px-4 py-3 mx-2 rounded-none flex items-center justify-between cursor-pointer transition-colors text-left border ${
+                  i === selectedIndex ? 'bg-signal-wash border-signal-line text-white' : 'border-transparent text-ghost-light hover:bg-white/5'
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg ${i === selectedIndex ? 'text-neon-cyan' : 'text-ghost'}`}>
-                    <cmd.icon size={18} />
+                  <div className={`p-2 ${i === selectedIndex ? 'text-signal-hot' : 'text-ghost'}`}>
+                    <cmd.icon size={18} aria-hidden="true" />
                   </div>
                   <span className="text-sm font-medium">{cmd.label}</span>
                 </div>
-                {i === selectedIndex && <ArrowRight size={14} className="text-neon-cyan animate-in slide-in-from-left-2" />}
-              </div>
+                {i === selectedIndex && <ArrowRight size={14} className="text-signal-hot animate-in slide-in-from-left-2" aria-hidden="true" />}
+              </button>
             ))
           )}
         </div>

@@ -65,7 +65,7 @@ const DocumentationPage: React.FC<{ onNavigate: (page: PageView) => void }> = ({
             <div className="bg-neon-cyan/5 border border-neon-cyan/20 rounded-3xl p-8 group">
               <h3 className="text-sm font-bold text-white mb-2">Architect Support</h3>
               <p className="text-xs text-ghost-light leading-relaxed mb-8 font-light">Need direct technical assistance? Open a priority uplink with our engineering node.</p>
-              <button className="w-full bg-neon-cyan text-black font-black py-4 rounded-xl text-[10px] tracking-widest uppercase hover:shadow-[0_0_20px_rgba(255,149,0,0.4)] transition-all">ESTABLISH UPLINK</button>
+              <button className="w-full bg-neon-cyan text-black font-black py-4 rounded-xl text-[10px] tracking-widest uppercase hover:shadow-[0_0_20px_rgba(214,0,25,0.4)] transition-all">ESTABLISH UPLINK</button>
             </div>
           </aside>
 

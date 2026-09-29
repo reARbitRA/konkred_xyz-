@@ -1,385 +1,1483 @@
 <!--
-  KONKRED — konkred.xyz
-  FACTORY FLOOR theme · Black #0A0908 · Red #D60019 · Ink #F4F1EB
-  Type: Archivo Black (display) · Special Elite (prose) · JetBrains Mono (machine)
+  KONKRED.XYZ
+  CONTROLLED AI PRODUCT FLOOR
 
-  Red means signal and live state, never danger. The background never glows —
-  only foreground objects ignite.
+  Visual doctrine:
+  Black #0A0908 · Signal Red #D60019 · Ink #F4F1EB
+  Red means live signal, execution and power — never decoration.
+  The background stays dark. Only active machinery ignites.
 
-  Artwork is generated:  python3 tools/build_assets.py
-  Do not hand-edit assets/*.svg — regenerate them.
+  Product doctrine:
+  No invisible magic.
+  No unmetered execution.
+  No unverified output.
+  No secret in the browser.
+  Every action has a state, contract, limit and evidence trail.
 -->
 
 <div align="center">
 
 <a href="https://konkred.xyz">
-  <img src="./assets/header.svg" alt="KONKRED — AI workflow platform, enterprise audits, product builds" width="100%">
+  <img
+    src="https://raw.githubusercontent.com/reARbitRA/konkred_xyz-/main/assets/header.svg?v=2"
+    width="100%"
+    alt="KONKRED — Controlled AI Product Floor"
+  >
 </a>
 
 <br>
 
-[![Site](https://img.shields.io/badge/konkred.xyz-D60019?style=for-the-badge&logoColor=F4F1EB&labelColor=0A0908)](https://konkred.xyz)
-[![Email](https://img.shields.io/badge/ari@konkred.xyz-0A0908?style=for-the-badge&logoColor=F4F1EB&labelColor=0A0908)](mailto:ari@konkred.xyz)
-[![Tests](https://img.shields.io/badge/tests-485_passing-D60019?style=for-the-badge&labelColor=0A0908)](#-quality-bar)
-[![License](https://img.shields.io/badge/license-proprietary-0A0908?style=for-the-badge&labelColor=0A0908)](#-licence)
+# KONKRED.XYZ
+
+### CONTROLLED AI PRODUCT FLOOR
+### BUILD · BREAK · AUDIT · DEPLOY
+
+<br>
+
+[![Platform](https://img.shields.io/badge/LIVE_PLATFORM-KONKRED.XYZ-D60019?style=for-the-badge&labelColor=0A0908)](https://konkred.xyz)
+[![Products](https://img.shields.io/badge/CONTROLLED_PRODUCTS-36-F4F1EB?style=for-the-badge&labelColor=0A0908)](https://konkred.xyz/catalogue)
+[![Red Team](https://img.shields.io/badge/RED_TEAM_TECHNIQUES-367-D60019?style=for-the-badge&labelColor=0A0908)](https://konkred.xyz/redaeye)
+[![Tests](https://img.shields.io/badge/AUTOMATED_TESTS-485_PASSING-F4F1EB?style=for-the-badge&labelColor=0A0908)](#quality-bar)
+[![TypeScript](https://img.shields.io/badge/CORE-TYPESCRIPT-3178C6?style=for-the-badge&logo=typescript&logoColor=white&labelColor=0A0908)](https://www.typescriptlang.org)
+[![React](https://img.shields.io/badge/INTERFACE-REACT_19-61DAFB?style=for-the-badge&logo=react&logoColor=0A0908&labelColor=0A0908)](https://react.dev)
+
+<br>
+
+> **KONKRED is a production-oriented AI platform where generation, security, validation, metering, payment and delivery operate as one system.**
+
+[Open Platform](https://konkred.xyz) ·
+[Explore Catalogue](https://konkred.xyz/catalogue) ·
+[Run fullKONK](https://konkred.xyz/fullkonk) ·
+[Enter REDAEYE](https://konkred.xyz/redaeye) ·
+[Inspect Documentation](./SYSTEM_DOCUMENTATION.md)
 
 </div>
 
-<img src="./assets/divider.svg" alt="" width="100%">
+---
 
-<img src="./assets/metrics.svg" alt="36 workflows shipped · 367 red-team techniques · 500+ enterprise prompts · 70% cost reduction · 485 automated tests" width="100%">
+## `00 / SYSTEM IDENTITY`
 
-<img src="./assets/divider.svg" alt="" width="100%">
+KONKRED is not a landing page wrapped around an AI API.
 
-## `>` WHAT THIS IS
+It is a controlled product floor for designing, generating, attacking, validating, metering and delivering AI-powered systems.
 
-**KONKRED** is a production AI platform, not a demo. It ships four things that
-share one gateway, one identity model, one quota ledger and one payment system:
+The platform combines four operating surfaces:
 
-> **An AI app builder** that turns a prompt into a running project.
-> **A red-team service** that tries to break language models before your users do.
-> **A certification pipeline** that makes a prompt auditable.
-> **A catalogue** of 36 executive workflows with fixtures and validators.
+| Station | Function | Output |
+|---|---|---|
+| **fullKONK** | Architect and generate software projects | Structured source files, build stream, verification state and GitHub export |
+| **REDAEYE** | Adversarially test AI systems | Technique-driven findings, evidence and remediation paths |
+| **AUDIT** | Convert prompts into controlled enterprise artifacts | Schemas, fixtures, validators, provenance and approval records |
+| **CATALOGUE** | Operate 36 packaged workflow products | Controlled tools across legal, finance, engineering, support and operations |
 
-Everything is metered, every failure is a controlled JSON contract, and every
-guarantee in this document is backed by a test you can run.
+These surfaces are not disconnected demos.
 
-<img src="./assets/divider.svg" alt="" width="100%">
+They share the machinery that makes an AI product operational:
 
-<img src="./assets/products.svg" alt="fullKONK app builder, REDAEYE red team, Audit certification, Catalogue of 36 workflows" width="100%">
+- identity;
+- authentication;
+- provider orchestration;
+- quota metering;
+- payment grants;
+- idempotency;
+- streaming;
+- validation;
+- error contracts;
+- evidence;
+- deployment paths.
 
-<details>
-<summary><b>&nbsp;⟶&nbsp; fullKONK_&gt; — prompt to running application</b></summary>
+```text
+                          KONKRED CONTROL PLANE
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│  BUILD                BREAK                AUDIT              OPERATE     │
+│  fullKONK             REDAEYE              CERTIFICATION      CATALOGUE   │
+│     │                    │                     │                   │       │
+│     └────────────────────┴──────────┬──────────┴───────────────────┘       │
+│                                     │                                    │
+│                          SHARED PRODUCT RAIL                             │
+│                                     │                                    │
+│    IDENTITY · QUOTA · PAYMENTS · PROVIDERS · VALIDATION · EVIDENCE       │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
 
-<br>
+---
 
-Describe an app; get a working project with real files.
+## `01 / WHY THIS SYSTEM EXISTS`
 
-| Capability | Detail |
+The visible AI call is the smallest part of an AI product.
+
+The difficult work begins around it:
+
+- What happens when the selected provider is unavailable?
+- How is a retry prevented from charging twice?
+- Where are API credentials stored?
+- How is generated output validated before it becomes a file?
+- How does a disconnected browser resume a build?
+- How are limits enforced per user?
+- How does payment become usable quota?
+- How is a failed operation represented?
+- How can a reviewer inspect the source of a claim?
+- How does generated code leave the platform safely?
+- How are security failures exposed instead of hidden?
+
+KONKRED is built around those questions.
+
+Every major action is treated as a controlled transition:
+
+```text
+INTENT
+  │
+  ▼
+IDENTITY CHECK
+  │
+  ▼
+QUOTA ADMISSION
+  │
+  ▼
+PROVIDER ROUTING
+  │
+  ▼
+CONTROLLED EXECUTION
+  │
+  ▼
+OUTPUT VALIDATION
+  │
+  ▼
+METERING + EVIDENCE
+  │
+  ▼
+DELIVERY
+```
+
+The system does not rely on an illusion of autonomy.
+
+It exposes progress, provider changes, failure states, limits, source files and verification results as first-class product information.
+
+---
+
+# `02 / THE FOUR PRODUCT STATIONS`
+
+## `02.1 / fullKONK_>`
+
+### Prompt to structured software project
+
+fullKONK turns a product request into a live, inspectable build process.
+
+The user does not wait behind a generic loading spinner. The pipeline reports what the system is doing as it happens.
+
+```text
+PROMPT
+  │
+  ▼
+ARCHITECT
+  │  system structure · file plan · implementation strategy
+  ▼
+BUILD
+  │  source generation · provider events · file emission
+  ▼
+VERIFY
+  │  structural checks · output review · completion contract
+  ▼
+DELIVER
+     workspace · download · persistence · GitHub export
+```
+
+### Build modes
+
+| Mode | Purpose |
 |---|---|
-| **Pipeline** | `architect → build → verify` streamed live over SSE |
-| **Providers** | Groq, Cerebras, Gemini, Mistral, OpenRouter, Cloudflare, GitHub Models |
-| **Failover** | Automatic provider rotation with cooldowns; the stream reports every switch |
-| **Modes** | `fullstack` · `frontend` · `backend` · `review` |
-| **Export** | Server-side push to GitHub with strict path validation |
-| **BYOK** | Bring your own provider key; it is never stored |
+| `fullstack` | Generate a connected frontend and backend project |
+| `frontend` | Build interface, interaction and client-side architecture |
+| `backend` | Build services, API contracts and server-side logic |
+| `review` | Inspect and improve an existing project or attached source |
 
-Stream events: `stage` `provider` `failover` `metrics` `delta` `file` `reset` `done` `error`
+### Live stream protocol
 
-**Retrying never double-charges.** The client sends one idempotency key per
-logical generation, scoped server-side under your identity — so a reconnect
-cannot be billed twice, and cannot be pointed at somebody else's balance.
+Generation is delivered through Server-Sent Events.
 
-</details>
+The client understands explicit event types:
 
-<details>
-<summary><b>&nbsp;⟶&nbsp; REDAEYE — LLM red teaming</b></summary>
+| Event | Meaning |
+|---|---|
+| `stage` | Pipeline entered a new operating stage |
+| `provider` | Active provider and model changed |
+| `failover` | Current route failed and another route was selected |
+| `metrics` | Usage, timing or quota information changed |
+| `delta` | Incremental generated output |
+| `file` | A complete project file became available |
+| `reset` | Stream state was intentionally rebuilt |
+| `done` | Generation completed successfully |
+| `error` | A typed failure contract was returned |
 
-<br>
+### Resilient generation
 
-Adversarial testing against a corpus of **367 techniques**: prompt injection,
-jailbreaks, role confusion, data exfiltration, tool misuse and encoding
-attacks. Output is an evidence-backed report with reproduction steps, not a
-score with no provenance.
+A build request receives a scoped idempotency key.
 
-</details>
+```text
+ONE USER INTENT
+      │
+      ├── initial request
+      ├── browser reconnect
+      ├── network retry
+      └── stream recovery
+              │
+              ▼
+      ONE LOGICAL GENERATION
+      ONE METERING DECISION
+```
 
-<details>
-<summary><b>&nbsp;⟶&nbsp; AUDIT — prompt certification</b></summary>
+The key is bound to the authenticated identity and logical generation. A reconnect cannot silently become a second charge or be redirected toward another user’s balance.
 
-<br>
+### Project workspace
 
-Turns a prompt into something an enterprise can approve: input/output schemas,
-provenance checking, safety gates, a public fixture, a validator, and written
-approval instructions.
+Generated files are mounted into a project workspace with:
 
-</details>
+- file navigation;
+- language-aware rendering;
+- code inspection;
+- change comparison;
+- build-session state;
+- project persistence;
+- ZIP download;
+- GitHub export.
 
-<details>
-<summary><b>&nbsp;⟶&nbsp; CATALOGUE — 36 executive workflows</b></summary>
+### GitHub export
 
-<br>
+Source leaves the platform through a server-side boundary.
 
-**21 suites** and **15 validated workflows** across finance, legal, support,
-engineering and operations — each with a fixture, a validator and a deployment
-guide. Browse at [konkred.xyz/catalogue](https://konkred.xyz/catalogue).
+The export path includes:
 
-</details>
+- authenticated ownership;
+- repository selection;
+- branch targeting;
+- normalized paths;
+- path traversal protection;
+- prohibited path checks;
+- file validation;
+- controlled commit creation.
 
-<img src="./assets/divider.svg" alt="" width="100%">
+Provider tokens and GitHub credentials are not exposed to the browser.
 
-## `>` ARCHITECTURE
+---
 
-Secrets never reach the browser. The site holds no provider keys; the gateway
-holds no payment state. That separation is the whole design.
+## `02.2 / REDAEYE`
+
+### Adversarial testing for language-model systems
+
+REDAEYE is the hostile testing station of KONKRED.
+
+It evaluates prompts, agent boundaries and model-facing systems against a corpus of 367 adversarial techniques organized into 18 detection families.
+
+The objective is not to generate a decorative security score.
+
+The objective is to expose:
+
+- the attack;
+- the affected boundary;
+- the model behavior;
+- the evidence;
+- the severity;
+- the remediation path.
+
+### Detection families
+
+REDAEYE’s test surface covers families including:
+
+- direct prompt injection;
+- indirect prompt injection;
+- instruction hierarchy attacks;
+- role confusion;
+- system-prompt extraction;
+- context poisoning;
+- encoded payloads;
+- multilingual bypass;
+- jailbreak patterns;
+- tool misuse;
+- data exfiltration;
+- unsafe delegation;
+- output manipulation;
+- policy collision;
+- excessive agency;
+- memory contamination;
+- boundary erosion;
+- adversarial chaining.
+
+### Assessment flow
+
+```text
+TARGET DEFINITION
+      │
+      ▼
+ATTACK FAMILY SELECTION
+      │
+      ▼
+TECHNIQUE EXECUTION
+      │
+      ▼
+RESPONSE CAPTURE
+      │
+      ▼
+EVIDENCE CLASSIFICATION
+      │
+      ▼
+RISK + REMEDIATION
+```
+
+### Result model
+
+A finding can carry:
+
+- technique identifier;
+- family;
+- attack payload;
+- observed output;
+- reproduction path;
+- severity;
+- confidence;
+- affected boundary;
+- recommended mitigation;
+- reviewer state.
+
+REDAEYE is designed for engineering review, not theatrical fear.
+
+---
+
+## `02.3 / AUDIT`
+
+### Prompt certification and controlled approval
+
+AUDIT transforms a prompt from an informal block of text into an inspectable enterprise artifact.
+
+A prompt entering an organization must be more than “well written.” It must have a defined operating contract.
+
+AUDIT packages that contract.
+
+### Certification surface
+
+A controlled prompt can include:
+
+- purpose;
+- allowed scope;
+- prohibited scope;
+- input schema;
+- output schema;
+- required context;
+- source requirements;
+- safety gates;
+- deterministic fixtures;
+- validation rules;
+- provenance fields;
+- human-review instructions;
+- approval state.
+
+### Audit pipeline
+
+```text
+RAW PROMPT
+   │
+   ▼
+SCOPE EXTRACTION
+   │
+   ▼
+INPUT / OUTPUT CONTRACT
+   │
+   ▼
+RISK AND FAILURE ANALYSIS
+   │
+   ▼
+FIXTURE GENERATION
+   │
+   ▼
+VALIDATOR LINKAGE
+   │
+   ▼
+HUMAN APPROVAL RECORD
+```
+
+### Evidence over adjectives
+
+AUDIT avoids untestable labels such as:
+
+- “enterprise-grade”;
+- “fully safe”;
+- “highly accurate”;
+- “production-ready.”
+
+Instead, it produces inspectable artifacts:
+
+```text
+CLAIM
+  ├── fixture
+  ├── validation rule
+  ├── source or provenance
+  ├── expected boundary
+  └── reviewer instruction
+```
+
+The result is a prompt that can enter a real approval process.
+
+---
+
+## `02.4 / CATALOGUE`
+
+### 36 controlled workflow products
+
+The KONKRED catalogue contains 36 packaged products:
+
+- 21 suites;
+- 15 ready-to-run workflows.
+
+The products cover:
+
+- finance;
+- legal operations;
+- engineering;
+- customer support;
+- management;
+- procurement;
+- compliance;
+- property;
+- documentation;
+- strategic operations.
+
+Each catalogue entry is modeled as a product record rather than a marketing card.
+
+### Product record
+
+A record can define:
+
+- stable ID;
+- slug;
+- product family;
+- buyer;
+- problem;
+- inputs;
+- outputs;
+- fixtures;
+- validator;
+- evidence;
+- deployment guidance;
+- operational status;
+- human-review boundary.
+
+### Controlled workflow contract
+
+```text
+INPUT
+  │
+  ▼
+SCHEMA CHECK
+  │
+  ▼
+WORKFLOW EXECUTION
+  │
+  ▼
+STRUCTURED OUTPUT
+  │
+  ▼
+VALIDATOR
+  │
+  ▼
+HUMAN REVIEW
+```
+
+No workflow is presented as an invisible autonomous employee.
+
+The interface makes the control boundary visible.
+
+---
+
+# `03 / PLATFORM ARCHITECTURE`
+
+Secrets never enter browser code.
+
+Payment state and provider credentials live behind separate server boundaries.
 
 ```mermaid
 graph LR
-    B["🌐 Browser<br/><i>no secrets, ever</i>"]
-    V["▲ Vercel Function<br/><b>gateway-proxy</b><br/><i>validate · rate limit · meter</i>"]
-    G["⚙ Konkred Gateway<br/><i>provider keys live here</i>"]
-    P[("🐘 PostgreSQL<br/><i>quota · payments</i>")]
-    T["✈ Telegram Bot"]
-    N["₿ NowPayments<br/><i>USDT TRC20</i>"]
-    AI["🧠 Groq · Cerebras<br/>Gemini · Mistral"]
+    U["Browser / User"]
+    V["Vercel Edge + API Layer"]
+    G["KONKRED AI Gateway"]
+    P[("PostgreSQL")]
+    F["Firebase Identity"]
+    N["Payment Provider"]
+    T["Telegram Surface"]
+    AI["AI Provider Pool"]
+    GH["GitHub API"]
 
-    B -->|same-origin /api| V
-    V -->|server-side key| G
-    G --> AI
-    V <-->|quota + grants| P
-    T -->|"/api/internal/quota"| P
-    N -->|"signed IPN"| V
+    U -->|"same-origin requests"| V
+    U -->|"authentication"| F
+    F -->|"identity token"| V
+
+    V -->|"server-side gateway key"| G
+    G -->|"model requests"| AI
+
+    V <-->|"quota · grants · orders"| P
+    N -->|"signed payment event"| V
+
+    T -->|"internal quota routes"| V
+    V -->|"validated export"| GH
 
     classDef edge fill:#0A0908,stroke:#D60019,stroke-width:2px,color:#F4F1EB
-    classDef core fill:#141210,stroke:#D60019,stroke-width:3px,color:#F4F1EB
-    classDef data fill:#141210,stroke:#8A8580,stroke-width:2px,color:#F4F1EB
-    class B,T edge
+    classDef core fill:#171514,stroke:#D60019,stroke-width:3px,color:#F4F1EB
+    classDef data fill:#171514,stroke:#77716C,stroke-width:2px,color:#F4F1EB
+
+    class U,T edge
     class V,G core
-    class P,N,AI data
+    class P,F,N,AI,GH data
 ```
 
-### The money path
+## Trust boundaries
+
+| Boundary | Responsibility |
+|---|---|
+| Browser | Interface, user intent, local interaction |
+| Identity provider | Authentication and identity assertion |
+| API layer | Authorization, validation, quota and payment coordination |
+| AI gateway | Provider credentials, routing, fallback and inference |
+| PostgreSQL | Durable quota, payment and grant state |
+| Payment provider | Invoice and settlement event |
+| GitHub boundary | Validated server-side repository writes |
+
+---
+
+# `04 / PROVIDER ORCHESTRATION`
+
+KONKRED is designed to operate across multiple AI providers.
+
+The active provider pool can include:
+
+- Gemini;
+- Groq;
+- Cerebras;
+- Mistral;
+- OpenRouter;
+- Cloudflare Workers AI;
+- GitHub Models.
+
+The application does not bind product behavior directly to one provider SDK.
+
+```text
+PRODUCT REQUEST
+      │
+      ▼
+TASK + POLICY
+      │
+      ▼
+CANDIDATE CHAIN
+      │
+      ▼
+CAPACITY CHECK
+      │
+      ▼
+PROVIDER ATTEMPT
+      │
+      ├── success ──────────────► normalized result
+      │
+      ├── rate limit ───────────► cooldown + next candidate
+      │
+      ├── auth failure ─────────► disable route + next candidate
+      │
+      ├── timeout ──────────────► retry policy + next candidate
+      │
+      └── context failure ──────► reshape request + next candidate
+```
+
+### Why the gateway exists
+
+The gateway centralizes:
+
+- credentials;
+- provider adapters;
+- model registry;
+- model selection;
+- fallback;
+- request limits;
+- cache behavior;
+- deduplication;
+- usage normalization;
+- failure classification;
+- operational status.
+
+The product surfaces consume one controlled contract instead of embedding provider-specific logic throughout the application.
+
+---
+
+# `05 / IDENTITY, QUOTA AND METERING`
+
+KONKRED treats quota as product state.
+
+A user’s available execution is not derived from a client-side counter. It is calculated behind the authenticated API boundary.
+
+### Quota flow
+
+```text
+AUTHENTICATED REQUEST
+       │
+       ▼
+IDENTITY RESOLUTION
+       │
+       ▼
+AVAILABLE GRANTS
+       │
+       ▼
+RESERVATION / ADMISSION
+       │
+       ▼
+EXECUTION
+       │
+       ▼
+USAGE RECORD
+       │
+       ▼
+FINAL BALANCE
+```
+
+### Grant sources
+
+Quota may originate from:
+
+- account defaults;
+- purchased packages;
+- operator grants;
+- campaign grants;
+- product-specific access;
+- internal service allocation.
+
+### Metering guarantees
+
+The system is designed around:
+
+- authenticated ownership;
+- server-side calculation;
+- atomic state transitions;
+- idempotent usage;
+- explicit failure contracts;
+- separate administrative routes;
+- audit-friendly records.
+
+---
+
+# `06 / PAYMENT RAIL`
+
+Payment is treated as a state machine, not as a redirect button.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant U as User
-    participant S as konkred.xyz
-    participant N as NowPayments
+    participant K as KONKRED API
+    participant N as Payment Provider
     participant D as PostgreSQL
 
-    U->>S: POST /api/payments/create
-    S->>D: record intent (order_id UNIQUE)
-    S->>N: create invoice
-    N-->>U: invoice · USDT TRC20
-    U->>N: transfer
-    N->>S: signed IPN (HMAC-SHA512)
-    S->>S: verify signature · amount · ownership
-    S->>D: INSERT webhook_events (event_id UNIQUE)
-    Note over D: a replay loses this race<br/>and grants nothing
-    S->>D: credit quota · mark confirmed
+    U->>K: Create payment intent
+    K->>D: Insert owned order
+    K->>N: Create invoice
+    N-->>U: Return hosted payment URL
+    U->>N: Complete transfer
+    N->>K: Signed payment notification
+    K->>K: Verify signature and amount
+    K->>D: Record unique event
+    K->>D: Confirm order and grant quota
+    D-->>K: Updated balance
 ```
 
-<img src="./assets/divider.svg" alt="" width="100%">
+### Payment controls
 
-<img src="./assets/services.svg" alt="Offer ladder from workflow kits to enterprise setup" width="100%">
+The payment layer includes concepts for:
 
-<div align="center"><sub>Planning ranges. Exact quotes come from a scoping call — nothing is charged on this site.</sub></div>
+- owned orders;
+- unique order IDs;
+- signed event verification;
+- amount verification;
+- currency verification;
+- event replay protection;
+- atomic quota grants;
+- payment-status tracking;
+- authenticated history.
 
-<img src="./assets/divider.svg" alt="" width="100%">
+A repeated provider event must not become repeated credit.
 
-<img src="./assets/stack.svg" alt="Frontend, backend, data, AI, payments and quality stack" width="100%">
+---
 
-<img src="./assets/divider.svg" alt="" width="100%">
+# `07 / SECURITY MODEL`
 
-## `>` QUICK START
+Security is implemented as architecture, not as a paragraph added after development.
+
+## Secret isolation
+
+The browser does not receive:
+
+- AI-provider keys;
+- database credentials;
+- payment secrets;
+- administrator keys;
+- gateway secrets;
+- server-side GitHub credentials.
+
+## Input controls
+
+The server validates:
+
+- body size;
+- required fields;
+- accepted enum values;
+- route authorization;
+- user ownership;
+- quota state;
+- file paths;
+- export boundaries;
+- payment events.
+
+## Output controls
+
+Generated material can pass through:
+
+- structural checks;
+- file-contract checks;
+- schema validation;
+- content-boundary checks;
+- prohibited-path checks;
+- catalogue validators;
+- human-review states.
+
+## GitHub export controls
+
+Export rejects or controls:
+
+- path traversal;
+- absolute paths;
+- invalid repository targets;
+- prohibited metadata locations;
+- malformed generated files;
+- unauthorized ownership;
+- ambiguous branch operations.
+
+## Payment controls
+
+- signature verification;
+- replay protection;
+- unique event records;
+- order ownership;
+- server-side amount checks;
+- atomic quota grants.
+
+## Authentication controls
+
+- server-validated identity tokens;
+- protected internal routes;
+- separate admin boundaries;
+- authenticated account state;
+- ownership-scoped operations.
+
+---
+
+# `08 / API CONTRACT`
+
+KONKRED APIs return controlled success and failure envelopes.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "result": {}
+  }
+}
+```
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "QUOTA_EXHAUSTED",
+    "message": "No executable quota remains for this operation."
+  }
+}
+```
+
+### Contract principles
+
+- Errors are machine-readable.
+- HTTP status reflects the failure class.
+- Internal stack traces do not become public responses.
+- Ownership is checked server-side.
+- Retried operations preserve logical identity.
+- Invalid requests fail before provider execution.
+- Payment and quota mutations are explicit.
+
+---
+
+# `09 / REPOSITORY MAP`
+
+```text
+.
+├── App.tsx
+├── index.tsx
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── vitest.config.ts
+├── playwright.config.ts
+│
+├── pages/
+│   ├── LandingPage.tsx
+│   ├── FullKonkPage.tsx
+│   ├── RedaeyeSandbox.tsx
+│   ├── AuditPage.tsx
+│   ├── CataloguePage.tsx
+│   ├── SuiteDetailPage.tsx
+│   ├── WorkflowDetailPage.tsx
+│   ├── CheckoutPage.tsx
+│   ├── AccountPage.tsx
+│   ├── DocumentationPage.tsx
+│   └── ...
+│
+├── components/
+│   ├── brand/
+│   ├── common/
+│   ├── fullkonk/
+│   ├── portfolio/
+│   ├── Navbar.tsx
+│   ├── SystemFooter.tsx
+│   └── ...
+│
+├── content/
+│   └── catalogue/
+│       ├── portfolio.ts
+│       └── portfolio-36.json
+│
+├── catalog/
+│   ├── product-manifest.json
+│   ├── products.ts
+│   ├── runtime.ts
+│   ├── types.ts
+│   └── validate.ts
+│
+├── server/
+│   ├── billing/
+│   ├── payments/
+│   ├── persistence/
+│   └── ...
+│
+├── services/
+│   ├── database.ts
+│   ├── fullkonk.projects.ts
+│   └── ...
+│
+├── api/
+│   └── index.ts
+│
+├── lib/
+│   ├── gateway-client.ts
+│   ├── sse.ts
+│   └── fullkonk-server.cjs
+│
+├── contexts/
+├── hooks/
+├── integrations/
+├── utils/
+├── styles/
+│
+├── tests/
+│   ├── api.test.ts
+│   ├── billing.test.ts
+│   ├── billing-postgres.test.ts
+│   ├── client-integration.test.ts
+│   ├── gateway-integration.test.ts
+│   ├── gateway-proxy.test.ts
+│   ├── internal-quota.test.ts
+│   ├── manifest.test.ts
+│   ├── metering.test.ts
+│   ├── payment-routes.test.ts
+│   ├── payments.test.ts
+│   ├── portfolio.test.ts
+│   ├── prompt-library.test.ts
+│   ├── routes.test.ts
+│   ├── secrets.test.ts
+│   ├── security-audit.test.ts
+│   ├── sse-parser.test.ts
+│   ├── workflow-products.test.ts
+│   ├── workflow-runner.test.ts
+│   └── e2e/
+│
+├── scripts/
+│   └── validate-portfolio.mjs
+│
+├── docs/
+├── agent/
+├── owner-docs/
+│
+├── firestore.rules
+├── firebase-blueprint.json
+├── vercel.json
+└── .env.example
+```
+
+---
+
+# `10 / LOCAL IGNITION`
+
+## Requirements
+
+- Node.js 20+
+- npm
+- PostgreSQL for durable production-oriented billing tests
+- Firebase project for authenticated surfaces
+- Access to at least one configured AI provider for live generation
+
+## Clone
 
 ```bash
-git clone https://github.com/reARbitRA/konkred_xyz-
-cd konkred_xyz- && npm install
-npm run dev                      # http://localhost:3000
+git clone https://github.com/reARbitRA/konkred_xyz-.git
+cd konkred_xyz-
 ```
 
-<details>
-<summary><b>&nbsp;⟶&nbsp; Full local stack (billing, payments and AI, entirely offline)</b></summary>
-
-<br>
-
-No credentials and no network required — the mock gateway and mock payment
-provider stand in for the real services.
+## Install
 
 ```bash
-# 1 — real PostgreSQL (an in-memory emulator hides real bugs; see below)
-python3 -m venv /tmp/pgvenv && /tmp/pgvenv/bin/pip install pgserver
-/tmp/pgvenv/bin/python scripts/dev/start-postgres.py &
-
-export DATABASE_URL="postgresql://postgres@localhost/postgres?host=/tmp/pgdata"
-bash scripts/setup-database.sh        # migrate + prove the UNIQUE constraints
-
-# 2 — stand-ins for the paid services
-node scripts/dev/mock-gateway.mjs 5055 &
-node scripts/dev/mock-nowpayments.mjs 5066 &
-
-# 3 — the site
-KONKRED_GATEWAY_URL=http://127.0.0.1:5055 \
-KONKRED_GATEWAY_API_KEY=dev FULLKONK_KEY=dev ANON_SALT=dev \
-INTERNAL_API_KEY=dev NOWPAYMENTS_API_KEY=dev \
-NOWPAYMENTS_IPN_SECRET=dev-ipn-secret \
-NOWPAYMENTS_API_BASE=http://127.0.0.1:5066 \
-TRIAL_MESSAGES=3 npm run dev
+npm install
 ```
 
-Then watch the paywall engage on the fourth call:
+## Configure
 
 ```bash
-for i in 1 2 3 4; do
-  curl -s -o /dev/null -w "call $i → %{http_code}\n" -X POST \
-    -H 'content-type: application/json' \
-    -d '{"messages":[{"role":"user","content":"hi"}]}' \
-    localhost:3000/api/ai
-done
-# call 1 → 200   call 2 → 200   call 3 → 200   call 4 → 402
+cp .env.example .env
 ```
 
-</details>
+Populate the required environment variables for the surfaces you intend to run.
 
-### Commands
+Never expose provider credentials through client-prefixed variables.
 
-| Command | What it does |
+## Start development
+
+```bash
+npm run dev
+```
+
+The server binds the application and API surface through the project entry point.
+
+## Type validation
+
+```bash
+npm run typecheck
+```
+
+## Portfolio-manifest validation
+
+```bash
+npm run validate:portfolio
+```
+
+## Unit and integration tests
+
+```bash
+npm test
+```
+
+## End-to-end tests
+
+```bash
+npm run test:e2e
+```
+
+## Production build
+
+```bash
+npm run build
+```
+
+## Vercel-oriented build
+
+```bash
+npm run build:vercel
+```
+
+---
+
+# `11 / BUILD PIPELINE`
+
+The production build has separate client and server responsibilities.
+
+```text
+SOURCE
+  │
+  ├── portfolio validation
+  │
+  ├── TypeScript validation
+  │
+  ├── Vite client build
+  │
+  ├── API bundle
+  │
+  └── server bundle
+  │
+  ▼
+DEPLOYABLE ARTIFACTS
+```
+
+### Available scripts
+
+| Command | Purpose |
 |---|---|
-| `npm run dev` | Dev server with HMR on `:3000` |
-| `npm test` | 485 tests (6 skip without a database) |
-| `npm run lint` | `tsc --noEmit` |
-| `npm run build:vercel` | Client bundle + API bundle |
-| `bash scripts/setup-secrets.sh` | Generate secrets into a gitignored `0600` file |
-| `bash scripts/setup-database.sh` | Apply the migration and verify its constraints |
-| `bash scripts/verify-production.sh <url>` | 27 post-deploy checks; non-zero exit on failure |
-| `python3 tools/build_assets.py` | Regenerate this README's artwork |
+| `npm run dev` | Start the development server |
+| `npm run typecheck` | Validate TypeScript without emitting files |
+| `npm run lint` | Run the TypeScript validation boundary |
+| `npm run validate:portfolio` | Validate the 36-entry product manifest |
+| `npm test` | Execute Vitest suites |
+| `npm run test:e2e` | Execute Playwright end-to-end tests |
+| `npm run build:client` | Validate catalogue and build the client |
+| `npm run bundle:api` | Bundle server API logic |
+| `npm run build:vercel` | Build client and Vercel API artifact |
+| `npm run build` | Produce the complete application build |
+| `npm start` | Start the built server |
 
-<img src="./assets/divider.svg" alt="" width="100%">
+---
 
-## `>` API
+# `12 / QUALITY BAR`
 
-Every route returns JSON. **No route ever returns HTML** — a regression test
-enforces it, because an API answering `<!DOCTYPE html>` once made a real outage
-much harder to diagnose.
+KONKRED’s test suite covers product behavior, security boundaries and state transitions.
 
-| Route | Auth | Purpose |
-|---|---|---|
-| `GET /api/health` | public | Liveness. Always 200 if the function runs. Config reported as **booleans only** |
-| `GET /api/ready` | public | Readiness. Probes the gateway with a 5 s timeout; degrades to 503 |
-| `GET /api/fullkonk/providers` | public | Provider catalogue |
-| `POST /api/fullkonk/generate` | metered | SSE build pipeline |
-| `POST /api/fullkonk/github/export` | metered | Server-side GitHub export |
-| `POST /api/ai` | metered | Chat completion |
-| `GET /api/quota` | identity | Remaining balance |
-| `GET /api/payments/plans` | public | Plan catalogue + network warning |
-| `POST /api/payments/create` | identity | Create an invoice · 10/hour/identity |
-| `POST /api/payments/nowpayments/webhook` | **signature** | Provider callback |
-| `/api/internal/quota/*` | service token | Shared quota for the Telegram bot |
+## Test families
 
-<details>
-<summary><b>&nbsp;⟶&nbsp; Error contract</b></summary>
+### API behavior
 
-<br>
+- route contracts;
+- request validation;
+- success envelopes;
+- error envelopes;
+- authorization behavior.
 
-Failures are machine-readable and never leak internals. User-facing text is
-Persian; diagnostics go to logs only.
+### Billing and quota
 
-| Code | Status | Meaning |
-|---|---|---|
-| `GATEWAY_NOT_CONFIGURED` | 503 | No gateway URL set |
-| `GATEWAY_UNREACHABLE` / `GATEWAY_TIMEOUT` | 503 | Gateway down or slow |
-| `QUOTA_EXHAUSTED` | **402** | Out of messages; carries `upgradeUrl` |
-| `TOO_MANY_PAYMENT_ATTEMPTS` | 429 | Invoice throttle; carries `Retry-After` |
-| `INVALID_SIGNATURE` | 401 | Webhook rejected before touching state |
-| `BILLING_UNAVAILABLE` | 503 | Database unreachable — retryable |
-| `ROUTE_NOT_FOUND` | 404 | Unknown API path (JSON, never the SPA shell) |
+- grant calculation;
+- usage metering;
+- idempotency;
+- database-backed state;
+- internal quota routes;
+- exhausted balance behavior.
 
-</details>
+### Payments
 
-<img src="./assets/divider.svg" alt="" width="100%">
+- order creation;
+- provider-event handling;
+- signature logic;
+- replay protection;
+- quota crediting;
+- payment history.
 
-## `>` SECURITY POSTURE
+### Gateway
 
-Written as **attacks**, not assertions — `tests/security-audit.test.ts` mounts
-the real handler and attacks it.
+- proxy behavior;
+- upstream failures;
+- provider response handling;
+- integration contracts;
+- server-side credential isolation.
 
-| Threat | Defence |
-|---|---|
-| Quota bypass | Every inference route is metered. `/api/ai` was once unmetered — that hole is closed and guarded by a test |
-| Webhook forgery | HMAC-SHA512 over the **recursively** key-sorted body, constant-time compare |
-| Webhook replay | `webhook_events.event_id` is `UNIQUE` — the **database** arbitrates, not application code |
-| Identity forgery | Identity is always server-derived. A client `x-end-user` header is ignored |
-| Path traversal | Export rejects absolute paths, `..`, `.git/`, `.env` and `.github/workflows/` |
-| SSRF | Upstream paths are hard-coded constants; no client input reaches a URL |
-| Credential injection | A browser-supplied GitHub token is dropped, never forwarded |
-| Secret leakage | Client bundle scanned in CI; upstream responses screened before relay |
-| CORS | Billing routes are same-origin only; preflight from another origin is refused |
-| Transport | Database TLS certificates verified by default |
-| DoS | Body-size caps, per-route rate limits, SQL-counted invoice throttle |
+### Streaming
 
-> **Non-custodial by design.** Funds settle directly to the owner's address.
-> No seed phrase or private key is ever stored, requested or logged.
+- SSE event parsing;
+- completion behavior;
+- failure behavior;
+- reconnect-sensitive state.
 
-<img src="./assets/divider.svg" alt="" width="100%">
+### Security
 
-## `>` QUALITY BAR
+- secret exposure checks;
+- dangerous path rejection;
+- authorization boundaries;
+- client-bundle inspection;
+- security regression tests.
 
-```
-485 tests · 25 files · tsc clean · 14/14 guards proven by reversion
-```
+### Product catalogue
 
-Three practices this project holds to, each of which caught a real bug:
+- 36-entry manifest integrity;
+- unique IDs;
+- unique slugs;
+- route resolution;
+- parent-child relationships;
+- fixture linkage;
+- validator linkage;
+- product-runtime synchronization.
 
-**1 — Verify against real infrastructure.** The billing suite runs against a
-real PostgreSQL server, not only an in-memory emulator. That is how a
-**connection-pool deadlock** was found: a method requested a second connection
-while holding one, so ten concurrent duplicate webhooks hung for 30 seconds.
-The emulator did not reproduce it. In production that is a wedged payment
-endpoint under exactly the retry storm providers generate.
+### User interface
 
-**2 — Prove a regression test actually fails.** The "no infinite loading"
-tests were checked against a **deliberately reverted fix**. A test that passes
-with and without the fix is worthless.
+- loading-state termination;
+- client integration;
+- critical product surfaces;
+- navigation;
+- end-to-end platform behavior.
 
-**3 — Never weaken a guard that fails.** The secret scanner, the no-fakes
-check and the bundle-hygiene test each caught genuine mistakes during
-development. Every time, the code was fixed — not the test.
-
-<img src="./assets/divider.svg" alt="" width="100%">
-
-## `>` DEPLOYMENT
-
-Full sequence in **[`docs/DEPLOY_RUNBOOK.md`](./docs/DEPLOY_RUNBOOK.md)**.
+## Quality commands
 
 ```bash
-bash scripts/setup-secrets.sh                 # generate secrets
-bash scripts/setup-database.sh                # migrate + verify
-# set Vercel env vars, deploy with the build cache cleared
-bash scripts/verify-production.sh https://www.konkred.xyz
+npm run typecheck
+npm run validate:portfolio
+npm test
+npm run test:e2e
+npm run build
 ```
 
-> **Never prefix a secret with `VITE_`.** That compiles it into browser
-> JavaScript. Provider keys belong on the gateway only — never on the website.
+The build is not complete when the interface renders.
 
-<details>
-<summary><b>&nbsp;⟶&nbsp; Documentation index</b></summary>
+It is complete when the manifest validates, contracts hold, tests pass and deployable artifacts are produced.
 
-<br>
+---
 
-| Document | Contents |
+# `13 / DESIGN SYSTEM`
+
+KONKRED uses an industrial interface language built around machinery, evidence and controlled motion.
+
+## Core palette
+
+| Token | Value | Meaning |
+|---|---:|---|
+| Void | `#0A0908` | Primary environment |
+| Signal Red | `#D60019` | Live execution and active power |
+| Ink | `#F4F1EB` | Human-readable foreground |
+| Panel | `#171514` | Operational surface |
+| Steel | `#2A2624` | Structure and separation |
+
+## Interaction doctrine
+
+- Motion communicates state.
+- Active machinery may glow.
+- Background surfaces do not glow.
+- Red means signal, not generic error.
+- Borders expose structure.
+- Loading states reveal progress.
+- Product status is written explicitly.
+- Decorative softness does not replace hierarchy.
+
+## Interface motifs
+
+- factory floors;
+- signal rails;
+- hard-edged slabs;
+- stamped labels;
+- machine consoles;
+- visible status lights;
+- blueprint grids;
+- evidence panels;
+- controlled route transitions.
+
+The visual language is part of the product logic: systems should look inspectable because they are inspectable.
+
+---
+
+# `14 / PRODUCT MANIFEST`
+
+The catalogue is validated before the client build.
+
+The validation boundary checks:
+
+- expected entry count;
+- suite and workflow distribution;
+- unique identifiers;
+- unique slugs;
+- unique routes;
+- valid parent references;
+- valid status values;
+- linked validators;
+- linked fixtures;
+- prohibited autonomous-action claims;
+- runtime synchronization.
+
+Example validation command:
+
+```bash
+npm run validate:portfolio
+```
+
+Expected contract:
+
+```text
+portfolio manifest VALID
+36 entries
+21 suites
+15 workflows
+ids / slugs / routes unique
+parents resolve
+validators linked
+no uncontrolled autonomous actions
+```
+
+This converts catalogue content from page copy into build-validated product data.
+
+---
+
+# `15 / DEPLOYMENT SURFACES`
+
+KONKRED is structured for split deployment:
+
+```text
+BROWSER
+   │
+   ▼
+PUBLIC APPLICATION
+   │
+   ▼
+SERVER API / EDGE FUNCTIONS
+   │
+   ├── PostgreSQL
+   ├── Firebase Identity
+   ├── Payment Provider
+   ├── GitHub API
+   └── AI Gateway
+```
+
+## Vercel
+
+The repository includes:
+
+- `vercel.json`;
+- client build path;
+- API bundle path;
+- same-origin API structure;
+- environment-based secrets.
+
+## Firebase
+
+Firebase supports identity-facing surfaces.
+
+The repository includes:
+
+- Firebase configuration boundary;
+- Firestore rules;
+- authentication contexts;
+- verification flow;
+- account integration.
+
+## PostgreSQL
+
+PostgreSQL stores durable operational state including:
+
+- accounts;
+- quotas;
+- grants;
+- orders;
+- payment events;
+- metering state.
+
+## AI Gateway
+
+Provider credentials remain in the gateway environment.
+
+The public website reaches the gateway through a server-side proxy rather than calling provider APIs directly.
+
+---
+
+# `16 / FAILURE CONTRACTS`
+
+A controlled system describes failure as clearly as success.
+
+Representative failure classes include:
+
+| Failure | Product response |
 |---|---|
-| [`docs/DEPLOY_RUNBOOK.md`](./docs/DEPLOY_RUNBOOK.md) | Ordered deployment, env vars, verification |
-| [`docs/ROUTE_AUDIT.md`](./docs/ROUTE_AUDIT.md) | Every route: status, owner, auth, root cause, fix |
-| [`docs/INCIDENT_AND_DEPLOYMENT.md`](./docs/INCIDENT_AND_DEPLOYMENT.md) | Outage analysis + Persian operational guide |
-| [`docs/PHASE_STATUS.md`](./docs/PHASE_STATUS.md) | Honest status, including what is **not** done |
-| [`integrations/telegram/README.md`](./integrations/telegram/README.md) | Bot quota integration |
-| [`HANDOFF.md`](./HANDOFF.md) | Outstanding work and known traps |
+| Authentication missing | Reject before executing work |
+| Identity invalid | Return typed authorization failure |
+| Quota exhausted | Return explicit quota state |
+| Provider unavailable | Attempt a controlled fallback |
+| All providers unavailable | Return capacity failure |
+| Invalid generated files | Reject delivery or export |
+| Duplicate payment event | Preserve the original grant |
+| Invalid payment signature | Reject the event |
+| Stream interruption | Preserve logical generation identity |
+| Invalid catalogue record | Fail the build |
+| Dangerous export path | Reject the file set |
 
-</details>
+The interface does not remain in an infinite loading state when the server has already failed.
 
-<img src="./assets/divider.svg" alt="" width="100%">
+---
 
-## `>` LICENCE
+# `17 / ENGINEERING PRINCIPLES`
 
-Proprietary. © KONKRED. All rights reserved.
-Contact **[ari@konkred.xyz](mailto:ari@konkred.xyz)** for licensing.
+```text
+01  SECRETS STAY SERVER-SIDE.
 
-<img src="./assets/divider.svg" alt="" width="100%">
+02  RETRIES DO NOT BECOME NEW PURCHASES.
+
+03  AI OUTPUT IS DATA UNTIL IT PASSES A CONTRACT.
+
+04  PAYMENT EVENTS ARE IDEMPOTENT.
+
+05  FAILURE IS A PRODUCT STATE.
+
+06  A CATALOGUE CLAIM MUST RESOLVE TO AN ARTIFACT.
+
+07  HUMAN REVIEW IS EXPLICIT, NOT IMPLIED.
+
+08  PROVIDER FAILURE DOES NOT DEFINE PRODUCT FAILURE.
+
+09  GENERATED FILES DO NOT BYPASS PATH VALIDATION.
+
+10  DOCUMENTATION MUST MATCH THE RUNNING SYSTEM.
+```
+
+---
+
+# `18 / TECHNOLOGY FLOOR`
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### Interface
+
+- React 19
+- TypeScript
+- Vite
+- Motion
+- Lucide
+- Recharts
+- React Markdown
+- Sandpack
+- HTML2Canvas
+- jsPDF
+- JSZip
+
+</td>
+<td width="33%" valign="top">
+
+### Server
+
+- Node.js
+- Express
+- PostgreSQL
+- Drizzle ORM
+- Firebase Admin
+- REST APIs
+- Server-Sent Events
+- Payment webhooks
+- GitHub API
+
+</td>
+<td width="33%" valign="top">
+
+### Verification
+
+- Vitest
+- Testing Library
+- Playwright
+- pg-mem
+- TypeScript checks
+- Manifest validation
+- Security tests
+- Integration tests
+
+</td>
+</tr>
+</table>
+
+---
+
+# `19 / SELECTED END-TO-END FLOWS`
+
+## Application generation
+
+```text
+User prompt
+   → authenticated API
+   → quota admission
+   → gateway routing
+   → streamed architecture
+   → streamed source files
+   → verification
+   → project persistence
+   → download or GitHub export
+```
+
+## Prompt audit
+
+```text
+Prompt
+   → scope analysis
+   → schema generation
+   → risk classification
+   → fixture linkage
+   → validator linkage
+   → approval instructions
+   → controlled audit artifact
+```
+
+## Red-team assessment
+
+```text
+Target definition
+   → attack-family selection
+   → technique execution
+   → response capture
+   → evidence classification
+   → remediation output
+```
+
+## Payment grant
+
+```text
+Authenticated order
+   → hosted invoice
+   → signed provider event
+   → replay check
+   → amount verification
+   → atomic quota grant
+   → updated account state
+```
+
+---
+
+# `20 / DELIVERY STANDARD`
+
+A KONKRED product is not delivered as a screenshot and a promise.
+
+The delivery standard includes:
+
+- working source;
+- explicit environment contract;
+- typed API behavior;
+- controlled failure states;
+- test coverage;
+- deployment path;
+- security boundary;
+- operational documentation;
+- reproducible product manifest;
+- handoff-ready repository structure.
+
+The objective is not merely to produce code.
+
+The objective is to produce a system another engineer can inspect, run, test, deploy and continue.
+
+---
 
 <div align="center">
 
-<a href="mailto:ari@konkred.xyz">
-  <img src="./assets/footer.svg" alt="Build something concrete — ari@konkred.xyz" width="100%">
+<img src="./assets/divider.svg" width="100%" alt="">
+
+## KONKRED.XYZ
+
+### THE MACHINE IS VISIBLE.  
+### THE OUTPUT IS INSPECTABLE.  
+### THE CLAIMS HAVE EVIDENCE.
+
+<br>
+
+<a href="https://konkred.xyz">
+  <img src="./assets/footer.svg" width="100%" alt="Open KONKRED.XYZ">
 </a>
 
 <br>
 
-**[konkred.xyz](https://konkred.xyz)** · **[ari@konkred.xyz](mailto:ari@konkred.xyz)** · **[GitHub](https://github.com/reARbitRA)**
+**[OPEN PLATFORM](https://konkred.xyz)** ·
+**[EXPLORE CATALOGUE](https://konkred.xyz/catalogue)** ·
+**[CONTACT](mailto:ari@konkred.xyz)**
 
-<sub>Concrete tools for abstract problems.</sub>
+<br>
 
-<sub>KONKRED — Factory Floor · Black #0A0908 · Red #D60019 · Ink #F4F1EB</sub>
+<sub>
+Designed and engineered by Ari Miyanji.<br>
+AI product architecture · controlled automation · model security · enterprise workflows
+</sub>
 
 </div>
