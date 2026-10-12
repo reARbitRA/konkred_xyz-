@@ -1,5 +1,4 @@
-
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Special+Elite&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -11,87 +10,195 @@
   border-radius: 0 !important;
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   OBSIDIAN SIGNAL — global token contract.
+   Mirrors the Tailwind CDN remap in index.html. Keep in sync.
+   ════════════════════════════════════════════════════════════════════ */
 :root {
-  --void-bg: #0B0F14;          /* Void-1 */
-  --surface-1: #0E1319;        /* Void-2 / Card */
-  --surface-2: #0D1218;        /* Card / alt / Tool rows */
-  --text-primary: #D7D9DD;     /* Clinical / Light Gray */
-  --text-secondary: #9AA0A8;   /* Muted secondary text */
-  --accent-cyan: #D98A2E;      /* Signal Amber */
-  --accent-emerald: #22c55e;
-  --acid: #D98A2E;             /* Acid mapped to Signal Amber v2 */
-  --crimson: #ef4444;
-  --neon-cyan: #D98A2E;        /* Mapped to Signal Amber v2 */
-  --neon-purple: #a855f7;
-  --neon-green: #22c55e;
+  /* core canvas */
+  --obsidian: #0a0908;
+  --carbon: #0d0c0b;
+  --ash-surface: #171514;
+  --panel-top: #161311;
+  --panel-bottom: #0c0b0a;
+  --well: #100e0d;
+  --raised: #1d1a18;
+
+  /* signal red — primary and only core accent */
+  --signal: #d60019;
+  --signal-hot: #ff1a2e;
+  --signal-deep: #8f0010;
+  --signal-wash: #1a1010;
+  --signal-line: #3a201f;
+  --signal-critical: #5c0a10;
+
+  /* warm neutral ladder */
+  --ink: #f4f1eb;
+  --body: #eae7e1;
+  --rest: #b7b2a9;
+  --dim: #8a857d;
+  --meta: #7a756d;
+  --faint: #5c5852;
+  --ghost: #3d3835;
+  --line: #2a2624;
+  --line-inner: #262221;
+  --edge: #33302e;
+
+  /* rare severity states */
+  --high: #ff8a3c;
+  --medium: #e8a46c;
+
+  /* legacy aliases consumed by older components */
+  --void-bg: var(--obsidian);
+  --surface-1: var(--ash-surface);
+  --surface-2: var(--well);
+  --text-primary: var(--body);
+  --text-secondary: var(--rest);
+  --accent-cyan: var(--signal);
+  --accent-emerald: var(--rest);
+  --acid: var(--signal);
+  --crimson: var(--signal-hot);
+  --neon-cyan: var(--signal-hot);
+  --neon-purple: var(--signal-deep);
+  --neon-green: var(--rest);
 }
 
-/* --- CORE RESET & TYPOGRAPHY --- */
+/* ─── core reset & typography ─── */
 body {
-  background-color: var(--void-bg);
-  color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
+  background:
+    radial-gradient(120% 90% at 15% 10%, rgba(255, 255, 255, 0.028), transparent 55%),
+    radial-gradient(100% 80% at 90% 90%, rgba(214, 0, 25, 0.045), transparent 60%),
+    var(--obsidian);
+  color: var(--body);
+  font-family: 'Archivo', 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
 
 ::selection {
-  background: #D98A2E;
-  color: #000000;
+  background: var(--signal);
+  color: var(--ink);
 }
 
-/* --- CUSTOM INDUSTRIAL SCROLLBAR --- */
+/* branded, always-visible keyboard focus */
+:focus-visible {
+  outline: 2px solid var(--signal-hot);
+  outline-offset: 2px;
+}
+
+/* ─── typographic grammar ─── */
+.font-display {
+  font-family: 'Archivo Black', 'Archivo', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: -0.035em;
+}
+
+.font-machine {
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+}
+
+.font-prose {
+  font-family: 'Special Elite', 'Courier New', serif;
+  letter-spacing: normal;
+  line-height: 1.65;
+}
+
+/* decorative outlined type — never for critical copy */
+.hollow {
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--faint);
+}
+
+.ghost-num {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--ghost);
+  opacity: 0.5;
+  font-family: 'Archivo Black', 'Archivo', sans-serif;
+  line-height: 1;
+}
+
+/* ─── global interaction law: ash at rest, ignite on interaction ─── */
+.signal-item {
+  color: var(--rest);
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease,
+    filter 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.signal-item:hover,
+.signal-item:focus-visible {
+  color: var(--signal-hot);
+  filter:
+    drop-shadow(0 0 6px rgba(255, 26, 46, 0.7))
+    drop-shadow(0 0 18px rgba(214, 0, 25, 0.35));
+  text-shadow: 0 0 8px rgba(255, 26, 46, 0.55);
+}
+
+/* ─── industrial scrollbar ─── */
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B0F14;
-  border-left: 3px solid #1A212B;
+  background: var(--carbon);
+  border-left: 2px solid var(--line);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1A212B;
-  border: 2px solid #0B0F14;
+  background: var(--edge);
+  border: 2px solid var(--carbon);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #D98A2E;
+  background: var(--signal);
 }
 
-/* --- UTILITY CLASSES OR OVERRIDES --- */
-
-/* Brutalist Panels */
+/* ─── panels ─── */
 .glass-panel {
-  background: #0E1319;
-  border: 3px solid #1A212B !important;
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  border: 2px solid var(--line) !important;
   border-radius: 0px !important;
-  box-shadow: 4px 4px 0px 0px #000000;
+  box-shadow: 4px 4px 0px 0px #060505;
 }
 
-/* Concrete Texture Overlay */
+/* chalk texture helper (SVG turbulence, no external assets) */
 .concrete-texture {
-  background-image: url('https://www.transparenttextures.com/patterns/concrete-wall.png');
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
   background-blend-mode: overlay;
 }
 
-/* --- ANIMATIONS & INTERACTIONS --- */
-
+/* ─── animations & interactions ─── */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0px 0px 0px 0px rgba(217, 138, 46, 0); }
-  50% { box-shadow: 4px 4px 12px 0px rgba(217, 138, 46, 0.4); }
+  0%, 100% { box-shadow: 0px 0px 0px 0px rgba(214, 0, 25, 0); }
+  50% { box-shadow: 4px 4px 12px 0px rgba(214, 0, 25, 0.4); }
 }
 
 .animate-glow-pulse {
   animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Brutalist Inputs */
+/* ─── recessed technical wells (inputs) ─── */
 input, textarea, select {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
   border-radius: 0px !important;
+}
+
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--signal-hot);
+  outline-offset: 0;
 }
 
 /* Complete removal of soft rounded corners across all components */
@@ -99,7 +206,7 @@ input, textarea, select {
   border-radius: 0px !important;
 }
 
-/* --- MARQUEE & CURSOR ANIMATIONS --- */
+/* ─── marquee & cursor ─── */
 @keyframes marquee {
   0% { transform: translateX(0%); }
   100% { transform: translateX(-50%); }
@@ -120,3 +227,14 @@ input, textarea, select {
   animation: cursorBlink 0.9s infinite;
 }
 
+/* ─── reduced motion: preserve state, kill theatre ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

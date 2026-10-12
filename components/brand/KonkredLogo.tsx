@@ -48,7 +48,7 @@ export const KonkredLogo: React.FC<KonkredLogoProps> = ({
         className={animate ? 'brutal-stamp' : undefined}
         style={{ filter: 'drop-shadow(3px 3px 0 #000)' }}
       >
-        <rect x="0" y="0" width="100" height="100" fill="#0b0f14" stroke="#f59e0b" strokeWidth="7" />
+        <rect x="0" y="0" width="100" height="100" fill="#0d0c0b" stroke="#d60019" strokeWidth="7" />
         {K_BLOCKS.map(([cx, cy], i) => (
           <rect
             key={`${cx}-${cy}`}
@@ -56,7 +56,7 @@ export const KonkredLogo: React.FC<KonkredLogoProps> = ({
             y={cy * unit + 9}
             width={unit - 18}
             height={unit - 18}
-            fill={cx === 0 ? '#f59e0b' : '#ffffff'}
+            fill={cx === 0 ? '#d60019' : '#f4f1eb'}
             style={animate ? { animation: `k-block-in 0.35s ${0.08 + i * 0.045}s cubic-bezier(0.2,0.9,0.2,1) both` } : undefined}
           />
         ))}

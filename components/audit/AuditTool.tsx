@@ -107,7 +107,7 @@ const AuditTool: React.FC = () => {
       {/* Results HUD */}
       <div className="lg:col-span-5">
         {auditResult ? (
-          <div className="concrete-card rounded-3xl p-10 animate-in zoom-in-95 bg-black/60 border-neon-cyan/20 shadow-[0_0_50px_rgba(255,149,0,0.05)] h-full">
+          <div className="concrete-card rounded-3xl p-10 animate-in zoom-in-95 bg-black/60 border-neon-cyan/20 shadow-[0_0_50px_rgba(214,0,25,0.05)] h-full">
             <header className="flex justify-between items-start mb-10 pb-6 border-b border-white/5">
                 <div>
                     <h3 className="text-xl font-display font-bold text-white mb-1 uppercase">Audit Findings</h3>

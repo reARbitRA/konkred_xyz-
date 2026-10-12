@@ -97,4 +97,52 @@ describe('API', () => {
     const res = await fetch(`${baseUrl}/api/fullkonk/health`);
     expect(res.status).toBe(200);
   });
+
+  it('legacy (local dev) fullKONK providers route returns the registry shape', async () => {
+    const res = await fetch(`${baseUrl}/api/fullkonk/providers`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.providers)).toBe(true);
+    expect(typeof body.configured).toBe('boolean');
+  });
+
+  it('GitHub export without a browser token is a safe 503 when the server has no token', async () => {
+    if (process.env.GITHUB_TOKEN) return; // CI/dev with a server token skips this guard
+    const res = await fetch(`${baseUrl}/api/fullkonk/github/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner: 'octocat', repo: 'r', files: [{ path: 'a.ts', content: 'x' }] }),
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toMatch(/not configured/);
+    // Never hint that a token should be sent from the browser.
+    expect(JSON.stringify(body)).not.toMatch(/gh[pousr]_/);
+  });
+});
+
+/**
+ * Unknown /api/* routes must return JSON, never the SPA HTML shell.
+ *
+ * Regression guard: these paths previously fell through to the static/Vite
+ * handler and answered "200 <!DOCTYPE html>". A JSON client then failed while
+ * parsing HTML, producing a misleading error instead of a clean 404 — the same
+ * class of confusing failure that made the original production incident hard
+ * to diagnose.
+ */
+describe('unknown API routes', () => {
+  it('returns a JSON 404 rather than the SPA shell', async () => {
+    for (const path of ['/api/nonexistent', '/api/fullkonk/bogus', '/api/payments/nope']) {
+      const res = await fetch(`${baseUrl}${path}`);
+      expect(res.status, `${path} status`).toBe(404);
+      expect(res.headers.get('content-type'), `${path} content-type`).toMatch(/application\/json/);
+      const raw = await res.text();
+      expect(raw, `${path} body`).not.toContain('<!DOCTYPE');
+      expect(JSON.parse(raw).code).toBe('ROUTE_NOT_FOUND');
+    }
+  });
+
+  it('still serves real API routes normally', async () => {
+    expect((await fetch(`${baseUrl}/api/health`)).status).toBe(200);
+  });
 });

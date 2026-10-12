@@ -1,5 +1,5 @@
-import { GoogleGenAI, Modality } from "@google/genai";
 import { AIProviderID, AIProviderConfig } from '../../types.ts';
+import { gatewayComplete } from '../../services/gateway.ts';
 
 /**
  * Standardized message format for all providers
@@ -22,57 +22,48 @@ export interface ProviderImplementation {
 }
 
 /**
- * Standard Multi-Provider Proxy Implementation
+ * Gateway-backed provider implementation.
+ *
+ * Provider/model selection, failover and credentials all live server-side in
+ * the Konkred AI Ecosystem Gateway. The browser only talks to the same-origin
+ * /api/ai proxy; it never receives a provider key.
  */
-class ProxyAIProvider implements ProviderImplementation {
+class GatewayAIProvider implements ProviderImplementation {
   constructor(public id: AIProviderID) {}
 
   async generateResponse(messages: ChatMessage[], config: AIProviderConfig): Promise<string> {
-    const response = await fetch('/api/ai/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        provider: this.id,
-        messages,
-        config
-      })
+    return gatewayComplete({
+      messages,
+      temperature: typeof config?.temperature === 'number' ? config.temperature : 0.3,
+      maxTokens: typeof config?.maxTokens === 'number' ? config.maxTokens : 2048,
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Uplink to ${this.id} node refused.`);
-    }
-
-    const data = await response.json();
-    return data.text;
   }
 }
 
 /**
  * Factory and Registry for AI Providers
- * Refactored to use central server-side proxy
+ *
+ * Every logical provider id is routed through the gateway; the id is retained
+ * on the client for display/preference purposes only.
  */
 export class AIProviderFactory {
   private static providers: Map<AIProviderID, ProviderImplementation> = new Map();
 
   static {
-    // List of supported IDs mapped to the central proxy
     const providerIds: AIProviderID[] = [
-      'google', 'anthropic', 'cohere', 'openai', 'openrouter', 
-      'groq', 'xai', 'deepseek', 'mistral', 'qwen', 
+      'google', 'anthropic', 'cohere', 'openai', 'openrouter',
+      'groq', 'xai', 'deepseek', 'mistral', 'qwen',
       'cerebras', 'sambanova', 'together', 'fireworks', 'perplexity'
     ];
 
     providerIds.forEach(id => {
-      this.providers.set(id, new ProxyAIProvider(id));
+      this.providers.set(id, new GatewayAIProvider(id));
     });
   }
 
   static getProvider(id: AIProviderID): ProviderImplementation {
     const provider = this.providers.get(id);
-    if (!provider) throw new Error(`Provider ${id} not implemented.`);
+    if (!provider) throw new Error(`Provider ${id} is not available.`);
     return provider;
   }
 }

@@ -56,7 +56,7 @@ const AuthLoadingScreen: React.FC<AuthLoadingScreenProps> = ({ message }) => {
           
           <div className="relative h-1 w-full bg-void-300 rounded-full overflow-hidden concrete-card">
             <div 
-              className="h-full bg-neon-cyan transition-all duration-300 ease-out shadow-[0_0_15px_rgba(255,149,0,0.8)] relative overflow-hidden w-full animate-pulse" // Full width pulse
+              className="h-full bg-neon-cyan transition-all duration-300 ease-out shadow-[0_0_15px_rgba(214,0,25,0.8)] relative overflow-hidden w-full animate-pulse" // Full width pulse
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent bg-[length:200%_100%] animate-shimmer" />
             </div>

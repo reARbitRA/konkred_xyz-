@@ -9,6 +9,7 @@ import type { PageView } from '../types.ts';
 import { getEntryBySlug, WORKFLOWS } from '../content/catalogue/portfolio.ts';
 import type { PortfolioEntry } from '../content/catalogue/types.ts';
 import type { ProductRecord } from '../catalog/types.ts';
+import { getProductBySlug } from '../catalog/products.ts';
 import { MicroTool } from '../components/catalog/MicroTool.tsx';
 import { Pattern } from '../components/portfolio/patterns/index.tsx';
 import { EvidenceLine } from '../components/portfolio/Evidence.tsx';
@@ -63,24 +64,25 @@ const WorkflowDetailPage: React.FC<Props> = ({ slug, onNavigate }) => {
   const dialA = useRef(0);
   const dragging = useRef(false);
 
-  const shim: ProductRecord | null = useMemo(() => {
-    if (!entry?.demo) return null;
-    return {
-      id: entry.id, slug: entry.slug, name: entry.title, category: entry.category,
-      status: 'PUBLIC_DEMO', risk: 'low', humanApprovalRequired: entry.humanApprovalRequired,
-      shortDescription: entry.jobToBeDone ?? '', description: entry.definition ?? '', buyer: entry.buyer ?? '',
-      prompt: entry.demo.prompt, inputSchema: entry.demo.inputSchema, outputSchema: entry.demo.outputSchema,
-      fixture: entry.demo.fixturePath ? { path: entry.demo.fixturePath, label: entry.demo.fixtureLabel ?? '', source: entry.demo.fixtureSource ?? '' } : null,
-      demoStatus: { available: entry.demo.available, fixturePath: entry.demo.fixturePath, note: '' },
-      validationReport: { status: 'available', path: entry.validationReport, note: '' },
-      pricing: (entry.demo.legacyPricing as unknown as ProductRecord['pricing']) ?? { kitUsd: null, validationSprintUsd: null, enterprisePilot: null, currency: 'USD', proposed: true },
-      limitations: entry.demo.legacyLimitations,
-    };
-  }, [entry?.id]);
+  /*
+   * The real manifest record, not a hand-built copy.
+   *
+   * This used to assemble a synthetic `ProductRecord` out of the portfolio
+   * entry's embedded `demo` block, which duplicated the manifest and reported
+   * a fixed `status: 'PUBLIC_DEMO'`, `risk: 'low'` and
+   * `validationReport.status: 'available'` for EVERY workflow — three claims
+   * that are false for most of them. Reading the manifest directly removes the
+   * duplication and the false claims in one move, and keeps the new runtime
+   * fields (taskType, creditsPerRun, runnable…) available to the UI.
+   */
+  const shim: ProductRecord | null = useMemo(
+    () => (entry?.legacySlug ? getProductBySlug(entry.legacySlug) ?? null : null),
+    [entry?.id],
+  );
 
   if (!entry || entry.type !== 'WORKFLOW' || !shim) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-6 py-24" style={{ background: '#07090d' }}>
+      <div className="min-h-[60vh] flex items-center justify-center px-6 py-24" style={{ background: '#0a0908' }}>
         <div className="text-center space-y-4">
           <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">NO SIGNAL — {slug}</p>
           <button onClick={() => onNavigate('catalogue')} className="px-5 py-3 bg-amber-500 text-black font-mono font-black text-xs uppercase tracking-widest border-2 border-black cursor-pointer">Back to the Floor</button>
@@ -110,7 +112,7 @@ const WorkflowDetailPage: React.FC<Props> = ({ slug, onNavigate }) => {
   const price = entry.pricing.kitFromUsd;
 
   return (
-    <div className="min-h-screen px-3 sm:px-8 py-6 pb-28" style={{ background: '#07080b', color: '#c9e8d5' }} data-testid="workflow-tv">
+    <div className="min-h-screen px-3 sm:px-8 py-6 pb-28" style={{ background: '#0a0908', color: '#d8d4cc' }} data-testid="workflow-tv">
       <div className="max-w-6xl mx-auto">
         {/* top bar */}
         <div className="flex items-center justify-between mb-5">
@@ -127,14 +129,14 @@ const WorkflowDetailPage: React.FC<Props> = ({ slug, onNavigate }) => {
             {tuning && <Static onDone={() => setTuning(false)} />}
             <div className="relative z-10 p-4 sm:p-7 space-y-6 max-h-[78vh] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
               <div className="k-osd">CH {String(chNo).padStart(2, '0')}/{WORKFLOWS.length} · SIGNAL LOCKED · {entry.status.replace(/_/g, ' ')}</div>
-              <h1 className="font-black uppercase leading-[0.95] text-2xl sm:text-4xl" style={{ fontFamily: "'Archivo Black',ui-monospace,monospace", color: '#eafff3', textShadow: '0 0 24px rgba(61,255,154,.3)' }}>{entry.title}</h1>
-              <Typewriter as="p" text={entry.jobToBeDone ?? ''} speed={13} className="text-[13px] leading-relaxed max-w-2xl" style={{ color: '#8fd8b4' } as React.CSSProperties} />
+              <h1 className="font-black uppercase leading-[0.95] text-2xl sm:text-4xl" style={{ fontFamily: "'Archivo Black',ui-monospace,monospace", color: '#f4f1eb', textShadow: '0 0 24px rgba(61,255,154,.3)' }}>{entry.title}</h1>
+              <Typewriter as="p" text={entry.jobToBeDone ?? ''} speed={13} className="text-[13px] leading-relaxed max-w-2xl" style={{ color: '#d8d4cc' } as React.CSSProperties} />
               {/* tonight's programming: the real tool */}
               <MicroTool product={shim} fixtureKey={entry.legacySlug ?? undefined} />
               <Pattern entry={entry} />
               {/* oscilloscope corner */}
               <svg viewBox="0 0 200 60" className="w-40 h-12 opacity-50 pointer-events-none absolute right-4 bottom-3 hidden sm:block" aria-hidden="true">
-                <polyline points="0,30 20,30 28,6 36,54 44,30 80,30 88,14 96,46 104,30 150,30 158,10 166,50 174,30 200,30" fill="none" stroke="#3dff9a" strokeWidth="2" />
+                <polyline points="0,30 20,30 28,6 36,54 44,30 80,30 88,14 96,46 104,30 150,30 158,10 166,50 174,30 200,30" fill="none" stroke="#ff5a63" strokeWidth="2" />
               </svg>
             </div>
           </div>

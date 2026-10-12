@@ -52,6 +52,7 @@ export const PAGE_ROUTES: Record<PageView, string> = {
   contact: '/contact',
   style_guide: '/style-guide',
   verify_email: '/verify-email',
+  checkout: '/checkout',
 };
 
 /** Legacy pathnames that intentionally redirect to a real page. */
@@ -63,7 +64,7 @@ const REDIRECTS: Record<string, PageView> = {
   '/forge-audit-old': 'forge_audit',
   '/redaeye_sandbox': 'redaeye', // dev alias -> canonical
   '/wizard': 'not_found',
-  '/checkout': 'not_found',
+  // '/checkout' is no longer purged: it is now the real Persian billing page.
   '/wallet': 'not_found',
   '/enclave': 'not_found',
   '/library': 'not_found',

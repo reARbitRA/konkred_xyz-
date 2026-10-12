@@ -20,6 +20,9 @@ import { createStreamState, reduceStreamChunk, StreamMessageOp, StreamState } fr
 
 // Kept exported for backwards compatibility; implementation lives in utils/codeFiles.ts.
 export { extractFiles } from '../utils/codeFiles';
+import { SSEParser, parseStreamChunk } from '../lib/sse';
+import { GatewayError, readGatewayError } from '../lib/gateway-client';
+import { AttachedCodeFile, BuildMode, FKMessage, FKProject, GeneratedFile, PipelineStage, StreamChunk } from '../types';
 
 const MODES: { id: BuildMode; label: string }[] = [
   { id: 'fullstack', label: 'FULL-STACK' }, { id: 'frontend', label: 'FRONTEND' }, { id: 'backend', label: 'BACKEND' }, { id: 'review', label: 'REVIEW' },
@@ -81,7 +84,13 @@ export default function FullKonkPage() {
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const [saveState, setSaveState] = useState('SAVE AS PROJECT');
   const [providersLoaded, setProvidersLoaded] = useState(false);
+  /** Persian, user-facing reason the provider list could not be loaded. */
+  const [providersError, setProvidersError] = useState<string | null>(null);
+  /** Set when the server answers 402: the user is out of quota. */
+  const [paywalled, setPaywalled] = useState(false);
+  const [quota, setQuota] = useState<{ totalRemaining: number; trialRemaining: number; paidRemaining: number } | null>(null);
   const [retryable, setRetryable] = useState(false);
+  const providersAbortRef = useRef<AbortController | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const streamRef = useRef<StreamState | null>(null);
   const mountedRef = useRef(true);
@@ -89,6 +98,7 @@ export default function FullKonkPage() {
   const generationTextRef = useRef('');
   const baseFilesRef = useRef<GeneratedFile[]>([]);
   const latestPromptRef = useRef('');
+  const idempotencyRef = useRef('');
   const metricsRef = useRef<PipelineMetrics>({ tokensPerSecond: 0, totalTokens: 0, provider: '', elapsedMs: 0 });
 
   useEffect(() => {
@@ -110,11 +120,46 @@ export default function FullKonkPage() {
     try { localStorage.setItem('fk-byok', JSON.stringify(next)); } catch { /* private mode */ }
   };
 
-  useEffect(() => {
+  /**
+   * Provider discovery.
+   *
+   * Every outcome must be terminal: success, a controlled configuration error,
+   * a network error, or a timeout. The selector previously stayed on "LOADING…"
+   * forever whenever this request failed, which is one of the infinite spinners
+   * the brief calls out. A 12s abort guarantees the UI always settles, and
+   * `providersError` drives a visible Persian message plus a RETRY button.
+   */
+  const loadProviders = useCallback(() => {
+    providersAbortRef.current?.abort();
     const controller = new AbortController();
+    providersAbortRef.current = controller;
+    // Guarantees the UI leaves the loading state even if the network stalls.
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+
+    setProvidersError(null);
+    setProvidersLoaded(false);
+
     fetch('/api/fullkonk/providers', { signal: controller.signal })
-      .then(response => response.json() as Promise<{ providers?: ProviderOption[] }>)
+      .then(async response => {
+        if (!response.ok) {
+          // Configuration/availability problem — never masquerade as "no providers".
+          const detail = (await response.json().catch(() => ({}))) as { error?: string; code?: string };
+          // Branch on the HTTP status only. Server-side error *codes* are never
+          // hard-coded in client JavaScript (see tests/client-bundle.test.ts):
+          // 503 = the deployment is not configured, anything else = transient.
+          const message = response.status === 503
+            ? 'سرویس هوش مصنوعی هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.'
+            : 'دریافت فهرست ارائه‌دهنده‌ها ممکن نشد. لطفاً دوباره تلاش کنید.';
+          // Diagnostic code stays in the console only; users see plain Persian.
+          console.warn('[fullkonk] providers failed', { status: response.status, code: detail.code });
+          setProvidersError(message);
+          setProvidersLoaded(true);
+          return { providers: [] as ProviderOption[] };
+        }
+        return (await response.json().catch(() => ({}))) as { providers?: ProviderOption[] };
+      })
       .then(data => {
+        if (!mountedRef.current) return;
         setAllProviders(data.providers || []);
         setProvidersLoaded(true);
         const all = data.providers || [];
@@ -132,8 +177,29 @@ export default function FullKonkPage() {
       })
       // A failed probe says nothing about server configuration; never claim
       // "no providers" just because this request could not be completed.
-      .catch(() => undefined);
-    return () => controller.abort();
+      .catch((error: unknown) => {
+        if (!mountedRef.current) return;
+        const aborted = (error as Error)?.name === 'AbortError';
+        console.warn('[fullkonk] providers unreachable', { reason: aborted ? 'timeout' : 'network' });
+        setProvidersError(aborted
+          ? 'زمان دریافت فهرست ارائه‌دهنده‌ها به پایان رسید. لطفاً دوباره تلاش کنید.'
+          : 'ارتباط با سرور برقرار نشد. اتصال خود را بررسی و دوباره تلاش کنید.');
+        // Terminal state: the spinner must never persist.
+        setProvidersLoaded(true);
+      })
+      .finally(() => window.clearTimeout(timeout));
+  }, []);
+
+  useEffect(() => {
+    loadProviders();
+    return () => providersAbortRef.current?.abort();
+  }, [loadProviders]);
+  // Re-arm on mount: React StrictMode (and any remount) runs the cleanup once,
+  // and a ref that is only ever set to false would permanently suppress every
+  // subsequent setState — leaving the UI stuck in its loading state.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; abortRef.current?.abort(); };
   }, []);
   useEffect(() => () => {
     // Cancellation + unmount safety: abort the in-flight build and refuse any
@@ -184,6 +250,21 @@ export default function FullKonkPage() {
   }, [appendToLast]);
 
   const handleSend = useCallback(async (rawPrompt: string) => {
+  /** Read the authoritative balance from the server (never computed client-side). */
+  const refreshQuota = useCallback(async () => {
+    try {
+      const response = await fetch('/api/quota');
+      if (!response.ok) return;              // quota display is best-effort
+      const data = await response.json();
+      if (mountedRef.current) setQuota(data);
+    } catch {
+      /* Non-fatal: the balance strip simply stays hidden. */
+    }
+  }, []);
+
+  useEffect(() => { void refreshQuota(); }, [refreshQuota]);
+
+  const handleSend = useCallback(async (rawPrompt: string, reuseIdempotencyKey = false) => {
     const prompt = rawPrompt.trim();
     // One build at a time: `streaming` state alone can lag a fast double-click,
     // so the live AbortController is the authoritative guard.
@@ -192,12 +273,19 @@ export default function FullKonkPage() {
     abortRef.current = controller;
     startTimeRef.current = Date.now();
     latestPromptRef.current = prompt;
+    // One key per logical generation. A retry of the SAME generation reuses it
+    // so a reconnect is never billed twice (server-side dedup lives in
+    // server/metering.ts; the key is scoped under the server-derived identity).
+    if (!reuseIdempotencyKey || !idempotencyRef.current) {
+      idempotencyRef.current = crypto.randomUUID().replace(/-/g, '');
+    }
     generationTextRef.current = '';
     baseFilesRef.current = activeProject?.files || files;
     streamRef.current = createStreamState({ mode, baseFiles: baseFilesRef.current });
     setPreviousFiles(baseFilesRef.current);
     setStreaming(true);
     setRetryable(false);
+    setPaywalled(false);
     setStage(mode === 'review' ? 'review' : 'architect');
     setStageText('INITIALIZING PIPELINE');
     metricsRef.current = { tokensPerSecond: 0, totalTokens: 0, provider: '', elapsedMs: 0 };
@@ -221,7 +309,7 @@ export default function FullKonkPage() {
       const byok = byokKeys[provider] ? { 'x-provider-key': byokKeys[provider] } : {};
       const response = await fetch('/api/fullkonk/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...byok, ...headers },
+        headers: { 'Content-Type': 'application/json', 'x-idempotency-key': idempotencyRef.current, ...byok, ...headers },
         body: JSON.stringify({ prompt, mode, provider, model, temperature, maxTokens, systemPrompt: systemPrompt || undefined, projectId: activeProject?.id, attachedFiles: attachments }),
         signal: controller.signal,
       });
@@ -262,9 +350,68 @@ export default function FullKonkPage() {
             throw chunk.kind === 'configuration'
               ? new Error(chunk.error)
               : new RetryablePipelineError(chunk.error);
+      // Non-stream HTTP errors carry a normalized envelope from the proxy (400/401/403/413/429/5xx).
+      if (!response.ok) throw await readGatewayError(response);
+      if (!response.body) throw new RetryablePipelineError('Generation stream was empty.');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      const parser = new SSEParser();
+      let readerDone = false;
+      while (!readerDone) {
+        const result = await reader.read();
+        const feed = parser.feed(decoder.decode(result.value || new Uint8Array(), { stream: !result.done }));
+        if (result.done) feed.push(...parser.flush());
+        for (const item of feed) {
+          // Explicit SSE completion sentinel (some gateway builds emit it).
+          if (item.kind === 'done') { completed = true; readerDone = true; break; }
+          // Malformed/partial frames are skipped; they never crash the pipeline.
+          if (item.kind === 'malformed') continue;
+          const parsedResult = parseStreamChunk(item.message.data);
+          if (!parsedResult.ok) continue;
+          const parsed = parsedResult.value;
+          if (!isStreamChunk(parsed)) continue;
+          switch (parsed.type) {
+            case 'stage': activeStage = parsed.stage; setStage(parsed.stage); setStageText(parsed.content || parsed.stage.toUpperCase()); break;
+            case 'provider':
+              metricsRef.current = { ...metricsRef.current, provider: parsed.provider };
+              setMetrics(value => ({ ...value, provider: parsed.provider }));
+              setStageText(`${parsed.provider} / ${parsed.model}`);
+              break;
+            case 'failover':
+              metricsRef.current = { ...metricsRef.current, transition: `${parsed.from} → ${parsed.to || 'NEXT PROVIDER'}` };
+              setMetrics(value => ({ ...value, transition: metricsRef.current.transition }));
+              break;
+            case 'metrics':
+              metricsRef.current = { ...metricsRef.current, ...parsed.data };
+              setMetrics(value => ({ ...value, ...parsed.data }));
+              break;
+            case 'reset':
+              if (activeStage !== 'architect') {
+                generationTextRef.current = generationTextRef.current.slice(0, Math.max(0, generationTextRef.current.length - parsed.characters));
+              }
+              setMessages(previous => {
+                const last = previous.at(-1);
+                if (!last || last.role !== 'assistant' || last.stage !== activeStage) return previous;
+                const content = last.content.slice(0, Math.max(0, last.content.length - parsed.characters));
+                return content ? [...previous.slice(0, -1), { ...last, content }] : previous.slice(0, -1);
+              });
+              setFiles(mergeFiles(baseFilesRef.current, extractFiles(generationTextRef.current)));
+              break;
+            case 'delta':
+              if (activeStage !== 'architect') generationTextRef.current += parsed.content;
+              appendToLast(parsed.content, activeStage);
+              if (activeStage !== 'architect') setFiles(mergeFiles(baseFilesRef.current, extractFiles(generationTextRef.current)));
+              break;
+            case 'file': setFiles(current => mergeFiles(current, [{ ...parsed.file, language: parsed.file.language.toLowerCase() }])); break;
+            case 'done': completed = true; setStage('done'); setStageText('BUILD COMPLETE'); break;
+            // A provider-level failure means the orchestrator already exhausted
+            // every candidate; surface it as retryable rather than terminal.
+            case 'error': throw parsed.kind === 'configuration'
+              ? new Error(parsed.error)
+              : new RetryablePipelineError(parsed.error);
           }
         }
-        if (result.done) break;
+        if (result.done) readerDone = true;
       }
 
       if (!completed) throw new RetryablePipelineError('Generation stream closed before completion.');
@@ -288,6 +435,32 @@ export default function FullKonkPage() {
           setRetryable(error instanceof RetryablePipelineError || error instanceof TypeError);
           setStage('error'); setStageText(message); addMessage({ role: 'assistant', stage: 'error', content: `ERROR: ${message}` });
         }
+      setAttachments([]);
+      setSidebarRefresh(value => value + 1);
+      void refreshQuota();   // reflect the message just consumed
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        // User STOP or unmount: leave no error banner behind.
+        if (mountedRef.current) { setStage('idle'); setStageText(''); }
+      } else if (mountedRef.current) {
+        const message = error instanceof Error && error.message ? error.message : 'Unknown pipeline error';
+        // 402 is a business state, not a fault: show the paywall instead of an
+        // error the user cannot act on. Retrying would fail identically.
+        if (error instanceof GatewayError && error.status === 402) {
+          setPaywalled(true);
+          setRetryable(false);
+          setStage('idle');
+          setStageText('');
+          void refreshQuota();
+          return;
+        }
+        // Exhausted failover, capacity (429/5xx) and network faults are
+        // recoverable; validation/configuration faults are terminal.
+        const retryable = error instanceof RetryablePipelineError
+          || error instanceof TypeError
+          || (error instanceof GatewayError && error.retryable);
+        setRetryable(retryable);
+        setStage('error'); setStageText(message); addMessage({ role: 'assistant', stage: 'error', content: `ERROR: ${message}` });
         if (userId) void logUsage({ userId, provider, model, mode, stage: 'error', tokens: metricsRef.current.totalTokens, durationMs: Date.now() - startTimeRef.current, success: false });
       }
     } finally {
@@ -301,7 +474,8 @@ export default function FullKonkPage() {
     const prompt = latestPromptRef.current;
     if (!prompt || streaming) return;
     setRetryable(false);
-    void handleSend(prompt);
+    // Reuse the key: this is the same logical generation, retried.
+    void handleSend(prompt, true);
   }, [handleSend, streaming]);
 
   useEffect(() => {
@@ -340,15 +514,39 @@ export default function FullKonkPage() {
       <strong className="fk-brand">fullKONK_&gt;</strong>
       <div style={{ flex: 1 }} />
       {userId && <button onClick={() => setShowSidebar(value => !value)} className="fk-btn">≡ WORKSPACE</button>}
-      {userId && files.length > 0 && <button onClick={() => { void handleSaveProject(); }} className="fk-btn" style={{ borderColor: '#ffb400', color: '#ffb400' }}>{saveState}</button>}
+      {userId && files.length > 0 && <button onClick={() => { void handleSaveProject(); }} className="fk-btn" style={{ borderColor: '#d60019', color: '#d60019' }}>{saveState}</button>}
       {userId && <button onClick={() => setShowAnalytics(true)} className="fk-btn">◎ ANALYTICS</button>}
-      {files.length > 0 && <button onClick={() => setShowGitHub(true)} className="fk-btn" style={{ background: '#19d3c5', borderColor: '#000', color: '#0b0d10' }}>↑ GITHUB</button>}
+      {files.length > 0 && <button onClick={() => setShowGitHub(true)} className="fk-btn" style={{ background: '#c9c4bb', borderColor: '#000', color: '#0a0908' }}>↑ GITHUB</button>}
       <div style={{ display: 'flex', gap: 4 }}>{MODES.map(item => <button key={item.id} disabled={streaming} onClick={() => setMode(item.id)} className={`fk-btn${mode === item.id ? ' fk-btn-acc' : ''}`}>{item.label}</button>)}</div>
       <button onClick={() => setShowSettings(value => !value)} className="fk-btn">⚙ SETTINGS</button>
       <button onClick={() => setLiveEnv(value => !value)} className={`fk-btn${liveEnv ? ' fk-btn-acc' : ''}`}>▶ LIVE ENV</button>
-      <select className="fk-select" value={provider} disabled={streaming} onChange={event => { const next = providerOptions.find(option => option.id === event.target.value); setProvider(event.target.value); if (next?.models[0]) setModel(next.models[0].id); }}>{providerOptions.length ? providerOptions.map(option => <option key={option.id} value={option.id}>{option.name.toUpperCase()}</option>) : <option value={provider}>{providersLoaded ? 'NO KEY — PICK ONE, ADD KEY IN ⚙' : 'LOADING…'}</option>}</select>
+      <select className="fk-select" value={provider} disabled={streaming} onChange={event => { const next = providerOptions.find(option => option.id === event.target.value); setProvider(event.target.value); if (next?.models[0]) setModel(next.models[0].id); }}>{providerOptions.length ? providerOptions.map(option => <option key={option.id} value={option.id}>{option.name.toUpperCase()}</option>) : <option value={provider}>{!providersLoaded ? 'LOADING…' : providersError ? 'UNAVAILABLE — RETRY' : 'NO KEY — PICK ONE, ADD KEY IN ⚙'}</option>}</select>
       <select value={model} disabled={streaming} onChange={event => setModel(event.target.value)} className="fk-select">{(providerOptions.find(option => option.id === provider)?.models || [{ id: model, label: model }]).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
     </header>
+    {/* Terminal error state for provider discovery: Persian message + retry. */}
+    {providersError && <div
+      role="alert"
+      dir="rtl"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '8px 16px', background: '#1a1010', borderBottom: '2px solid #ff1a2e', color: '#ffd9db', fontSize: 12 }}
+    >
+      <span>{providersError}</span>
+      <button type="button" onClick={loadProviders} className="fk-btn" style={{ background: '#ff1a2e', borderColor: '#000', color: '#fff' }}>
+        تلاش دوباره
+      </button>
+    </div>}
+    {paywalled && <div
+      role="alert"
+      dir="rtl"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '10px 16px', background: '#2a2413', borderBottom: '2px solid #ff8a3c', color: '#ffd9db', fontSize: 12 }}
+    >
+      <span>
+        سهمیهٔ رایگان شما به پایان رسیده است. برای ادامه یکی از بسته‌ها را تهیه کنید.
+        {quota ? ` (باقی‌مانده: ${quota.totalRemaining})` : ''}
+      </span>
+      <a href="/checkout" className="fk-btn" style={{ background: '#ff8a3c', borderColor: '#000', color: '#0a0908', textDecoration: 'none' }}>
+        ارتقای حساب
+      </a>
+    </div>}
     {showSettings && <div className="fk-settings" style={{ display: 'grid', gridTemplateColumns: '120px 160px 170px minmax(240px, 1fr)', gap: 10, alignItems: 'center', padding: '8px 16px' }}>
       <label>TEMPERATURE <input type="number" min={0} max={1} step={0.05} value={temperature} onChange={event => setTemperature(Number(event.target.value))} className="fk-select" style={{ width: 58, marginLeft: 5 }} /></label>
       <label>MAX TOKENS <select value={maxTokens} onChange={event => setMaxTokens(Number(event.target.value))} className="fk-select" style={{ marginLeft: 5 }}><option value={4096}>4096</option><option value={8192}>8192</option><option value={16384}>16384</option></select></label>
@@ -358,7 +556,7 @@ export default function FullKonkPage() {
       </select>
       <input value={systemPrompt} onChange={event => setSystemPrompt(event.target.value)} placeholder="Optional system prompt override (or load a playbook)" className="fk-select" style={{ width: '100%', boxSizing: 'border-box' }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ color: byokKeys[provider] ? '#ffb400' : '#666' }}>🔑 {(allProviders.find(o => o.id === provider)?.name || provider).toUpperCase()} KEY</span>
+        <span style={{ color: byokKeys[provider] ? '#d60019' : '#666' }}>🔑 {(allProviders.find(o => o.id === provider)?.name || provider).toUpperCase()} KEY</span>
         <input type="password" value={byokDraft} onChange={event => saveByok(event.target.value)} placeholder={byokKeys[provider] ? '●●●● saved in this browser' : 'paste a free-tier key'} className="fk-select" style={{ width: 190, marginLeft: 5 }} autoComplete="off" />
         {!byokKeys[provider] && PROVIDER_SIGNUP[provider] && (
           <a href={PROVIDER_SIGNUP[provider]} target="_blank" rel="noreferrer noopener" className="fk-btn fk-btn-acc" style={{ textDecoration: 'none' }}>GET FREE KEY ↗</a>
@@ -375,13 +573,13 @@ export default function FullKonkPage() {
           {panel === 'code' && <div style={{ flex: 1, minWidth: 0 }}><CodeOutput files={files} previousFiles={previousFiles} activeFile={activeFile} onSelectFile={setActiveFile} streaming={streaming} /></div>}
           {panel === 'live' && <div style={{ flex: 1, minWidth: 0 }}><LiveEnvironment files={files} streaming={streaming} /></div>}
         </div>
-        <nav aria-label="Console panels" style={{ display: 'flex', flexShrink: 0, borderTop: '4px solid #000', background: '#0e0f14' }}>
+        <nav aria-label="Console panels" style={{ display: 'flex', flexShrink: 0, borderTop: '4px solid #000', background: '#100e0d' }}>
           {([
             ['chat', '▤ CHAT'],
             ['code', '◈ CODE'],
             ['live', '▶ LIVE'],
           ] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setPanel(id)} className={`fk-btn${panel === id ? ' fk-btn-acc' : ''}`} style={{ flex: 1, padding: '14px 0', fontSize: 10, border: 'none', borderBottom: panel === id ? '4px solid #ffb400' : '4px solid transparent' }}>
+            <button key={id} onClick={() => setPanel(id)} className={`fk-btn${panel === id ? ' fk-btn-acc' : ''}`} style={{ flex: 1, padding: '14px 0', fontSize: 10, border: 'none', borderBottom: panel === id ? '4px solid #d60019' : '4px solid transparent' }}>
               {label}{id === 'live' && !liveEnv ? ' (off)' : ''}
             </button>
           ))}

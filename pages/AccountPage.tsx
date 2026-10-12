@@ -44,7 +44,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ user, onNavigate }) => {
                   onClick={() => setActiveTab(item.id as any)}
                   className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all border ${
                     activeTab === item.id 
-                      ? 'bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan shadow-[0_0_20px_rgba(255,149,0,0.05)]' 
+                      ? 'bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan shadow-[0_0_20px_rgba(214,0,25,0.05)]' 
                       : 'border-transparent text-ghost hover:text-white hover:bg-white/5'
                   }`}
                 >

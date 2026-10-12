@@ -17,53 +17,53 @@ tailwind.config = {
     extend: {
       fontFamily: { sans:['Inter','system-ui','sans-serif'], mono:['"IBM Plex Mono"','ui-monospace','monospace'] },
       colors: {
-        void:{DEFAULT:'#0B0F14',100:'#0E1319',200:'#0D1218',300:'#1A212B',400:'#222B36',500:'#9AA0A8',600:'#C8CDD3',700:'#E6E9ED'},
-        rae:{DEFAULT:'#FF003C',soft:'rgba(255,0,60,.08)'},
-        cy:'#00D2FF', am:'#FF8C00', pu:'#A855F7'
+        void:{DEFAULT:'#0d0c0b',100:'#171514',200:'#100e0d',300:'#2a2624',400:'#33302e',500:'#b7b2a9',600:'#C8CDD3',700:'#eae7e1'},
+        rae:{DEFAULT:'#ff1a2e',soft:'rgba(255,26,46,.08)'},
+        cy:'#00D2FF', am:'#ff5a63', pu:'#8f0010'
       }
     }
   }
 }
 </script>
 <style>
-  body{background:#0B0F14;color:#E6E9ED;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{background:#0d0c0b;color:#eae7e1;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   .mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
-  .glow-red{box-shadow:0 0 40px rgba(255,0,60,.15),inset 0 0 0 1px rgba(255,0,60,.25)}
-  .pulse-dot{width:8px;height:8px;border-radius:999px;background:#22C55E;box-shadow:0 0 10px #22C55E;animation:blink 1.6s ease-in-out infinite}
+  .glow-red{box-shadow:0 0 40px rgba(255,26,46,.15),inset 0 0 0 1px rgba(255,26,46,.25)}
+  .pulse-dot{width:8px;height:8px;border-radius:999px;background:#b7b2a9;box-shadow:0 0 10px #b7b2a9;animation:blink 1.6s ease-in-out infinite}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-  .chip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border:1px solid #222B36;background:#0E1319;color:#9AA0A8}
-  .chip.on{border-color:#FF003C;color:#FF003C;background:rgba(255,0,60,.08)}
-  .stat-num{font-family:'IBM Plex Mono',monospace;font-weight:700;color:#fff;font-size:44px;line-height:1;letter-spacing:-.02em;text-shadow:0 0 28px rgba(255,0,60,.35)}
-  .price-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:16px 28px;background:linear-gradient(180deg,#FF003C,#c4002d);color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;letter-spacing:.25em;text-transform:uppercase;border:1px solid #FF003C;transition:all .2s;cursor:pointer;text-decoration:none}
-  .price-btn:hover{box-shadow:0 0 30px rgba(255,0,60,.5);transform:translateY(-1px)}
-  .ghost-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:16px 28px;background:transparent;color:#C8CDD3;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12px;letter-spacing:.2em;text-transform:uppercase;border:1px solid #222B36;transition:all .2s;cursor:pointer;text-decoration:none}
-  .ghost-btn:hover{border-color:#9AA0A8;color:#fff}
-  .section-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:#9AA0A8;display:inline-flex;align-items:center;gap:10px}
-  .section-eyebrow::before{content:'';width:8px;height:8px;background:#FF003C;box-shadow:0 0 12px #FF003C;display:inline-block}
-  .copy-btn{background:#1A212B;border:1px solid #222B36;color:#9AA0A8;padding:6px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s}
-  .copy-btn:hover{border-color:#FF003C;color:#FF003C}
-  .copy-btn.copied{border-color:#22C55E;color:#22C55E}
-  .bump-toggle{width:20px;height:20px;border:1px solid #222B36;background:#0E1319;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;transition:all .15s}
-  .bump-toggle.checked{background:#FF003C;border-color:#FF003C}
+  .chip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border:1px solid #33302e;background:#171514;color:#b7b2a9}
+  .chip.on{border-color:#ff1a2e;color:#ff1a2e;background:rgba(255,26,46,.08)}
+  .stat-num{font-family:'IBM Plex Mono',monospace;font-weight:700;color:#fff;font-size:44px;line-height:1;letter-spacing:-.02em;text-shadow:0 0 28px rgba(255,26,46,.35)}
+  .price-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:16px 28px;background:linear-gradient(180deg,#ff1a2e,#b30015);color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;letter-spacing:.25em;text-transform:uppercase;border:1px solid #ff1a2e;transition:all .2s;cursor:pointer;text-decoration:none}
+  .price-btn:hover{box-shadow:0 0 30px rgba(255,26,46,.5);transform:translateY(-1px)}
+  .ghost-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:16px 28px;background:transparent;color:#C8CDD3;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12px;letter-spacing:.2em;text-transform:uppercase;border:1px solid #33302e;transition:all .2s;cursor:pointer;text-decoration:none}
+  .ghost-btn:hover{border-color:#b7b2a9;color:#fff}
+  .section-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:#b7b2a9;display:inline-flex;align-items:center;gap:10px}
+  .section-eyebrow::before{content:'';width:8px;height:8px;background:#ff1a2e;box-shadow:0 0 12px #ff1a2e;display:inline-block}
+  .copy-btn{background:#2a2624;border:1px solid #33302e;color:#b7b2a9;padding:6px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+  .copy-btn:hover{border-color:#ff1a2e;color:#ff1a2e}
+  .copy-btn.copied{border-color:#b7b2a9;color:#b7b2a9}
+  .bump-toggle{width:20px;height:20px;border:1px solid #33302e;background:#171514;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;transition:all .15s}
+  .bump-toggle.checked{background:#ff1a2e;border-color:#ff1a2e}
   .bump-toggle.checked::after{content:'✓';color:#fff;font-size:12px;font-weight:bold}
-  .address-box{background:#0B0F14;border:1px solid #1A212B;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#C8CDD3;word-break:break-all;line-height:1.6;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-  .red-rule{height:1px;background:linear-gradient(90deg,transparent,#FF003C,transparent)}
-  .grid-bg{background-image:linear-gradient(rgba(255,0,60,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,0,60,.03) 1px,transparent 1px);background-size:60px 60px}
-  .fam-row{display:grid;grid-template-columns:180px 1fr 70px;gap:16px;align-items:center;padding:12px 0;border-bottom:1px dashed #1A212B}
-  .bar{height:4px;background:#1A212B;overflow:hidden;position:relative}
-  .bar>span{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#FF003C,#FF8C00);box-shadow:0 0 12px rgba(255,0,60,.5)}
-  details{border:1px solid #1A212B;padding:18px 22px;transition:border-color .2s}
-  details[open]{border-color:#FF003C}
+  .address-box{background:#0d0c0b;border:1px solid #2a2624;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#C8CDD3;word-break:break-all;line-height:1.6;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .red-rule{height:1px;background:linear-gradient(90deg,transparent,#ff1a2e,transparent)}
+  .grid-bg{background-image:linear-gradient(rgba(255,26,46,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,26,46,.03) 1px,transparent 1px);background-size:60px 60px}
+  .fam-row{display:grid;grid-template-columns:180px 1fr 70px;gap:16px;align-items:center;padding:12px 0;border-bottom:1px dashed #2a2624}
+  .bar{height:4px;background:#2a2624;overflow:hidden;position:relative}
+  .bar>span{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ff1a2e,#ff5a63);box-shadow:0 0 12px rgba(255,26,46,.5)}
+  details{border:1px solid #2a2624;padding:18px 22px;transition:border-color .2s}
+  details[open]{border-color:#ff1a2e}
   summary{cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#fff;list-style:none;display:flex;justify-content:space-between;align-items:center}
-  summary::after{content:'+';color:#FF003C;font-size:22px;line-height:1}
+  summary::after{content:'+';color:#ff1a2e;font-size:22px;line-height:1}
   details[open] summary::after{content:'−'}
-  .faq p{margin-top:14px;color:#9AA0A8;font-size:14px;line-height:1.7}
+  .faq p{margin-top:14px;color:#b7b2a9;font-size:14px;line-height:1.7}
 </style>
 </head>
 <body class="min-h-screen">
 
 <!-- NAV -->
-<header class="border-b border-[#1A212B] bg-[rgba(11,15,20,.85)] backdrop-blur sticky top-0 z-50">
+<header class="border-b border-[#2a2624] bg-[rgba(13,12,11,.85)] backdrop-blur sticky top-0 z-50">
   <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
     <a href="/" class="flex items-center gap-3">
       <span class="text-rae text-2xl leading-none">◆</span>
@@ -93,7 +93,7 @@ tailwind.config = {
   <div class="relative max-w-7xl mx-auto px-6 pt-16 pb-20">
     <div class="flex items-center gap-3 mb-8">
       <span class="pulse-dot"></span>
-      <span class="mono text-[10px] tracking-[.3em] uppercase text-[#22C55E]">v1.0 · LIVE · PAY WITH USDT (TRC20) · DELIVERY IN MINUTES</span>
+      <span class="mono text-[10px] tracking-[.3em] uppercase text-[#b7b2a9]">v1.0 · LIVE · PAY WITH USDT (TRC20) · DELIVERY IN MINUTES</span>
     </div>
     <h1 class="mono font-black text-5xl md:text-7xl lg:text-8xl text-white leading-[0.95] tracking-tight max-w-5xl">
       367 WAYS TO<br/>
@@ -117,22 +117,22 @@ tailwind.config = {
       <span class="chip">16 attack families</span>
     </div>
     <div class="mt-14 grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="border border-[#1A212B] bg-[#0E1319]/80 backdrop-blur p-6">
+      <div class="border border-[#2a2624] bg-[#171514]/80 backdrop-blur p-6">
         <div class="mono text-[9px] tracking-[.25em] uppercase text-void-500 mb-3">TECHNIQUES</div>
         <div class="stat-num">367</div>
         <div class="mt-2 text-void-500 text-xs mono">18 core · 346 deep · 3 master</div>
       </div>
-      <div class="border border-[#1A212B] bg-[#0E1319]/80 backdrop-blur p-6">
+      <div class="border border-[#2a2624] bg-[#171514]/80 backdrop-blur p-6">
         <div class="mono text-[9px] tracking-[.25em] uppercase text-void-500 mb-3">EFFICACY</div>
         <div class="stat-num">1,081</div>
         <div class="mt-2 text-void-500 text-xs mono">records across frontier models</div>
       </div>
-      <div class="border border-[#1A212B] bg-[#0E1319]/80 backdrop-blur p-6">
+      <div class="border border-[#2a2624] bg-[#171514]/80 backdrop-blur p-6">
         <div class="mono text-[9px] tracking-[.25em] uppercase text-void-500 mb-3">DETECTION SIGS</div>
         <div class="stat-num">3,820</div>
         <div class="mt-2 text-void-500 text-xs mono">lexical · structural · behavioral · technical</div>
       </div>
-      <div class="border border-[#1A212B] bg-[#0E1319]/80 backdrop-blur p-6">
+      <div class="border border-[#2a2624] bg-[#171514]/80 backdrop-blur p-6">
         <div class="mono text-[9px] tracking-[.25em] uppercase text-void-500 mb-3">MASTER PAYLOADS</div>
         <div class="stat-num">30</div>
         <div class="mt-2 text-void-500 text-xs mono">12 base · 18 edge case</div>
@@ -144,21 +144,21 @@ tailwind.config = {
 <div class="red-rule"></div>
 
 <!-- MASTERS -->
-<section class="border-b border-[#1A212B] py-10 bg-pu/5">
+<section class="border-b border-[#2a2624] py-10 bg-pu/5">
   <div class="max-w-7xl mx-auto px-6">
     <div class="mono text-[10px] tracking-[.3em] uppercase text-pu text-center mb-6">◆ 3 MASTER-TIER DOSSIERS INCLUDED ◆</div>
     <div class="grid md:grid-cols-3 gap-4">
-      <div class="border border-pu/30 bg-[#0E1319] p-5">
+      <div class="border border-pu/30 bg-[#171514] p-5">
         <div class="mono text-[10px] tracking-[.2em] text-pu mb-2">RAE0184AT · AGENTS & TOOL USE</div>
         <div class="text-white mono font-bold text-sm mb-2">Agentic Environment Shadowing</div>
         <div class="text-void-500 text-xs leading-relaxed">Privilege escalation in Plan-Act-Observe agent loops via poisoned <span class="text-rae">&lt;|system_update|&gt;</span> tokens injected into tool outputs/logs/configs. 6 base + 6 edge payloads.</div>
       </div>
-      <div class="border border-pu/30 bg-[#0E1319] p-5">
+      <div class="border border-pu/30 bg-[#171514] p-5">
         <div class="mono text-[10px] tracking-[.2em] text-pu mb-2">RAE0179RT · REASONING & THOUGHT</div>
         <div class="text-white mono font-bold text-sm mb-2">Neuro-Semantic Resonance / Weight-Space Hijacking</div>
         <div class="text-void-500 text-xs leading-relaxed">Activation-steering class attack implanting persistent behavioral vectors into inference context without weight modification. Deep mechanism breakdown.</div>
       </div>
-      <div class="border border-pu/30 bg-[#0E1319] p-5">
+      <div class="border border-pu/30 bg-[#171514] p-5">
         <div class="mono text-[10px] tracking-[.2em] text-pu mb-2">RAE0185RC · RETRIEVAL & CONTEXT</div>
         <div class="text-white mono font-bold text-sm mb-2">KV-Cache Eviction / Attention-Sink Purge</div>
         <div class="text-void-500 text-xs leading-relaxed">Exploits KV-cache eviction + attention-sink behavior to erase system-prompt alignment from context without triggering refusal classifiers. 6 base + 6 edge payloads.</div>
@@ -196,17 +196,17 @@ tailwind.config = {
 </section>
 
 <!-- BUY -->
-<section id="buy" class="py-20 border-t border-[#1A212B] bg-[#0D1218]/40">
+<section id="buy" class="py-20 border-t border-[#2a2624] bg-[#100e0d]/40">
   <div class="max-w-3xl mx-auto px-6">
     <div class="section-eyebrow mb-6">02 · CHECKOUT · USDT (TRC20)</div>
     <h2 class="mono font-black text-4xl md:text-5xl text-white leading-tight">Pay with USDT on TRON.<br/>Get your files in minutes.</h2>
     <p class="mt-6 text-void-600 text-base">No account. No KYC. No Stripe holds. Send the exact amount to the address below, then send us your transaction ID. We deliver manually within 15 minutes — usually under 5.</p>
 
-    <div class="mt-10 border border-[#1A212B] bg-[#0E1319] p-6">
+    <div class="mt-10 border border-[#2a2624] bg-[#171514] p-6">
       <div class="mono text-[10px] tracking-[.25em] uppercase text-rae mb-4">STEP 1 · CONFIRM YOUR ORDER</div>
 
       <div class="flex items-start gap-4 p-4 border border-rae bg-rae/5">
-        <input type="checkbox" checked disabled class="mt-1 accent-[#FF003C]">
+        <input type="checkbox" checked disabled class="mt-1 accent-[#ff1a2e]">
         <div class="flex-1">
           <div class="flex justify-between items-center">
             <div class="mono text-sm font-bold text-white">REDAEYE ARSENAL v1.0 (Complete Catalog)</div>
@@ -216,18 +216,18 @@ tailwind.config = {
         </div>
       </div>
 
-      <label class="flex items-start gap-4 p-4 border border-[#1A212B] hover:border-[#222B36] cursor-pointer mt-3" id="bump-row">
+      <label class="flex items-start gap-4 p-4 border border-[#2a2624] hover:border-[#33302e] cursor-pointer mt-3" id="bump-row">
         <div class="bump-toggle" id="bump-toggle" onclick="toggleBump();return false"></div>
         <div class="flex-1">
           <div class="flex justify-between items-center">
-            <div class="mono text-sm font-bold text-am">+ ADD STARTER KIT <span class="text-[#22C55E] ml-2">SAVE $9</span></div>
+            <div class="mono text-sm font-bold text-am">+ ADD STARTER KIT <span class="text-[#b7b2a9] ml-2">SAVE $9</span></div>
             <div class="mono text-white font-bold">$29</div>
           </div>
           <div class="text-void-500 text-xs mt-1">25 copy-paste working payloads · operator decision tree · printable field card</div>
         </div>
       </label>
 
-      <div class="pt-4 mt-4 border-t border-[#1A212B] flex justify-between items-center">
+      <div class="pt-4 mt-4 border-t border-[#2a2624] flex justify-between items-center">
         <div class="mono text-[11px] tracking-[.2em] uppercase text-void-500">TOTAL (USDT · TRC20)</div>
         <div class="mono font-black text-3xl text-white" id="total-usdt">99 USDT</div>
       </div>
@@ -241,7 +241,7 @@ tailwind.config = {
       </div>
     </div>
 
-    <div class="mt-4 border-2 border-rae bg-[#0E1319] glow-red p-6">
+    <div class="mt-4 border-2 border-rae bg-[#171514] glow-red p-6">
       <div class="mono text-[10px] tracking-[.25em] uppercase text-rae mb-4">STEP 2 · SEND EXACT AMOUNT TO THIS ADDRESS</div>
 
       <div class="mb-4">
@@ -262,8 +262,8 @@ tailwind.config = {
       </div>
     </div>
 
-    <div class="mt-4 border border-[#22C55E]/40 bg-[#22C55E]/5 p-6">
-      <div class="mono text-[10px] tracking-[.25em] uppercase text-[#22C55E] mb-4">STEP 3 · AFTER PAYMENT, SEND TX HASH</div>
+    <div class="mt-4 border border-[#b7b2a9]/40 bg-[#b7b2a9]/5 p-6">
+      <div class="mono text-[10px] tracking-[.25em] uppercase text-[#b7b2a9] mb-4">STEP 3 · AFTER PAYMENT, SEND TX HASH</div>
       <p class="text-void-600 text-sm mb-4">After sending payment, send a message on Telegram with your <b class="text-white">Order ID</b> + <b class="text-white">transaction hash</b>. We monitor 24/7.</p>
 
       <a id="tg-link" href="https://t.me/RE_ARBITRA" target="_blank" class="price-btn w-full !bg-[#0088cc] !border-[#0088cc]">
@@ -280,7 +280,7 @@ tailwind.config = {
 <div id="lite"></div>
 
 <!-- FAQ -->
-<section id="faq" class="py-20 border-t border-[#1A212B]">
+<section id="faq" class="py-20 border-t border-[#2a2624]">
   <div class="max-w-3xl mx-auto px-6">
     <div class="section-eyebrow mb-6">03 · FINE PRINT</div>
     <h2 class="mono font-black text-4xl md:text-5xl text-white leading-tight">Questions, answered.</h2>
@@ -314,7 +314,7 @@ tailwind.config = {
 </section>
 
 <!-- FINAL CTA -->
-<section class="py-20 border-t border-[#1A212B] relative overflow-hidden">
+<section class="py-20 border-t border-[#2a2624] relative overflow-hidden">
   <div class="absolute inset-0 grid-bg opacity-60"></div>
   <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-rae/[.05] blur-[120px]"></div>
   <div class="relative max-w-4xl mx-auto px-6 text-center">
@@ -327,7 +327,7 @@ tailwind.config = {
   </div>
 </section>
 
-<footer class="border-t border-[#1A212B] py-10">
+<footer class="border-t border-[#2a2624] py-10">
   <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
     <a href="/" class="flex items-center gap-3">
       <span class="text-rae text-xl leading-none">◆</span>

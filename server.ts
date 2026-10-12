@@ -16,6 +16,7 @@ import { getKeyedModels, getOrchestratorHealth, hasProviderApiKey, MODEL_REGISTR
 import productManifest from './catalog/product-manifest.json';
 import portfolioManifest from './content/catalogue/portfolio-36.json';
 import { validateDemoInput, validateDemoOutput } from './catalog/validate.ts';
+import { apiJsonErrorHandler } from './server/api-error-handler.ts';
 import type { ProductRecord } from './catalog/types.ts';
 import type { PortfolioEntry } from './content/catalogue/types.ts';
 
@@ -33,12 +34,139 @@ const adminDb = getAdminFirestore();
 export async function createApp(): Promise<express.Express> {
   const app = express();
 
-  app.use(cors());
+  /**
+   * CORS policy.
+   *
+   * Previously `cors()` with no options, which emits
+   * `Access-Control-Allow-Origin: *` on every route. That was tolerable when
+   * the API was public read-only content, but the billing and quota endpoints
+   * added since are per-user state — any site could read a visitor's balance
+   * or start a purchase flow against their identity.
+   *
+   * Policy now:
+   *   * `/api/internal/*` — no CORS at all. Service-to-service only; a browser
+   *     must never be able to reach it, token or otherwise.
+   *   * `/api/quota`, `/api/payments/*` — same-origin only (no ACAO header),
+   *     since only our own pages call them.
+   *   * everything else — unchanged public access, so existing embeds and
+   *     integrations that read catalogue/demo endpoints keep working.
+   */
+  const PRIVATE_CORS_PREFIXES = ["/api/internal/", "/api/payments/", "/api/quota"];
+  const publicCors = cors();
+  app.use((req, res, next) => {
+    const isPrivate = PRIVATE_CORS_PREFIXES.some(
+      (prefix) => req.path === prefix || req.path.startsWith(prefix),
+    );
+    if (isPrivate) {
+      // Vary so a cached public response can never be reused for these paths.
+      res.setHeader("Vary", "Origin");
+      // A cross-origin preflight for a private route is refused outright.
+      if (req.method === "OPTIONS" && req.headers.origin) {
+        return res.status(403).json({ error: "Cross-origin requests are not allowed.", code: "CORS_DENIED" });
+      }
+      return next();
+    }
+    return publicCors(req, res, next);
+  });
+
+  // ── Billing / payments ────────────────────────────────────────────────────
+  // Mounted BEFORE express.json() because the NowPayments webhook signature is
+  // computed over the body, and these handlers read and parse the raw stream
+  // themselves. Letting body-parser consume it first would leave the webhook
+  // handler with an empty stream and break verification.
+  //
+  // Mirrors the Vercel function (api/index.ts) so local behaviour matches
+  // production. A deployment without DATABASE_URL gets a controlled 503.
+  const BILLING_PATHS = new Set([
+    "/api/quota",
+    "/api/payments/plans",
+    "/api/payments/create",
+    "/api/payments/status",
+    "/api/payments/nowpayments/webhook",
+  ]);
+  app.use(async (req, res, next) => {
+    // /api/internal/* is the bot's quota contract (service token authenticated).
+    if (!BILLING_PATHS.has(req.path) && !req.path.startsWith("/api/internal/")) return next();
+    try {
+      const { billingConfigured, getPaymentRoutes } = await import("./server/billing-runtime");
+      if (!billingConfigured()) {
+        return res.status(503).json({
+          error: "سرویس پرداخت هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.",
+          code: "BILLING_NOT_CONFIGURED",
+        });
+      }
+      const routes = await getPaymentRoutes();
+      if (!routes) {
+        return res.status(503).json({
+          error: "سرویس پرداخت موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.",
+          code: "BILLING_UNAVAILABLE",
+          retryable: true,
+        });
+      }
+      if (await routes(req, res)) return undefined;
+      return next();
+    } catch (error) {
+      console.error("[billing] event=error.mount name=" + ((error as Error)?.name || "Error"));
+      return res.status(503).json({ error: "سرویس پرداخت موقتاً در دسترس نیست.", code: "BILLING_UNAVAILABLE", retryable: true });
+    }
+  });
+
   app.use(express.json({ limit: "1mb" }));
 
   // API Routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", node: "KONKRED-PROD-01" });
+  //
+  // Health contract — kept deliberately identical in shape to the Vercel
+  // function (server/gateway-proxy.ts) so that what is verified locally is what
+  // runs in production. Both report liveness plus which server-only variables
+  // are present, as booleans only: a value is never echoed to the browser.
+  app.get(["/api/health", "/api/ready"], async (req, res) => {
+    const gatewayUrl = (process.env.KONKRED_GATEWAY_URL || process.env.BRAIN_URL || '').replace(/\/+$/, '');
+    const fullkonkKey = process.env.FULLKONK_KEY || process.env.BRAIN_KEY || '';
+    const base = {
+      status: "ok",
+      service: "konkred-website",
+      runtime: "node-express",
+      node: "KONKRED-PROD-01",
+      time: new Date().toISOString(),
+      configured: {
+        gatewayUrl: Boolean(gatewayUrl),
+        gatewayApiKey: Boolean(process.env.KONKRED_GATEWAY_API_KEY),
+        fullkonkKey: Boolean(fullkonkKey),
+      },
+    };
+
+    // Liveness: must succeed whenever the process can serve a request at all.
+    if (req.path !== "/api/ready") return res.json(base);
+
+    // Readiness: additionally prove the gateway is reachable, with a short
+    // timeout so this endpoint can never hang.
+    if (!gatewayUrl) {
+      return res.status(503).json({ ...base, status: "degraded", code: "GATEWAY_NOT_CONFIGURED", gateway: { reachable: false, reason: "not_configured" } });
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const started = Date.now();
+    try {
+      const upstream = await fetch(`${gatewayUrl}/api/health`, {
+        headers: { accept: "application/json", "x-brain-key": fullkonkKey },
+        signal: controller.signal,
+      });
+      const ms = Date.now() - started;
+      if (!upstream.ok) {
+        return res.status(503).json({ ...base, status: "degraded", code: "GATEWAY_UNHEALTHY", gateway: { reachable: true, status: upstream.status, ms } });
+      }
+      return res.json({ ...base, gateway: { reachable: true, status: upstream.status, ms } });
+    } catch (error) {
+      const aborted = (error as Error)?.name === "AbortError";
+      return res.status(503).json({
+        ...base,
+        status: "degraded",
+        code: aborted ? "GATEWAY_TIMEOUT" : "GATEWAY_UNREACHABLE",
+        gateway: { reachable: false, reason: aborted ? "timeout" : "network" },
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   });
 
   // GitHub OAuth: Get URL
@@ -656,9 +784,14 @@ export async function createApp(): Promise<express.Express> {
 
   app.post('/api/fullkonk/github/export', async (req, res) => {
     try {
-      const { files, token, owner, repo, branch = 'fullkonk-output', message = 'Generated by fullKONK_>' } = req.body || {};
+      const { files, owner, repo, branch = 'fullkonk-output', message = 'Generated by fullKONK_>' } = req.body || {};
+      // Local dev / standalone only. On Vercel this route is handled by the
+      // gateway proxy, which always strips a browser-supplied token; here we
+      // prefer the server-only GITHUB_TOKEN environment variable.
+      const token = (typeof req.body?.token === 'string' && req.body.token) || process.env.GITHUB_TOKEN || '';
       if (!Array.isArray(files) || files.length === 0) return res.status(400).json({ error: 'files required' });
-      if (typeof token !== 'string' || !/^(?:gh[pousr]_[A-Za-z0-9_]{20,255}|github_pat_[A-Za-z0-9_]{20,255})$/.test(token)) return res.status(400).json({ error: 'A valid GitHub token is required.' });
+      if (!token) return res.status(503).json({ error: 'GitHub export is not configured on this deployment.' });
+      if (!/^(?:gh[pousr]_[A-Za-z0-9_]{20,255}|github_pat_[A-Za-z0-9_]{20,255})$/.test(token)) return res.status(503).json({ error: 'GitHub export is misconfigured on this deployment.' });
       if (typeof owner !== 'string' || typeof repo !== 'string' || !/^[A-Za-z0-9_.-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo)) return res.status(400).json({ error: 'Valid owner and repository names are required.' });
       if (typeof branch !== 'string' || !/^[A-Za-z0-9._/-]+$/.test(branch) || branch.includes('..')) return res.status(400).json({ error: 'Invalid branch name.' });
       const result = await exportToGitHub(files, { token, owner, repo, branch, message: typeof message === 'string' ? message.slice(0, 200) : 'Generated by fullKONK_>' });
@@ -843,6 +976,69 @@ export async function createApp(): Promise<express.Express> {
     }
   });
 
+  // ── Workflow catalogue + runner ───────────────────────────────────────────
+  //
+  // Mounted on the legacy Express app deliberately. On Vercel every /api path
+  // the gateway proxy does not own falls through to this app, so mounting here
+  // makes the four routes behave identically on both deploy targets without
+  // touching vercel.json, api/index.ts, or the proxy's security boundary.
+  //
+  // Dependencies are resolved once, lazily, and every one of them is optional:
+  // a deployment with no DATABASE_URL runs unmetered and refuses anonymous
+  // demos; a deployment with no gateway configured answers a controlled 503.
+  // Nothing here can crash the app at import time.
+  {
+    const { createWorkflowRouter } = await import('./server/workflow-routes.ts');
+    const { workflowGatewayFromEnv, createGatewayCaller } = await import('./server/workflow-gateway.ts');
+    const { getWorkflowDeps } = await import('./server/billing-runtime.ts');
+
+    const dbDeps = await getWorkflowDeps().catch(() => undefined);
+    const gatewayConfig = workflowGatewayFromEnv();
+    const workflowLog = (event: string, meta?: Record<string, unknown>) => {
+      const line = [`[workflow] event=${event}`];
+      for (const [k, v] of Object.entries(meta || {})) line.push(`${k}=${String(v)}`);
+      if (event.startsWith('error')) console.error(line.join(' '));
+      else console.log(line.join(' '));
+    };
+
+    app.use(
+      '/api/workflows',
+      createWorkflowRouter({
+        billing: dbDeps?.billing,
+        store: dbDeps?.store,
+        anonSalt: process.env.ANON_SALT || 'konkred-default-anon-salt',
+        verifyIdToken: async (token: string) => {
+          try {
+            const decoded = await adminAuth.verifyIdToken(token);
+            return decoded.uid || null;
+          } catch {
+            return null;
+          }
+        },
+        callGateway: gatewayConfig
+          ? createGatewayCaller({ ...gatewayConfig, log: workflowLog })
+          : undefined,
+        demoIpMax: Number(process.env.WORKFLOW_DEMO_IP_HOURLY_MAX || 5),
+        demoGlobalMax: Number(process.env.WORKFLOW_DEMO_DAILY_MAX || 200),
+        log: workflowLog,
+      }),
+    );
+  }
+
+  // ── Unknown API routes must answer JSON, never the SPA shell ──────────────
+  // Without this, /api/anything falls through to the Vite/static handler and
+  // returns 200 text/html. A JSON client then tries to parse "<!DOCTYPE html>"
+  // and reports a confusing syntax error instead of a clean 404, which is
+  // exactly the class of misleading failure that made the original incident
+  // hard to diagnose.
+  app.use("/api", (req, res) => {
+    res.status(404).json({
+      error: "The requested API route does not exist.",
+      code: "ROUTE_NOT_FOUND",
+      path: req.path,
+    });
+  });
+
   // Serve REDAEYE sales checkout page
   app.get(["/redaeye", "/redaeye.html"], (req, res) => {
     const prodFile = path.join(process.cwd(), "dist", "redaeye.html");
@@ -853,6 +1049,13 @@ export async function createApp(): Promise<express.Express> {
     }
     return res.sendFile(devFile);
   });
+
+  // ── Terminal JSON error handler for /api/* ────────────────────────────────
+  // Registered last so it is reachable from every earlier layer, including
+  // express.json(). Without it a malformed request body is answered by
+  // Express's default handler with an HTML error page — see
+  // server/api-error-handler.ts for the full reasoning.
+  app.use(apiJsonErrorHandler);
 
   return app;
 }

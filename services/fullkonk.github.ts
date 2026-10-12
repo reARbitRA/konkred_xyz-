@@ -1,11 +1,42 @@
 import { GeneratedFile } from '../types';
 
 export interface GitHubConfig {
-  token: string;
+  /**
+   * Optional in the gateway model: when exporting through the Konkred Gateway
+   * the credential lives server-side and the browser never supplies one.
+   * It is only populated by the legacy standalone Express route (local dev),
+   * which falls back to the server-only GITHUB_TOKEN environment variable.
+   */
+  token?: string;
   owner: string;
   repo: string;
   branch: string;
   message: string;
+}
+
+/**
+ * Normalize a GitHub export result from either:
+ *  - the Konkred Gateway envelope `{ ok:true, data:{ ... } } / { ok:false, error }`
+ *  - the legacy direct shape `{ success, filesUploaded, prUrl, errors }`
+ */
+export function normalizeGitHubExportResult(payload: unknown): GitHubExportResult {
+  const root = (payload || {}) as Record<string, unknown>;
+  const dataNode = root.ok === true && root.data && typeof root.data === 'object'
+    ? (root.data as Record<string, unknown>)
+    : root;
+  const errors = Array.isArray(dataNode.errors)
+    ? dataNode.errors.filter((item): item is string => typeof item === 'string')
+    : typeof root.error === 'string' && root.ok === false
+      ? [root.error as string]
+      : [];
+  const success = dataNode.success === true
+    || (root.ok === true && dataNode.success !== false && errors.length === 0);
+  const filesUploaded = Number(dataNode.filesUploaded ?? dataNode.files_uploaded ?? 0) || 0;
+  const prUrl = typeof dataNode.prUrl === 'string' ? dataNode.prUrl
+    : typeof dataNode.pr_url === 'string' ? dataNode.pr_url : undefined;
+  const commitSha = typeof dataNode.commitSha === 'string' ? dataNode.commitSha
+    : typeof dataNode.commit_sha === 'string' ? dataNode.commit_sha : undefined;
+  return { success, filesUploaded, prUrl, commitSha, errors };
 }
 
 export interface GitHubExportResult {
@@ -49,7 +80,7 @@ async function githubFetch(url: string, init: RequestInit, retries = 2): Promise
 
 function headers(config: GitHubConfig): Record<string, string> {
   return {
-    Authorization: `Bearer ${config.token}`,
+    ...(config.token ? { Authorization: `Bearer ${config.token}` } : {}),
     'Content-Type': 'application/json',
     Accept: 'application/vnd.github+json',
     'User-Agent': 'KONKRED-fullKONK',
@@ -141,6 +172,9 @@ async function createPR(config: GitHubConfig, baseBranch: string): Promise<strin
 
 export async function exportToGitHub(files: GeneratedFile[], config: GitHubConfig): Promise<GitHubExportResult> {
   if (files.length === 0) return { success: false, filesUploaded: 0, errors: ['No files to export.'] };
+  // Legacy standalone route only (local dev). On Vercel the gateway owns the
+  // credential and this service is not involved in the proxy path.
+  if (!config.token) return { success: false, filesUploaded: 0, errors: ['GitHub export is not configured on this deployment.'] };
   const errors: string[] = [];
   let filesUploaded = 0;
   let commitSha: string | undefined;
