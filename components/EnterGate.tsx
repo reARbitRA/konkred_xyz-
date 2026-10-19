@@ -28,8 +28,8 @@ const EnterGate: React.FC<EnterGateProps> = ({ onEnter, onBack, onVerificationNe
         onEnter();
       }, 800);
     } catch (err: any) {
-      if (err.code === 'auth/email-not-verified') {
-        onVerificationNeeded(err.email);
+      if (err.code === 'email_not_confirmed') {
+        onVerificationNeeded(identity);
         return;
       }
       setError(err.message || "Authentication failed");
@@ -111,7 +111,7 @@ const EnterGate: React.FC<EnterGateProps> = ({ onEnter, onBack, onVerificationNe
                   <p className="font-black">[SYSTEM_FAILURE]: {error}</p>
                   {isDomainError && (
                     <p className="mt-2 normal-case font-sans opacity-70">
-                      FIX: Add <strong>{window.location.hostname}</strong> to the "Authorized Domains" list in your Firebase Console.
+                      FIX: Add <strong>{window.location.hostname}</strong> to the redirect URL allowlist in Supabase Authentication → URL Configuration.
                     </p>
                   )}
                </div>

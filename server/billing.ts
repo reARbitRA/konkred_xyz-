@@ -62,7 +62,7 @@ const IDENTITY_RE = /^(fb|telegram|api|anon):[A-Za-z0-9_.:-]{1,128}$/;
  * Validate a canonical identity.
  *
  * SECURITY: identities are always derived server-side — from a verified
- * Firebase token, the Telegram update, a registered API key, or a hashed
+ * Supabase token, the Telegram update, a registered API key, or a hashed
  * IP/device fallback. A client-supplied `x-end-user` header must never reach
  * this function unvalidated, otherwise a caller could impersonate another
  * account (or mint unlimited anonymous ones) to bypass quota.

@@ -36,7 +36,7 @@ export interface GatewayConfig {
    * browser can never inject its own token on a deployment.
    */
   githubExportToken: string;
-  /** When true, gateway routes require a verified Firebase ID token. */
+  /** When true, gateway routes require a verified Supabase access token. */
   requireAuth: boolean;
   /** Extra browser origins allowed to call the BFF (same-origin is always ok). */
   allowedOrigins: string[];
@@ -53,9 +53,9 @@ export interface GatewayConfig {
   maxUpstreamErrorBytes: number;
   rateLimits: GatewayRateLimits;
   nodeEnv: string;
-  /** Service account JSON for Firebase ID-token verification (server-only). */
-  firebaseServiceAccountJson: string;
-  firebaseProjectId: string;
+  /** Public project configuration used for Supabase access-token verification. */
+  supabaseUrl: string;
+  supabasePublishableKey: string;
 }
 
 /* Vercel Node.js functions cap the request body at ~4.5 MB; the gateway's own
@@ -140,8 +140,8 @@ export const readGatewayConfig = (env: NodeJS.ProcessEnv = process.env): Gateway
       providers: intEnv(env, 'FULLKONK_RATE_LIMIT_PROVIDERS_PER_MIN', 120, 0, 10_000),
     },
     nodeEnv,
-    firebaseServiceAccountJson: firstDefined(env, ['FIREBASE_SERVICE_ACCOUNT_JSON']),
-    firebaseProjectId: firstDefined(env, ['FIREBASE_PROJECT_ID', 'GCLOUD_PROJECT']),
+    supabaseUrl: firstDefined(env, ['SUPABASE_URL', 'VITE_SUPABASE_URL']),
+    supabasePublishableKey: firstDefined(env, ['SUPABASE_PUBLISHABLE_KEY', 'VITE_SUPABASE_PUBLISHABLE_KEY']),
   };
 };
 

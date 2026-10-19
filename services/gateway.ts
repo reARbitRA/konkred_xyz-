@@ -5,6 +5,7 @@
  * server-side; this module holds no credentials and contains no
  * provider-specific logic — model/provider selection lives in the gateway.
  */
+import { getAuthHeaders } from './supabase';
 import { GatewayError, readGatewayError } from '../lib/gateway-client';
 
 export interface GatewayChatMessage {
@@ -42,7 +43,7 @@ export async function gatewayComplete(input: GatewayCompletionInput): Promise<st
   try {
     response = await fetch('/api/ai', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
       body: JSON.stringify({
         taskType: input.taskType || 'general',
         messages: input.messages,

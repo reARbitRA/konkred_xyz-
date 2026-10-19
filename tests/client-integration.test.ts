@@ -93,8 +93,8 @@ describe('client gateway integration', () => {
 
   it('uses the hardened SSE parser on the generation stream', () => {
     const page = fs.readFileSync(path.join(ROOT, 'pages/FullKonkPage.tsx'), 'utf8');
-    expect(page).toContain('new SSEParser()');
-    expect(page).toContain("item.kind === 'done'");
-    expect(page).toContain("item.kind === 'malformed'");
+    expect(page).toContain('new SseParser()');
+    expect(page).toContain("chunk.type === 'done'");
+    expect(page).toContain('if (!chunk) continue;');
   });
 });

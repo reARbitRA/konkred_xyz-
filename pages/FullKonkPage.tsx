@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getAuth } from 'firebase/auth';
+import { getSupabase, getAccessToken } from '../services/supabase';
 import AnalyticsDashboard from '../components/fullkonk/AnalyticsDashboard';
 import ChatPanel from '../components/fullkonk/ChatPanel';
 import CodeOutput from '../components/fullkonk/CodeOutput';
@@ -20,9 +20,7 @@ import { createStreamState, reduceStreamChunk, StreamMessageOp, StreamState } fr
 
 // Kept exported for backwards compatibility; implementation lives in utils/codeFiles.ts.
 export { extractFiles } from '../utils/codeFiles';
-import { SSEParser, parseStreamChunk } from '../lib/sse';
 import { GatewayError, readGatewayError } from '../lib/gateway-client';
-import { AttachedCodeFile, BuildMode, FKMessage, FKProject, GeneratedFile, PipelineStage, StreamChunk } from '../types';
 
 const MODES: { id: BuildMode; label: string }[] = [
   { id: 'fullstack', label: 'FULL-STACK' }, { id: 'frontend', label: 'FRONTEND' }, { id: 'backend', label: 'BACKEND' }, { id: 'review', label: 'REVIEW' },
@@ -44,8 +42,7 @@ class RetryablePipelineError extends Error {
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const user = getAuth().currentUser;
-  const token = user ? await user.getIdToken() : '';
+  const token = await getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -102,8 +99,10 @@ export default function FullKonkPage() {
   const metricsRef = useRef<PipelineMetrics>({ tokensPerSecond: 0, totalTokens: 0, provider: '', elapsedMs: 0 });
 
   useEffect(() => {
-    const auth = getAuth();
-    return auth.onAuthStateChanged(user => { setUserId(user?.uid || null); if (user) setShowSidebar(true); });
+    try {
+      const { data } = getSupabase().auth.onAuthStateChange((_event, session) => { setUserId(session?.user.id || null); if (session) setShowSidebar(true); });
+      return () => data.subscription.unsubscribe();
+    } catch { setUserId(null); }
   }, []);
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1100px)');
@@ -249,11 +248,10 @@ export default function FullKonkPage() {
     }
   }, [appendToLast]);
 
-  const handleSend = useCallback(async (rawPrompt: string) => {
   /** Read the authoritative balance from the server (never computed client-side). */
   const refreshQuota = useCallback(async () => {
     try {
-      const response = await fetch('/api/quota');
+      const response = await fetch('/api/quota', { headers: await authHeaders() });
       if (!response.ok) return;              // quota display is best-effort
       const data = await response.json();
       if (mountedRef.current) setQuota(data);
@@ -306,22 +304,13 @@ export default function FullKonkPage() {
     let completed = false;
     try {
       const headers = await authHeaders();
-      const byok = byokKeys[provider] ? { 'x-provider-key': byokKeys[provider] } : {};
       const response = await fetch('/api/fullkonk/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-idempotency-key': idempotencyRef.current, ...byok, ...headers },
+        headers: { 'Content-Type': 'application/json', 'x-idempotency-key': idempotencyRef.current, ...headers },
         body: JSON.stringify({ prompt, mode, provider, model, temperature, maxTokens, systemPrompt: systemPrompt || undefined, projectId: activeProject?.id, attachedFiles: attachments }),
         signal: controller.signal,
       });
-      if (!response.ok) {
-        // Non-stream failure (405/413/429/5xx/config). Retry-After is surfaced
-        // so the user knows when the gateway quota window reopens.
-        const payload = await response.json().catch(() => ({ error: 'Generation request failed.' })) as { error?: string; code?: string; retryAfter?: number };
-        const headerRetry = Number(response.headers.get('retry-after'));
-        const retryAfter = Number.isFinite(headerRetry) && headerRetry > 0 ? headerRetry : Number(payload.retryAfter);
-        const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? ` Retry in ${Math.ceil(retryAfter)}s.` : '';
-        throw new Error(`${payload.error || 'Generation request failed.'}${wait}`);
-      }
+      if (!response.ok) throw await readGatewayError(response);
       if (!response.body) throw new Error('Generation stream was empty.');
 
       // Robust SSE consumption: network reads never equal events, chunks may
@@ -350,68 +339,9 @@ export default function FullKonkPage() {
             throw chunk.kind === 'configuration'
               ? new Error(chunk.error)
               : new RetryablePipelineError(chunk.error);
-      // Non-stream HTTP errors carry a normalized envelope from the proxy (400/401/403/413/429/5xx).
-      if (!response.ok) throw await readGatewayError(response);
-      if (!response.body) throw new RetryablePipelineError('Generation stream was empty.');
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      const parser = new SSEParser();
-      let readerDone = false;
-      while (!readerDone) {
-        const result = await reader.read();
-        const feed = parser.feed(decoder.decode(result.value || new Uint8Array(), { stream: !result.done }));
-        if (result.done) feed.push(...parser.flush());
-        for (const item of feed) {
-          // Explicit SSE completion sentinel (some gateway builds emit it).
-          if (item.kind === 'done') { completed = true; readerDone = true; break; }
-          // Malformed/partial frames are skipped; they never crash the pipeline.
-          if (item.kind === 'malformed') continue;
-          const parsedResult = parseStreamChunk(item.message.data);
-          if (!parsedResult.ok) continue;
-          const parsed = parsedResult.value;
-          if (!isStreamChunk(parsed)) continue;
-          switch (parsed.type) {
-            case 'stage': activeStage = parsed.stage; setStage(parsed.stage); setStageText(parsed.content || parsed.stage.toUpperCase()); break;
-            case 'provider':
-              metricsRef.current = { ...metricsRef.current, provider: parsed.provider };
-              setMetrics(value => ({ ...value, provider: parsed.provider }));
-              setStageText(`${parsed.provider} / ${parsed.model}`);
-              break;
-            case 'failover':
-              metricsRef.current = { ...metricsRef.current, transition: `${parsed.from} → ${parsed.to || 'NEXT PROVIDER'}` };
-              setMetrics(value => ({ ...value, transition: metricsRef.current.transition }));
-              break;
-            case 'metrics':
-              metricsRef.current = { ...metricsRef.current, ...parsed.data };
-              setMetrics(value => ({ ...value, ...parsed.data }));
-              break;
-            case 'reset':
-              if (activeStage !== 'architect') {
-                generationTextRef.current = generationTextRef.current.slice(0, Math.max(0, generationTextRef.current.length - parsed.characters));
-              }
-              setMessages(previous => {
-                const last = previous.at(-1);
-                if (!last || last.role !== 'assistant' || last.stage !== activeStage) return previous;
-                const content = last.content.slice(0, Math.max(0, last.content.length - parsed.characters));
-                return content ? [...previous.slice(0, -1), { ...last, content }] : previous.slice(0, -1);
-              });
-              setFiles(mergeFiles(baseFilesRef.current, extractFiles(generationTextRef.current)));
-              break;
-            case 'delta':
-              if (activeStage !== 'architect') generationTextRef.current += parsed.content;
-              appendToLast(parsed.content, activeStage);
-              if (activeStage !== 'architect') setFiles(mergeFiles(baseFilesRef.current, extractFiles(generationTextRef.current)));
-              break;
-            case 'file': setFiles(current => mergeFiles(current, [{ ...parsed.file, language: parsed.file.language.toLowerCase() }])); break;
-            case 'done': completed = true; setStage('done'); setStageText('BUILD COMPLETE'); break;
-            // A provider-level failure means the orchestrator already exhausted
-            // every candidate; surface it as retryable rather than terminal.
-            case 'error': throw parsed.kind === 'configuration'
-              ? new Error(parsed.error)
-              : new RetryablePipelineError(parsed.error);
           }
         }
-        if (result.done) readerDone = true;
+        if (result.done) break;
       }
 
       if (!completed) throw new RetryablePipelineError('Generation stream closed before completion.');
@@ -423,18 +353,6 @@ export default function FullKonkPage() {
         setSidebarRefresh(value => value + 1);
       }
       if (userId) void logUsage({ userId, provider: metricsRef.current.provider || provider, model, mode, stage: 'done', tokens: metricsRef.current.totalTokens, durationMs: Date.now() - startTimeRef.current, success: true });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        // User pressed STOP (or the page unmounted) — nothing to report.
-        if (mountedRef.current) { setStage('idle'); setStageText(''); }
-      } else {
-        const message = error instanceof Error ? error.message : 'Unknown pipeline error';
-        // Exhausted failover and network faults are recoverable; only a real
-        // server-side configuration fault is reported as terminal.
-        if (mountedRef.current) {
-          setRetryable(error instanceof RetryablePipelineError || error instanceof TypeError);
-          setStage('error'); setStageText(message); addMessage({ role: 'assistant', stage: 'error', content: `ERROR: ${message}` });
-        }
       setAttachments([]);
       setSidebarRefresh(value => value + 1);
       void refreshQuota();   // reflect the message just consumed

@@ -13,46 +13,23 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor, cleanup, act } from '@testing-library/react';
 
-// ── Firebase is stubbed at module level so no network or credentials are used.
-// `onAuthStateChanged` is controllable per-test: that is the whole point, since
-// the production bug was it never calling back.
-let authCallback: ((user: unknown) => void) | null = null;
+// Supabase SDK calls are controlled; these tests never use the network.
+let authCallback: ((session: unknown) => void) | null = null;
 let authErrorCallback: ((error: unknown) => void) | null = null;
 let unsubscribeCalls = 0;
-
-vi.mock('../services/firebase.ts', () => ({
-  auth: {},
-  db: {},
-  storage: {},
-  OperationType: { SIGN_IN: 'signIn' },
-  handleFirestoreError: () => undefined,
+vi.mock('../services/supabase', () => ({
+  db: vi.fn(),
+  getAuthHeaders: async () => ({}),
+  getSupabase: () => ({ auth: {
+    onAuthStateChange: (callback: (event: string, session: unknown) => void) => {
+      authCallback = session => callback('SIGNED_OUT', session);
+      return { data: { subscription: { unsubscribe: () => { unsubscribeCalls++; } } } };
+    },
+    getSession: () => new Promise((_resolve, reject) => { authErrorCallback = reject; }),
+  } }),
 }));
-
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (_auth: unknown, next: (u: unknown) => void, error?: (e: unknown) => void) => {
-    authCallback = next;
-    authErrorCallback = error ?? null;
-    return () => { unsubscribeCalls += 1; };
-  },
-  signInWithEmailAndPassword: vi.fn(),
-  createUserWithEmailAndPassword: vi.fn(),
-  signOut: vi.fn(async () => undefined),
-  GoogleAuthProvider: class {},
-  GithubAuthProvider: class {},
-  signInWithPopup: vi.fn(),
-  updateProfile: vi.fn(),
-  sendEmailVerification: vi.fn(),
-  sendPasswordResetEmail: vi.fn(),
-}));
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn(),
-  getDoc: vi.fn(async () => ({ exists: () => false, data: () => ({}) })),
-  setDoc: vi.fn(async () => undefined),
-  updateDoc: vi.fn(async () => undefined),
-  serverTimestamp: vi.fn(),
-  collection: vi.fn(),
-  getDocs: vi.fn(async () => ({ docs: [] })),
+vi.mock('../services/documents', () => ({
+  doc: vi.fn(), getDoc: vi.fn(async () => ({ data: () => ({}) })), setDoc: vi.fn(),
 }));
 
 beforeEach(() => {
@@ -82,7 +59,7 @@ describe('AuthContext never leaves the app stuck on the boot screen', () => {
     );
   }
 
-  it('settles when Firebase reports a signed-out user', async () => {
+  it('settles when Supabase reports a signed-out user', async () => {
     await renderAuthProbe();
     expect(screen.getByTestId('state').textContent).toBe('LOADING');
 
@@ -90,15 +67,15 @@ describe('AuthContext never leaves the app stuck on the boot screen', () => {
     await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('SETTLED'));
   });
 
-  it('settles via the error callback when Firebase fails', async () => {
+  it('settles when the initial Supabase session lookup rejects', async () => {
     await renderAuthProbe();
-    expect(authErrorCallback, 'an error callback must be registered').toBeTypeOf('function');
+    expect(authErrorCallback, 'session lookup must be started').toBeTypeOf('function');
 
     await act(async () => { authErrorCallback?.(new Error('auth/network-request-failed')); });
     await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('SETTLED'));
   });
 
-  it('SETTLES VIA THE WATCHDOG when Firebase never calls back at all', async () => {
+  it('SETTLES VIA THE WATCHDOG when Supabase never calls back at all', async () => {
     // This is the exact production failure: the callback never fires, so
     // without a timeout the app renders AuthLoadingScreen forever.
     vi.useFakeTimers();

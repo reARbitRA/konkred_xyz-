@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('identity resolution', () => {
-  it('uses the verified Firebase uid when a valid token is present', async () => {
+  it('uses the verified Supabase uid when a valid token is present', async () => {
     const decision = await meter.reserve(request({ authorization: 'Bearer good' }));
     expect(decision.identity).toBe('fb:user-1');
   });

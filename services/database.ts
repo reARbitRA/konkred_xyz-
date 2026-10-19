@@ -2,8 +2,8 @@ import {
   collection, 
   addDoc,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from './firebase.ts';
+} from './documents';
+import { db } from './supabase.ts';
 
 /**
  * Database service — lean post-purge version.
@@ -16,7 +16,7 @@ import { db } from './firebase.ts';
  */
 class DatabaseService {
     /**
-     * Records a waitlist access request in Firestore.
+     * Records a waitlist access request in Supabase.
      * Returns the ticket id only after a successful write; throws otherwise.
      */
     async joinWaitlist(email: string): Promise<string> {
@@ -34,7 +34,7 @@ class DatabaseService {
     }
 
     /**
-     * Persists customer inquiry/contact form data to Firestore.
+     * Persists customer inquiry/contact form data to Supabase.
      */
     async submitContactMessage(data: { name: string; email: string; subject: string; message: string }): Promise<void> {
         await addDoc(collection(db, 'contact_messages'), {

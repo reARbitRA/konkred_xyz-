@@ -177,7 +177,7 @@ describe('shared quota across surfaces (the acceptance criterion)', () => {
     expect((await after.json()).paidRemaining).toBe(499);
   });
 
-  it('keeps telegram and firebase identities isolated from each other', async () => {
+  it('keeps telegram and supabase identities isolated from each other', async () => {
     await spend({ identity: 'telegram:1' , amount: 5 });
     expect((await (await balance('telegram:1')).json()).totalRemaining).toBe(0);
     expect((await (await balance('fb:other')).json()).totalRemaining).toBe(5);

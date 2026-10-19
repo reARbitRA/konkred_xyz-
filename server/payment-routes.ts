@@ -28,8 +28,8 @@ export interface PaymentRoutesDeps {
   billing: Billing;
   payments: Payments;
   /**
-   * Verifies a Firebase ID token and returns its uid, or null when the token is
-   * absent/invalid. Injected so the route layer never imports firebase-admin
+   * Verifies a Supabase access token and returns its uid, or null when the token is
+   * absent/invalid. Injected so the route layer never imports the Supabase SDK
    * directly (keeping it testable and cold-start friendly).
    */
   verifyIdToken?: (token: string) => Promise<string | null>;
@@ -75,7 +75,7 @@ export function createPaymentRoutes(deps: PaymentRoutesDeps) {
   /**
    * Resolve the caller's canonical identity, server-side only.
    *
-   * Order of trust: a verified Firebase ID token, then a salted hash of the
+   * Order of trust: a verified Supabase access token, then a salted hash of the
    * client IP. A browser-supplied identity header is deliberately ignored —
    * honouring one would let anyone spend another user's quota or mint fresh
    * free trials at will.

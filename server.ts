@@ -4,12 +4,8 @@ import path from "path";
 import cors from "cors";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
-import { initializeApp as initAdmin, getApps as getAdminApps } from "firebase-admin/app";
-import { getAuth as getAdminAuth } from "firebase-admin/auth";
-import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
-import firebaseConfig from "./firebase-applet-config.json";
-import { db as sqlDb } from "./src/db/index.ts";
-import { users as sqlUsers } from "./src/db/schema.ts";
+import { sessionClient, verifySession } from './server/supabase';
+import { doc, getDoc, collection, getDocs, query, where, limit, addDoc, serverTimestamp } from './services/documents';
 import { SYSTEM_PROMPTS } from './services/fullkonk';
 import { exportToGitHub } from './services/fullkonk.github';
 import { getKeyedModels, getOrchestratorHealth, hasProviderApiKey, MODEL_REGISTRY, NoProvidersConfiguredError, orchestrate, redactSecrets, TaskType } from './services/fullkonk.orchestrator';
@@ -20,16 +16,7 @@ import { apiJsonErrorHandler } from './server/api-error-handler.ts';
 import type { ProductRecord } from './catalog/types.ts';
 import type { PortfolioEntry } from './content/catalogue/types.ts';
 
-dotenv.config();
-
-if (!getAdminApps().length) {
-  initAdmin({
-    projectId: firebaseConfig.projectId,
-  });
-}
-const adminAuth = getAdminAuth();
-const adminDb = getAdminFirestore();
-
+dotenv.config({ path: ['.env.local', '.env'] });
 
 export async function createApp(): Promise<express.Express> {
   const app = express();
@@ -169,176 +156,8 @@ export async function createApp(): Promise<express.Express> {
     }
   });
 
-  // GitHub OAuth: Get URL
-  app.get("/api/auth/github/url", (req, res) => {
-    const client_id = process.env.GITHUB_CLIENT_ID;
-    if (!client_id) {
-      return res.status(500).json({ error: "GITHUB_CLIENT_ID environment variable is not configured on the server." });
-    }
-    const clientRedirect = req.query.redirectUri as string || `${req.protocol}://${req.get("host")}/auth/callback`;
-    const params = new URLSearchParams({
-      client_id,
-      redirect_uri: clientRedirect,
-      scope: "read:user user:email",
-    });
-    res.json({ url: `https://github.com/login/oauth/authorize?${params.toString()}` });
-  });
-
-  // GitHub OAuth: Callback
-  app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
-    const { code, state } = req.query;
-    if (!code) {
-      return res.status(400).send("Authorization code missing from GitHub redirect.");
-    }
-
-    try {
-      // 1. Swap authorization code for GitHub access token
-      const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          client_id: process.env.GITHUB_CLIENT_ID,
-          client_secret: process.env.GITHUB_CLIENT_SECRET,
-          code,
-        }),
-      });
-
-      const tokenData = await tokenRes.json() as any;
-      if (!tokenData.access_token) {
-        throw new Error(tokenData.error_description || "Failed to obtain access token from GitHub.");
-      }
-
-      // 2. Fetch user profile info
-      const userRes = await fetch("https://api.github.com/user", {
-        headers: {
-          "Authorization": `Bearer ${tokenData.access_token}`,
-          "User-Agent": "konkred-applet",
-        },
-      });
-      const githubUser = await userRes.json() as any;
-
-      // 3. Fetch user emails to get the primary address
-      const emailsRes = await fetch("https://api.github.com/user/emails", {
-        headers: {
-          "Authorization": `Bearer ${tokenData.access_token}`,
-          "User-Agent": "konkred-applet",
-        },
-      });
-      const emails = await emailsRes.json() as any[];
-      const primaryEmailObj = emails && Array.isArray(emails) ? emails.find((e: any) => e.primary) : null;
-      const email = primaryEmailObj ? primaryEmailObj.email : (githubUser.email || `${githubUser.login}@github.konkred.local`);
-
-      const uid = `github_${githubUser.id}`;
-      const displayName = githubUser.name || githubUser.login || "GitHub Architect";
-
-      // 4. Synchronize user record with Cloud SQL (PostgreSQL) using Drizzle
-      try {
-        await sqlDb.insert(sqlUsers)
-          .values({
-            uid,
-            email,
-            displayName,
-            acceptedCopyrightTerms: true,
-            canGenerateBlogs: true,
-            role: "user",
-          })
-          .onConflictDoUpdate({
-            target: sqlUsers.uid,
-            set: {
-              email,
-              displayName,
-            },
-          });
-      } catch (dbErr) {
-        console.error("Failed to sync GitHub user with Postgres:", dbErr);
-      }
-
-      // 5. Synchronize user record with Firebase Firestore
-      const userDocRef = adminDb.collection("users").doc(uid);
-      const userDoc = await userDocRef.get();
-      if (!userDoc.exists) {
-        await userDocRef.set({
-          displayName,
-          email,
-          role: "user",
-          tier: "free",
-          balance: { fiat: 1000, crypto: 0.1 },
-          stats: {
-            totalPurchases: 0,
-            totalSales: 0,
-            totalEarnings: 0,
-            rating: 5.0,
-            reviewCount: 0,
-          },
-          payoutThreshold: 500,
-          kycStatus: "unverified",
-          acceptedCopyrightTerms: true,
-          canGenerateBlogs: true,
-          createdAt: new Date().toISOString(),
-        });
-      } else {
-        await userDocRef.set({
-          displayName,
-          email,
-        }, { merge: true });
-      }
-
-      // 6. Generate Custom Firebase Auth Token
-      const customToken = await adminAuth.createCustomToken(uid);
-
-      // 7. Inject Custom Token script postMessage and shut the popup
-      res.send(`
-        <html>
-          <head>
-            <title>KONKRED Handshake Established</title>
-            <style>
-              body {
-                background: #050505;
-                color: #ffffff;
-                font-family: monospace;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100vh;
-                margin: 0;
-                letter-spacing: 0.1em;
-                text-transform: uppercase;
-              }
-              .card {
-                border: 2px solid #00ffd5;
-                padding: 40px;
-                text-align: center;
-                background: #000000;
-                box-shadow: 0 0 30px rgba(0, 255, 213, 0.15);
-              }
-            </style>
-          </head>
-          <body>
-            <div class="card">
-              <h3 style="color: #00ffd5; margin-bottom: 5px;">HANDSHAKE_ESTABLISHED</h3>
-              <p style="font-size: 11px; opacity: 0.7;">TRANSMITTING_CRYPTOGRAPHIC_TOKEN_PROXIES...</p>
-              <script>
-                if (window.opener) {
-                  window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', token: '${customToken}' }, '*');
-                  setTimeout(() => {
-                    window.close();
-                  }, 800);
-                } else {
-                  window.location.href = '/';
-                }
-              </script>
-            </div>
-          </body>
-        </html>
-      `);
-    } catch (err: any) {
-      console.error("Github OAuth error:", err);
-      res.status(500).send(`Authentication sequence failure: ${err.message || err}`);
-    }
-  });
+  // OAuth code exchange and redirect validation are owned by Supabase Auth.
+  app.get('/api/auth/github/url', (_req, res) => res.status(410).json({ error: 'Use Supabase OAuth sign-in.' }));
 
   // AI Proxy Endpoint
   app.post("/api/ai/generate", async (req, res) => {
@@ -479,11 +298,16 @@ export async function createApp(): Promise<express.Express> {
     const match = authorization.match(/^Bearer\s+(.+)$/i);
     if (!match) return null;
     try {
-      const decoded = await adminAuth.verifyIdToken(match[1]);
-      return { uid: decoded.uid };
+      const uid = await verifySession(match[1]);
+      return uid ? { uid } : null;
     } catch {
       return null;
     }
+  }
+
+  function requestStore(req: express.Request) {
+    const token = (req.header('authorization') || '').replace(/^Bearer\s+/i, '');
+    return () => sessionClient(token);
   }
 
   function safeError(error: unknown): string {
@@ -580,8 +404,8 @@ export async function createApp(): Promise<express.Express> {
       if (projectId) {
         const identity = await authenticatedIdentity(req);
         if (!identity) return res.status(401).json({ error: 'Authentication required to access a project.' });
-        const project = await adminDb.collection('fk_projects').doc(projectId).get();
-        if (!project.exists) return res.status(404).json({ error: 'Project not found.' });
+        const project = await getDoc(doc(requestStore(req), 'fk_projects', projectId));
+        if (!project.exists()) return res.status(404).json({ error: 'Project not found.' });
         const data = project.data();
         if (data?.userId !== identity.uid) return res.status(403).json({ error: 'Project access denied.' });
         const projectFiles = Array.isArray(data.files) ? data.files as { path?: unknown; content?: unknown }[] : [];
@@ -704,7 +528,7 @@ export async function createApp(): Promise<express.Express> {
       if (!identity) return res.status(401).json({ error: 'Authentication required.' });
       if (identity.uid !== req.params.userId) return res.status(403).json({ error: 'User mismatch.' });
       const count = Math.min(Number(req.query.count) || 20, 50);
-      const snapshot = await adminDb.collection('fk_sessions').where('userId', '==', identity.uid).limit(count).get();
+      const snapshot = await getDocs(query(collection(requestStore(req), 'fk_sessions'), where('userId', '==', identity.uid), limit(count)));
       const sessions = snapshot.docs.map(item => ({ id: item.id, data: item.data() })).sort((a, b) => {
         const aUpdated = a.data.updatedAt as { toMillis?: () => number } | undefined;
         const bUpdated = b.data.updatedAt as { toMillis?: () => number } | undefined;
@@ -721,7 +545,7 @@ export async function createApp(): Promise<express.Express> {
       if (identity.uid !== req.body?.userId) return res.status(403).json({ error: 'User mismatch.' });
       const { provider, model, mode, stage, tokens, durationMs, success } = req.body;
       if (typeof provider !== 'string') return res.status(400).json({ error: 'provider required' });
-      await adminDb.collection('fk_usage').add({
+      await addDoc(collection(requestStore(req), 'fk_usage'), {
         userId: identity.uid,
         provider,
         model: typeof model === 'string' ? model : '',
@@ -730,7 +554,7 @@ export async function createApp(): Promise<express.Express> {
         tokens: typeof tokens === 'number' ? tokens : 0,
         durationMs: typeof durationMs === 'number' ? durationMs : 0,
         success: typeof success === 'boolean' ? success : true,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       });
       res.json({ ok: true });
     } catch (error) { res.status(500).json({ error: safeError(error) }); }
@@ -743,7 +567,7 @@ export async function createApp(): Promise<express.Express> {
       if (identity.uid !== req.params.userId) return res.status(403).json({ error: 'User mismatch.' });
       const days = Math.min(Math.max(Number(req.query.days) || 30, 1), 90);
       const since = new Date(Date.now() - days * 86_400_000);
-      const snapshot = await adminDb.collection('fk_usage').where('userId', '==', identity.uid).limit(1000).get();
+      const snapshot = await getDocs(query(collection(requestStore(req), 'fk_usage'), where('userId', '==', identity.uid), limit(1000)));
       const events = snapshot.docs.map(item => {
         const data = item.data();
         const created = data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() as Date : new Date(0);
@@ -1009,8 +833,7 @@ export async function createApp(): Promise<express.Express> {
         anonSalt: process.env.ANON_SALT || 'konkred-default-anon-salt',
         verifyIdToken: async (token: string) => {
           try {
-            const decoded = await adminAuth.verifyIdToken(token);
-            return decoded.uid || null;
+            return await verifySession(token);
           } catch {
             return null;
           }

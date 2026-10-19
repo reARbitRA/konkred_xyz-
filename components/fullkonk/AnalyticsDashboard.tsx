@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getAuth } from 'firebase/auth';
+import { getAccessToken } from '../../services/supabase';
 import { UsageSummary, UsageEvent } from '../../services/fullkonk.analytics';
 
 interface Props {
@@ -61,7 +61,7 @@ export default function AnalyticsDashboard({ userId, onClose }: Props) {
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    void getAuth().currentUser?.getIdToken().then(token => fetch(`/api/fullkonk/analytics/${userId}?days=${days}`, {
+    void getAccessToken().then(token => fetch(`/api/fullkonk/analytics/${userId}?days=${days}`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: controller.signal,
     })).then(async response => {
