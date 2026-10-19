@@ -9,8 +9,8 @@
 - **Frontend Framework:** React 19 (Vite)
 - **Backend Architecture:** Full-stack integration
   - **Server:** Node.js / Express 5 (Custom API Gateway)
-  - **Database:** Firebase Firestore (Cloud persistence)
-  - **Authentication:** Firebase Auth
+  - **Database:** Supabase Postgres (RLS-protected persistence)
+  - **Authentication:** Supabase Auth
   - **ORM:** Drizzle ORM (configured for PostgreSQL/Cloud SQL support)
 - **AI Engine:** Unified Provider Gateway (Gemini 3 Pro, Claude 3.5, Llama 3.3, GPT-4o) via `@google/genai` and custom API proxies.
 - **Styling:** Tailwind CSS (Modern Utility-First)
@@ -43,7 +43,7 @@
 | **VALUATION ENGINE** | **IMPLEMENTED** | Terminal-based automated protocol valuation. |
 | **INTEL REPORT** | **IMPLEMENTED** | Dynamic intelligence feeds and classification layers. |
 | **USAGE METRICS** | **IMPLEMENTED** | Real-time telemetry for API usage and spend. |
-| **AUTH SYSTEM** | **FULL** | Login, Signup, and Email Verification with Firebase. |
+| **AUTH SYSTEM** | **FULL** | Login, Signup, and Email Verification with Supabase. |
 | **GATEWAY API** | **FULL** | Express server proxying multi-provider AI requests. |
 
 ## 5. FILE STRUCTURE (CORE)
@@ -64,7 +64,7 @@
 │   └── AccountPage.tsx   # Profile & Security
 ├── services/             # API and Database abstractions
 │   ├── ai.ts             # Multi-provider logic
-│   └── firebase.ts       # Cloud initialization
+│   └── supabase.ts       # Cloud initialization
 ├── styles/               # Global CSS & Tailwind imports
 ├── types.ts              # Global TypeScript interfaces
 ├── server.ts             # Express entry point

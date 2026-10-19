@@ -2,7 +2,9 @@ import express from 'express';
 import http from 'node:http';
 import path from 'node:path';
 import { createApp } from './server';
-import { handleGatewayRequest } from './server/gateway/router';
+import { authenticateRequest } from './server/gateway/auth';
+import { isHttpFailure, sendFailure } from './server/gateway/http';
+import { isGatewayOwnedPath, handleGatewayRequest } from './server/gateway/router';
 import { isGatewayConfigured, readGatewayConfig } from './server/gateway/config';
 import { log, sendJson } from './server/gateway/http';
 
@@ -23,7 +25,13 @@ void createApp().then(async app => {
   // the in-repo Express app. With no KONKRED_GATEWAY_URL configured the BFF
   // declines the request (outside production) and dev keeps the BYOK engine.
   const server = http.createServer((request, response) => {
-    handleGatewayRequest(request, response)
+    (async () => {
+      if (isGatewayOwnedPath((request.url || '/').split('?')[0])) {
+        const caller = await authenticateRequest(request, readGatewayConfig());
+        if (isHttpFailure(caller)) { sendFailure(response, caller); return true; }
+      }
+      return handleGatewayRequest(request, response);
+    })()
       .then(handled => {
         if (!handled) app(request, response);
       })

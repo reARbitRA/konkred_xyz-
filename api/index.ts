@@ -1,25 +1,4 @@
 /**
- * konkred.xyz Vercel Node.js function — the server-side edge for /fullkonk.
- *
- * Request flow (see docs/fullkonk/GATEWAY_INTEGRATION.md):
- *
- *   browser → this function (same-origin) → Konkred Gateway (Render/VM) → providers
- *
- *   1. Gateway-owned routes (`/api/fullkonk/providers`, `/api/fullkonk/generate`,
- *      `/api/fullkonk/github/export`, `/api/ai`, `/api/ai/generate`) are handled
- *      by server/gateway/router.ts, which injects x-brain-key / x-api-key from
- *      server-only environment variables and streams SSE responses untouched.
- *   2. Everything else (`/api/demo/run`, `/api/auth/github/*`, `/api/health`,
- *      `/api/fullkonk/{health,sessions,usage,analytics,optimize-prompt}` …) is
- *      served by the bundled in-repo Express app, unchanged.
- *
- * No gateway, provider, GitHub or Redis credential is ever sent to the browser
- * from this file.
- */
-import type { Express } from 'express';
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { handleGatewayRequest } from '../server/gateway/router';
-import { log, redactSecrets, sendJson } from '../server/gateway/http';
  * Vercel Node.js serverless entry point for konkred.xyz.
  *
  * Routing (see vercel.json rewrites; every /api/* request lands here):
@@ -33,7 +12,7 @@ import { log, redactSecrets, sendJson } from '../server/gateway/http';
  *   POST /api/ai                        ┘  x-brain-key / x-api-key added here)
  *
  *   every other /api/*                 → the bundled legacy Express app
- *                                        (lib/fullkonk-server.cjs): Firebase
+ *                                        (lib/fullkonk-server.cjs): Supabase
  *                                        auth/session/analytics routes,
  *                                        /api/ai/generate, OAuth, demo, etc.
  *
@@ -45,7 +24,7 @@ import { log, redactSecrets, sendJson } from '../server/gateway/http';
  * including routes that need no configuration at all. That signature means the
  * invocation itself died — an exception escaping the handler, or a rejected
  * promise/throw raised while loading the 4.1 MB bundled legacy Express app
- * (which runs `initializeApp()` for firebase-admin and builds a pg Pool at
+ * (which runs `initializeApp()` for Supabase Auth and builds a pg Pool at
  * module scope). Vercel renders its own HTML error page in that case, so the
  * carefully written JSON error contracts inside the proxy never got a chance
  * to run and the browser saw an opaque 500.
@@ -58,6 +37,10 @@ import { log, redactSecrets, sendJson } from '../server/gateway/http';
 import type { Express } from 'express';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { configFromEnv, createGatewayHandler, defaultLogger } from '../server/gateway-proxy';
+import { authenticateRequest } from '../server/gateway/auth';
+import { readGatewayConfig } from '../server/gateway/config';
+import { isGatewayOwnedPath } from '../server/gateway/router';
+import { isHttpFailure, sendFailure } from '../server/gateway/http';
 import { billingConfigured, getMeter, getPaymentRoutes } from '../server/billing-runtime';
 
 // Runtime: Node.js (Express + streaming require it; this is not an Edge function).
@@ -91,36 +74,11 @@ const legacyApp = (): Promise<Express> => {
   return legacyAppPromise;
 };
 
-export default async function handler(request: IncomingMessage, response: ServerResponse): Promise<void> {
-  try {
-    if (await handleGatewayRequest(request, response)) return;
-  } catch (error) {
-    // A failure inside the BFF must never surface internals or a fake success.
-    log.error('bff.entry', 'gateway route failed', {
-      detail: redactSecrets(error instanceof Error ? error.stack ?? error.message : String(error)),
-    });
-    if (!response.headersSent && !response.writableEnded) {
-      sendJson(response, 500, { ok: false, error: { code: 'INTERNAL_ERROR', message: 'The platform API failed to process this request.' } });
-    } else if (!response.writableEnded) {
-      response.end();
-    }
-    return;
-  }
-
-  try {
-    const app = await legacyApp();
-    return void app(request, response);
-  } catch (error) {
-    legacyAppPromise = undefined;
-    log.error('bff.entry', 'legacy server initialization failed', {
-      detail: redactSecrets(error instanceof Error ? error.message : String(error)),
-    });
-    sendJson(response, 500, { error: 'Server initialization failed.' });
 /**
  * Legacy Express fallback.
  *
- * The bundled app initialises firebase-admin and a PostgreSQL pool at module
- * scope, so importing it can reject on a deployment whose SQL_ / Firebase
+ * The bundled app initialises Supabase Auth and a PostgreSQL pool at module
+ * scope, so importing it can reject on a deployment whose SQL_ / Supabase
  * variables are absent. That rejection is contained here: the failed promise is
  * discarded (so a later request can retry a cold import) and the caller gets a
  * controlled 503 instead of an invocation crash.
@@ -211,6 +169,10 @@ export default async function handler(request: IncomingMessage, response: Server
         code: 'GATEWAY_MISCONFIGURED',
       });
       return;
+    }
+    if (isGatewayOwnedPath((request.url || '/').split('?')[0])) {
+      const caller = await authenticateRequest(request, readGatewayConfig());
+      if (isHttpFailure(caller)) { sendFailure(response, caller); return; }
     }
     await gatewayHandler(request, response);
   } catch (error) {

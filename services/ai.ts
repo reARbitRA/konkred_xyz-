@@ -1,7 +1,7 @@
 
 import { AIProviderID, AIProviderConfig, AuditResult } from '../types.ts';
-import { db } from './firebase.ts';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { db } from './supabase.ts';
+import { doc, setDoc, serverTimestamp, getDoc } from './documents';
 import { AIProviderFactory, ChatMessage } from '../lib/ai/providers.ts';
 import { AI_PROVIDERS } from '../constants.ts';
 import { gatewayComplete, extractJsonFromText } from './gateway.ts';

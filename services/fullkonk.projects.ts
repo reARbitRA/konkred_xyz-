@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db } from './supabase';
 import {
   addDoc,
   collection,
@@ -12,7 +12,7 @@ import {
   setDoc,
   Timestamp,
   where,
-} from 'firebase/firestore';
+} from './documents';
 import { FKProject, GeneratedFile } from '../types';
 
 export interface ProjectInput {

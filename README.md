@@ -501,7 +501,7 @@ graph LR
     V["Vercel Edge + API Layer"]
     G["KONKRED AI Gateway"]
     P[("PostgreSQL")]
-    F["Firebase Identity"]
+    F["Supabase Identity"]
     N["Payment Provider"]
     T["Telegram Surface"]
     AI["AI Provider Pool"]
@@ -910,8 +910,7 @@ KONKRED APIs return controlled success and failure envelopes.
 ├── agent/
 ├── owner-docs/
 │
-├── firestore.rules
-├── firebase-blueprint.json
+├── supabase/migrations/
 ├── vercel.json
 └── .env.example
 ```
@@ -925,7 +924,7 @@ KONKRED APIs return controlled success and failure envelopes.
 - Node.js 20+
 - npm
 - PostgreSQL for durable production-oriented billing tests
-- Firebase project for authenticated surfaces
+- Supabase project for authenticated surfaces
 - Access to at least one configured AI provider for live generation
 
 ## Clone
@@ -1222,7 +1221,7 @@ PUBLIC APPLICATION
 SERVER API / EDGE FUNCTIONS
    │
    ├── PostgreSQL
-   ├── Firebase Identity
+   ├── Supabase Identity
    ├── Payment Provider
    ├── GitHub API
    └── AI Gateway
@@ -1238,17 +1237,13 @@ The repository includes:
 - same-origin API structure;
 - environment-based secrets.
 
-## Firebase
+## Supabase
 
-Firebase supports identity-facing surfaces.
-
-The repository includes:
-
-- Firebase configuration boundary;
-- Firestore rules;
-- authentication contexts;
-- verification flow;
-- account integration.
+Supabase Auth handles email/password verification and Google/GitHub OAuth.
+Supabase Postgres stores user profiles, fullKONK sessions/projects, analytics,
+blogs, audits, settings, and lead/contact forms with row-level security.
+No service-role key is required by the application. See
+[Supabase migration and setup](docs/SUPABASE_MIGRATION.md).
 
 ## PostgreSQL
 
@@ -1348,7 +1343,7 @@ The interface does not remain in an infinite loading state when the server has a
 - Express
 - PostgreSQL
 - Drizzle ORM
-- Firebase Admin
+- Supabase Auth
 - REST APIs
 - Server-Sent Events
 - Payment webhooks

@@ -33,7 +33,7 @@ const JoinNetwork: React.FC<JoinNetworkProps> = ({ onNavigate, onComplete }) => 
       if (userEmail) {
         onComplete(userEmail);
       } else {
-        throw new Error("Could not retrieve email for verification.");
+        onNavigate('catalogue');
       }
     } catch (err: any) {
       setError(err.message || "Signup failed.");

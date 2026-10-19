@@ -1,8 +1,9 @@
+import { verifySession, supabaseConfig, type SupabaseEnv } from './supabase';
 /**
  * Lazy, crash-safe construction of the billing/payment stack from environment.
  *
  * Deliberately lazy: the production incident was caused by a module that built
- * a PostgreSQL pool and initialised firebase-admin at import time, so a bad
+ * a PostgreSQL pool and initialised Supabase Auth at import time, so a bad
  * environment killed the whole serverless function. Nothing here runs until a
  * payment route is actually called, and a failure yields `null` (→ a controlled
  * 503) rather than an exception during module evaluation.
@@ -13,7 +14,7 @@ import { Payments } from './payments';
 import { createPaymentRoutes } from './payment-routes';
 import { createInternalQuotaRoutes } from './internal-quota-routes';
 
-export interface BillingRuntimeEnv {
+export interface BillingRuntimeEnv extends SupabaseEnv {
   DATABASE_URL?: string;
   NOWPAYMENTS_API_KEY?: string;
   NOWPAYMENTS_IPN_SECRET?: string;
@@ -29,7 +30,6 @@ export interface BillingRuntimeEnv {
   TRIAL_ENABLED?: string;
   DAILY_FREE_MESSAGES?: string;
   DAILY_MODE?: string;
-  FIREBASE_PROJECT_ID?: string;
 }
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<boolean>;
@@ -65,31 +65,17 @@ export function billingConfigured(env: BillingRuntimeEnv = process.env): boolean
 }
 
 /**
- * Verify a Firebase ID token using firebase-admin, imported lazily.
+ * Verify a Supabase access token using Supabase Auth, imported lazily.
  *
  * Returning null (rather than throwing) on any failure means an invalid token
  * simply degrades to an anonymous identity instead of erroring the request.
  */
-async function verifyIdTokenFactory(projectId?: string): Promise<((token: string) => Promise<string | null>) | undefined> {
-  if (!projectId) return undefined;
-  try {
-    const [{ initializeApp, getApps }, { getAuth }] = await Promise.all([
-      import('firebase-admin/app'),
-      import('firebase-admin/auth'),
-    ]);
-    if (!getApps().length) initializeApp({ projectId });
-    const auth = getAuth();
-    return async (token: string) => {
-      try {
-        const decoded = await auth.verifyIdToken(token);
-        return decoded.uid || null;
-      } catch {
-        return null; // expired / forged / wrong audience
-      }
-    };
-  } catch {
-    return undefined; // firebase-admin unavailable → anonymous only
-  }
+async function verifyIdTokenFactory(env: SupabaseEnv): Promise<((token: string) => Promise<string | null>) | undefined> {
+  const { url, key } = supabaseConfig(env);
+  if (!url || !key) return undefined;
+  return async token => {
+    try { return await verifySession(token, env); } catch { return null; }
+  };
 }
 
 /**
@@ -138,7 +124,7 @@ export async function getPaymentRoutes(env: BillingRuntimeEnv = process.env): Pr
       payments,
       // Falls back to a per-deployment constant; rotating it resets anon trials.
       anonSalt: env.ANON_SALT || 'konkred-default-anon-salt',
-      verifyIdToken: await verifyIdTokenFactory(env.FIREBASE_PROJECT_ID),
+      verifyIdToken: await verifyIdTokenFactory(env),
       log: (event, meta) => {
         const line = [`[billing] event=${event}`];
         for (const [k, v] of Object.entries(meta || {})) line.push(`${k}=${String(v)}`);
@@ -248,7 +234,7 @@ export async function getMeter(env: BillingRuntimeEnv = process.env) {
     const meter = new Meter({
       billing,
       anonSalt: env.ANON_SALT || 'konkred-default-anon-salt',
-      verifyIdToken: await verifyIdTokenFactory(env.FIREBASE_PROJECT_ID),
+      verifyIdToken: await verifyIdTokenFactory(env),
       log: (event) => console.log(`[meter] event=${event}`),
     });
 

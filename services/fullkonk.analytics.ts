@@ -1,6 +1,6 @@
 // services/fullkonk.analytics.ts
 
-import { db } from './firebase';
+import { db } from './supabase';
 import {
   collection,
   addDoc,
@@ -11,7 +11,7 @@ import {
   limit,
   serverTimestamp,
   Timestamp,
-} from 'firebase/firestore';
+} from './documents';
 
 export interface UsageEvent {
   id:         string;

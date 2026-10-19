@@ -82,7 +82,7 @@ describe('fullKONK client wiring', () => {
       expect(pipeline).toContain(label);
     }
     expect(page).toContain('RetryablePipelineError');
-    expect(page).toContain('retry-after');
+    expect(page).toContain('readGatewayError(response)');
   });
 
   it('parses the stream with the shared parser instead of ad-hoc chunk splitting', () => {
@@ -93,16 +93,16 @@ describe('fullKONK client wiring', () => {
   });
 
   it('surfaces Retry-After from the gateway on rate-limited generation', () => {
-    const page = read(PAGE);
-    expect(page).toContain("response.headers.get('retry-after')");
-    expect(page).toContain('Retry in');
+    const helper = read(path.join(ROOT, 'lib/gateway-client.ts'));
+    expect(helper).toContain("response.headers.get('retry-after')");
+    expect(helper).toContain('Retry in');
   });
 
   it('keeps the AI Studio style provider probe resilient to gateway outages', () => {
     const page = read(PAGE);
     const probeStart = page.indexOf("fetch('/api/fullkonk/providers'");
     expect(probeStart).toBeGreaterThan(-1);
-    const probe = page.slice(probeStart, probeStart + 1200);
+    const probe = page.slice(probeStart, page.indexOf('  useEffect(() => {', probeStart));
     expect(probe).toContain('.catch(');
     // A failed probe must never be reported as "no providers configured".
     expect(probe).toContain('never claim');
@@ -118,15 +118,15 @@ describe('GitHub export modal', () => {
     expect(modal).not.toContain('sessionStorage');
   });
 
-  it('attaches the Firebase session token when the user is signed in', () => {
+  it('attaches the Supabase session token when the user is signed in', () => {
     const modal = read(EXPORT_MODAL);
-    expect(modal).toContain('getIdToken');
+    expect(modal).toContain('getAccessToken');
     expect(modal).toContain('Authorization');
   });
 
-  it('clears the token from component state when the modal closes', () => {
+  it('never keeps a provider or GitHub token in component state', () => {
     const modal = read(EXPORT_MODAL);
-    expect(modal).toMatch(/setToken\(''\)/);
+    expect(modal).not.toContain('setToken');
   });
 });
 
@@ -138,7 +138,7 @@ describe('production client bundle', () => {
     const banned = [
       'KONKRED_GATEWAY_URL', 'KONKRED_GATEWAY_API_KEY', 'FULLKONK_KEY', 'BRAIN_URL', 'BRAIN_KEY',
       'FULLKONK_GITHUB_EXPORT_TOKEN', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'CLOUDFLARE_API_TOKEN',
-      'FULLKONK_REQUIRE_AUTH', 'FIREBASE_SERVICE_ACCOUNT_JSON',
+      'FULLKONK_REQUIRE_AUTH', 'SUPABASE_SERVICE_ROLE_KEY',
     ];
     for (const file of assets) {
       const bundle = fs.readFileSync(path.join(assetsDir, file), 'utf8');

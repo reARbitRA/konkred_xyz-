@@ -122,7 +122,7 @@ export interface User {
   kycStatus: 'unverified' | 'verified' | 'pending';
   acceptedCopyrightTerms: boolean;
   canGenerateBlogs: boolean;
-  createdAt: any; // Firestore Timestamp
+  createdAt: any; // Application timestamp
 }
 
 export interface Listing {

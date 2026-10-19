@@ -445,7 +445,7 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
     };
     const authorization = req.headers.authorization;
     if (typeof authorization === 'string' && /^Bearer\s+\S+/i.test(authorization)) {
-      headers.authorization = authorization; // Firebase ID token → gateway user binding
+      headers.authorization = authorization; // Supabase access token → gateway user binding
     }
     const ip = clientIp(req);
     if (ip !== 'unknown') headers['x-forwarded-for'] = ip;
@@ -779,7 +779,7 @@ export function createGatewayHandler(deps: ProxyDeps): (req: IncomingMessage, re
 
     // ── Health contract (Phase 1) ───────────────────────────────────────────
     // These routes are owned by the proxy itself and MUST NOT depend on the
-    // bundled legacy Express app, a database, Firebase, or the gateway being
+    // bundled legacy Express app, a database, Supabase, or the gateway being
     // reachable. They are the only thing that can prove "the Vercel function is
     // alive" during an incident, so they must never throw.
     if (pathname === '/api/health' || pathname === '/api/ready') {

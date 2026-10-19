@@ -32,8 +32,8 @@ import Badge from '../components/common/Badge.tsx';
 import DOMPurify from 'dompurify';
 import { PageView } from '../types.ts';
 import { useAuth } from '../contexts/AuthContext.tsx';
-import { db, OperationType, handleFirestoreError } from '../services/firebase.ts';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
+import { db, OperationType, handleDatabaseError } from '../services/supabase.ts';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, doc } from '../services/documents';
 
 interface BlogPost {
   id: string | number;
@@ -198,7 +198,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
   // Authorization & Permissions control
   const [showAuthGate, setShowAuthGate] = useState(false);
 
-  // Load and merge default posts with Firestore blogs
+  // Load and merge default posts with Supabase blogs
   useEffect(() => {
     const fetchBlogs = async () => {
       setLoading(true);
@@ -206,14 +206,14 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
         const blogsRef = collection(db, 'blogs');
         const q = query(blogsRef, orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
-        const firestorePosts = snapshot.docs.map(doc => ({
+        const databasePosts = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
           isUserUploaded: true,
           date: doc.data().createdAt ? new Date(doc.data().createdAt.seconds * 1000).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() : 'RECENT'
         } as BlogPost));
         
-        setBlogPosts([...firestorePosts, ...DEFAULT_POSTS]);
+        setBlogPosts([...databasePosts, ...DEFAULT_POSTS]);
       } catch (err) {
         console.error("Critical: Hub feed synchronization failed.", err);
         setBlogPosts(DEFAULT_POSTS);
@@ -306,7 +306,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
 
     try {
       if (typeof id === 'string' && id.startsWith('user-')) {
-          // This case shouldn't happen with firestore but for safety
+          // This case shouldn't happen with database but for safety
           return;
       }
       
@@ -368,7 +368,7 @@ const BlogHub: React.FC<{ onNavigate: (page: PageView) => void }> = ({ onNavigat
         setDesc('');
       }, 1500);
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'blogs');
+      handleDatabaseError(err, OperationType.CREATE, 'blogs');
     } finally {
       setIsPublishing(false);
     }

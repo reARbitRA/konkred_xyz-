@@ -7,8 +7,8 @@ import { useAuth } from '../../contexts/AuthContext.tsx';
 import { useToast } from '../../contexts/ToastContext.tsx';
 import { AI_PROVIDERS } from '../../constants.ts';
 import { AIProviderID, AIProviderConfig } from '../../types.ts';
-import { db } from '../../services/firebase.ts';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../../services/supabase.ts';
+import { doc, getDoc, setDoc, updateDoc } from '../../services/documents';
 import { aiService } from '../../services/ai.ts';
 import Badge from '../common/Badge.tsx';
 

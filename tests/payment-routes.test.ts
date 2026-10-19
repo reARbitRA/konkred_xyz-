@@ -97,7 +97,7 @@ describe('GET /api/quota', () => {
     expect(body.exhausted).toBe(false);
   });
 
-  it('binds quota to the verified Firebase uid when a token is supplied', async () => {
+  it('binds quota to the verified Supabase uid when a token is supplied', async () => {
     const body = await (await get('/api/quota', { authorization: 'Bearer good-token' })).json();
     expect(body.authenticated).toBe(true);
   });

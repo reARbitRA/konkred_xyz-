@@ -125,7 +125,7 @@ describe('browser → Vercel proxy → Konkred Gateway (end-to-end with mock gat
       // ── generation (fragmented SSE) ────────────────────────────────────
       const genRes = await fetch(`${proxy.baseUrl}/api/fullkonk/generate`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-provider-key': 'gsk_byok', authorization: 'Bearer firebase-id-token' },
+        headers: { 'content-type': 'application/json', 'x-provider-key': 'gsk_byok', authorization: 'Bearer supabase-id-token' },
         body: JSON.stringify({ prompt: 'Build it', mode: 'fullstack', temperature: 0.4, maxTokens: 2048 }),
       });
       expect(genRes.status).toBe(200);
@@ -161,7 +161,7 @@ describe('browser → Vercel proxy → Konkred Gateway (end-to-end with mock gat
       ]);
       expect(gateway.seenHeaders['/api/fullkonk/generate']['x-brain-key']).toBe('integration-brain-key-0123456789');
       expect(gateway.seenHeaders['/api/fullkonk/generate']['x-provider-key']).toBe('gsk_byok');
-      expect(gateway.seenHeaders['/api/fullkonk/generate'].authorization).toBe('Bearer firebase-id-token');
+      expect(gateway.seenHeaders['/api/fullkonk/generate'].authorization).toBe('Bearer supabase-id-token');
 
       // ── standard inference envelope ────────────────────────────────────
       const aiRes = await fetch(`${proxy.baseUrl}/api/ai`, {

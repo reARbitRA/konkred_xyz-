@@ -67,7 +67,8 @@ const SECRET_ENV_NAMES = [
   'BRAIN_API_KEY',
   'FULLKONK_GITHUB_EXPORT_TOKEN',
   'GITHUB_CLIENT_SECRET',
-  'FIREBASE_SERVICE_ACCOUNT_JSON',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_SECRET_KEY',
 ];
 
 /** Literal secret values configured on this deployment (short values ignored). */

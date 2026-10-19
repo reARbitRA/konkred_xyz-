@@ -18,7 +18,7 @@ Rules: No truncation. Every component fully typed. All errors handled. Accessibl
 Output complete file contents with file paths as comments.`,
 
   backend: `You are a senior backend engineer. You write complete Node.js/TypeScript API code.
-Use: Express 5, TypeScript strict, Firebase Firestore, Zod validation.
+Use: Express 5, TypeScript strict, Supabase Postgres, Zod validation.
 Rules: Validate all inputs. Handle all errors with proper status codes. Return { data?, error? }.
 Output complete file contents with file paths as comments.`,
 
@@ -26,5 +26,5 @@ Output complete file contents with file paths as comments.`,
 Check: API call signatures match routes. Types consistent across frontend/backend. All imports resolve.
 Fix what is broken. Output corrected complete files only. List issues first.`,
 
-  test: `Given the frontend and backend files, write comprehensive tests: unit tests for utilities with Vitest, component tests with Testing Library, Express API route tests with Supertest, and an integration test for the primary flow. Reuse production TypeScript types. Mock Firebase and all external APIs. Output complete test files with paths.`,
+  test: `Given the frontend and backend files, write comprehensive tests: unit tests for utilities with Vitest, component tests with Testing Library, Express API route tests with Supertest, and an integration test for the primary flow. Reuse production TypeScript types. Mock Supabase and all external APIs. Output complete test files with paths.`,
 };

@@ -1,6 +1,6 @@
 // services/fullkonk.sessions.ts
 
-import { db } from './firebase';
+import { db } from './supabase';
 import {
   collection,
   addDoc,
@@ -14,7 +14,7 @@ import {
   limit,
   serverTimestamp,
   Timestamp,
-} from 'firebase/firestore';
+} from './documents';
 import { FKMessage, GeneratedFile, BuildMode } from '../types';
 
 export interface FKSession {

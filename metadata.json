@@ -9,7 +9,7 @@
   },
   "tech_stack": {
     "frontend": "React 18",
-    "backend": "Firebase Firestore / Cloud Functions",
+    "backend": "Supabase Postgres / Node.js API",
     "ai": "Unified AI Provider Gateway (Gemini 3 Pro + External)",
     "payments": "USDT (TRC-20)"
   },

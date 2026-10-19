@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { getAuth } from 'firebase/auth';
+import { getAccessToken } from '../../services/supabase';
 import { GeneratedFile } from '../../types';
 import { GitHubExportResult, normalizeGitHubExportResult } from '../../services/fullkonk.github';
 
@@ -38,19 +38,18 @@ export default function GitHubExportModal({ files, onClose }: Props) {
     setResult(null);
 
     try {
-      // Same-origin Vercel route: it injects the gateway x-brain-key server-side
+      // Same-origin Vercel route: it injects gateway credentials server-side
       // and (when configured) uses a server-owned GitHub token, so the PAT below
       // never leaves konkred.xyz. The session token is attached so the route can
       // bind/verify the export when FULLKONK_REQUIRE_AUTH is enabled.
-      const user = getAuth().currentUser;
-      const idToken = user ? await user.getIdToken().catch(() => '') : '';
+      const idToken = await getAccessToken();
       const res = await fetch('/api/fullkonk/github/export', {
         method:  'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
         },
-        body: JSON.stringify({ files, token, owner, repo, branch, message }),
+        body: JSON.stringify({ files, owner: owner.trim(), repo: repo.trim(), branch: branch.trim(), message }),
       });
       const data = await res.json().catch(() => ({})) as { error?: string; errors?: string[]; retryAfter?: number };
       if (!res.ok) {
@@ -58,17 +57,6 @@ export default function GitHubExportModal({ files, onClose }: Props) {
         const retryAfter = Number.isFinite(retryHeader) && retryHeader > 0 ? retryHeader : Number(data.retryAfter);
         const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? ` Retry in ${Math.ceil(retryAfter)}s.` : '';
         throw new Error(`${data.error ?? data.errors?.[0] ?? 'Export failed'}${wait}`);
-      }
-      setResult(data as GitHubExportResult);
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files, owner: owner.trim(), repo: repo.trim(), branch: branch.trim(), message }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const detail = typeof data?.error === 'string' ? data.error
-          : data?.error && typeof data.error === 'object' ? (data.error.message ?? 'Export failed')
-          : `Export failed (${res.status}).`;
-        throw new Error(detail);
       }
       setResult(normalizeGitHubExportResult(data));
     } catch (err) {

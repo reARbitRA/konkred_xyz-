@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '../services/supabase';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
@@ -50,7 +51,9 @@ async function fetchJson<T>(input: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const response = await fetch(input, { ...init, signal: controller.signal });
+    const headers = new Headers(init.headers);
+    for (const [key, value] of Object.entries(await getAuthHeaders())) headers.set(key, value);
+    const response = await fetch(input, { ...init, headers, signal: controller.signal });
     const body = (await response.json().catch(() => ({}))) as T & { error?: string; code?: string };
     if (!response.ok) {
       const error = new Error(body?.error || 'REQUEST_FAILED') as Error & { code?: string; status?: number };
