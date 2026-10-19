@@ -75,6 +75,12 @@ const embeddedPaths = new Set<string>([
   '/v1/chat/completions',
   '/v1/models',
 ]);
+const BILLABLE_EMBEDDED = new Set<string>([
+  '/api/ai',
+  '/api/fullkonk/generate',
+  '/v1/chat/completions',
+  '/v1/models',
+]);
 const tryLoadEmbedded = async (): Promise<EmbeddedModule | null> => {
   if (embeddedMod !== undefined) return embeddedMod;
   try {
@@ -91,15 +97,60 @@ const tryLoadEmbedded = async (): Promise<EmbeddedModule | null> => {
 };
 const isEmbeddedPath = (pathname: string): boolean => embeddedPaths.has(pathname) || pathname.startsWith('/v1/');
 const shouldUseEmbedded = (): boolean => {
-  // If an external gateway URL is explicitly configured, keep the BFF proxy
-  // path for backward compatibility (existing tests set KONKRED_GATEWAY_URL).
-  // The embedded gateway is the default when no external URL is set.
   const extUrl = (process.env.KONKRED_GATEWAY_URL || process.env.BRAIN_URL || '').trim();
   if (extUrl) return false;
-  // Otherwise always try embedded — it handles DEMO_MOCK/mock fallback even
-  // with no provider keys, which is needed for preview smoke without paid calls.
   return true;
 };
+
+// ── KRedKey billing metering for embedded gateway (persistent quota) ──────
+async function billEmbeddedCall(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (!BILLABLE_EMBEDDED.has((req.url || '/').split('?')[0])) return true;
+  if (!billingConfigured()) return true; // no DB → unmetered, but tier limits still apply via userLimiter
+  try {
+    const { getWorkflowDeps } = await import('../server/billing-runtime');
+    const deps = await getWorkflowDeps().catch(()=>undefined);
+    const billing = (deps as unknown as { billing?: import('../server/billing').Billing })?.billing;
+    if (!billing) return true;
+    // Resolve identity: kred_live_ key → api:<key>, else fb:<uid> via Supabase token
+    let identity: string | null = null;
+    const apiKey = (req.headers['x-api-key'] as string) || (req.headers.authorization as string)?.replace(/^Bearer\s+/i, '').trim();
+    if (apiKey && typeof apiKey === 'string' && apiKey.startsWith('kred_live_')) {
+      identity = `api:${apiKey}`;
+    } else if (req.headers.authorization) {
+      const token = (req.headers.authorization as string).replace(/^Bearer\s+/i, '').trim();
+      if (token && token.length > 20) {
+        try {
+          const { verifySession } = await import('../server/supabase');
+          const uid = await verifySession(token);
+          if (uid) identity = `fb:${uid}`;
+        } catch {}
+      }
+    }
+    if (!identity) {
+      // fallback to anon via IP (has daily 10 free)
+      const fwd = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || 'unknown';
+      const { anonymousIdentity } = await import('../server/billing');
+      identity = await anonymousIdentity(fwd.split(',')[0].trim() || 'unknown', process.env.ANON_SALT || 'konkred-default-anon-salt');
+    }
+    const result = await billing.spend(identity, 1, 'api');
+    if (!result.ok) {
+      safeJson(res, 402, {
+        error: 'Quota exhausted. Upgrade your KRedKey to continue.',
+        code: 'QUOTA_EXHAUSTED',
+        balance: result.balance,
+        upgradeUrl: '/checkout',
+      });
+      return false;
+    }
+    // Touch kred key lastUsed
+    if (identity.startsWith('api:kred_live_')) {
+      import('../server/kredkey-store').then(m=> m.getKredKeyStore().then(s=> s.touch(identity.slice(4)))).catch(()=>{});
+    }
+    return true;
+  } catch {
+    return true; // fail open — don't block AI on billing glitch
+  }
+}
 
 // Runtime: Node.js (Express + streaming require it; this is not an Edge function).
 export const config = {
@@ -212,31 +263,27 @@ export default async function handler(request: IncomingMessage, response: Server
     // function (see vercel.json rewrites). The external BFF proxy is kept for
     // backward compatibility when KONKRED_GATEWAY_URL is present (existing tests).
     const rawPath = (request.url || '/').split('?')[0];
-    // Normalise Vercel's /api/v1/* rewrite back to /v1/* so the gateway router
-    // can match it (same as api/[...path].mjs in the ecosystem repo).
+    // KRedKey routes are handled first — they live in Supabase/Postgres, not the legacy bundle
+    if (rawPath.startsWith('/api/kredkeys')) {
+      const { handleKredKeyRequest } = await import('../server/kredkey-routes');
+      if (await handleKredKeyRequest(request, response)) return;
+    }
     if (typeof request.url === 'string' && request.url.startsWith('/api/v1')) {
       request.url = request.url.replace(/^\/api\/v1(?=\/|$|\?)/, '/v1');
     }
     const pathname = (request.url || '/').split('?')[0];
 
     if (shouldUseEmbedded() && isEmbeddedPath(pathname)) {
+      // Persistent quota check before inference (free tier → paywall)
+      if (BILLABLE_EMBEDDED.has(pathname)) {
+        const allowed = await billEmbeddedCall(request, response);
+        if (!allowed) return;
+      }
       const mod = await tryLoadEmbedded();
       if (mod) {
-        // For health/ready we keep the website contract but enrich it with
-        // gateway pool info when available — this preserves the existing
-        // monitors (tests expect {status:"ok"}) while enabling the gateway
-        // capacity checks needed for api.konkred.xyz readiness.
-        // The embedded handler already implements correct auth for /api/models,
-        // /api/status etc., including kred_ keys.
-        // We delegate directly; the embedded router returns 404 for unknown
-        // paths, which we then fall through to the proxy logic below.
         const before = response.writableEnded;
         await mod.handleRequest(request as unknown as Parameters<typeof mod.handleRequest>[0], response as unknown as Parameters<typeof mod.handleRequest>[1]);
         if (response.writableEnded || response.headersSent) return;
-        // If embedded returned 404 (no route), fall through to BFF proxy.
-        // We detect this by checking if handleRequest wrote a 404 JSON with
-        // code NOT_FOUND and no other handler has sent headers. For now, if
-        // no headers sent, we continue.
         if (!before && !response.headersSent) {
           // fall through
         } else {

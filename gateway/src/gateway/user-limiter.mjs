@@ -29,6 +29,15 @@ class UserLimiter {
         ? { userId: 'anonymous', tier: config.anonymousTier, key: null }
         : null;
     }
+    // Check dynamic KRedKeys first (runtime-registered via /api/kredkeys), then env-based users.
+    const dynamic = (config.getAllUsers ? config.getAllUsers() : config.users).find((u) => String(u?.key ?? '') === key);
+    if (dynamic) {
+      return {
+        userId: String(dynamic.userId ?? dynamic.id ?? 'unknown'),
+        tier: String(dynamic.tier ?? 'free'),
+        key,
+      };
+    }
     const user = config.users.find((u) => String(u?.key ?? '') === key);
     if (!user) return null;
     return {
