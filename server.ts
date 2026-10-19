@@ -349,32 +349,53 @@ export async function createApp(): Promise<express.Express> {
     try {
       const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
       if (!prompt || prompt.length > 4000) return res.status(400).json({ error: 'Prompt must contain 1–4000 characters.' });
-      const groqKey = process.env.GROQ_API_KEY;
-      if (!groqKey) return res.status(503).json({ error: 'Prompt optimizer is unavailable.' });
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15_000);
+      // Route through ecosystem gateway (any provider) — no hard dependency on GROQ_API_KEY
       try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile', temperature: 0.25, max_tokens: Math.min(1800, Math.max(256, prompt.length * 2)),
-            messages: [
-              { role: 'system', content: 'Improve this product description for AI code generation. Add: tech stack preferences if missing, specific feature list, expected user flows, data models if inferrable. Return improved version only. Max 3x original length.' },
-              { role: 'user', content: prompt },
-            ],
-          }),
-          signal: controller.signal,
+        const { gatewayComplete } = await import('./services/gateway.ts');
+        const out = await gatewayComplete({
+          messages: [
+            { role: 'system', content: 'Improve this product description for AI code generation. Add: tech stack preferences if missing, specific feature list, expected user flows, data models if inferrable. Return improved version only. Max 3x original length.' },
+            { role: 'user', content: prompt },
+          ],
+          maxTokens: Math.min(1800, Math.max(256, prompt.length * 2)),
+          temperature: 0.25,
+          taskType: 'general',
         });
-        if (!response.ok) return res.status(response.status === 429 ? 429 : 502).json({ error: 'Prompt optimizer provider failed.' });
-        const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
-        const optimized = payload.choices?.[0]?.message?.content?.trim();
+        const optimized = (typeof out === 'string' ? out : String((out as { content?: unknown })?.content ?? '')).trim();
         if (!optimized) return res.status(502).json({ error: 'Prompt optimizer returned no suggestion.' });
-        res.json({ prompt: optimized.slice(0, prompt.length * 3) });
-      } finally {
-        clearTimeout(timer);
+        return res.json({ prompt: optimized.slice(0, prompt.length * 3) });
+      } catch (e) {
+        // Fallback: direct GROQ if gateway unavailable and GROQ key present
+        const groqKey = process.env.GROQ_API_KEY || process.env.GROQ_KEY_P1;
+        if (groqKey) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 15_000);
+          try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile', temperature: 0.25, max_tokens: Math.min(1800, Math.max(256, prompt.length * 2)),
+                messages: [
+                  { role: 'system', content: 'Improve this product description for AI code generation. Add: tech stack preferences if missing, specific feature list, expected user flows, data models if inferrable. Return improved version only. Max 3x original length.' },
+                  { role: 'user', content: prompt },
+                ],
+              }),
+              signal: controller.signal,
+            });
+            if (!response.ok) return res.status(response.status === 429 ? 429 : 502).json({ error: 'Prompt optimizer provider failed.' });
+            const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
+            const optimized = payload.choices?.[0]?.message?.content?.trim();
+            if (!optimized) return res.status(502).json({ error: 'Prompt optimizer returned no suggestion.' });
+            return res.json({ prompt: optimized.slice(0, prompt.length * 3) });
+          } finally { clearTimeout(timer); }
+        }
+        throw e;
       }
     } catch (error) {
+      // Map gateway misconfiguration to 503 consistently
+      const msg = String((error as Error)?.message || '');
+      if (/NoProvidersConfigured|provider|configured/i.test(msg)) return res.status(503).json({ error: 'Prompt optimizer is unavailable — no provider configured.' });
       res.status(500).json({ error: safeError(error) });
     }
   });
@@ -394,6 +415,35 @@ export async function createApp(): Promise<express.Express> {
     const byok = byokKey && preferredProvider ? { providerId: preferredProvider, key: byokKey } : undefined;
     const projectId = typeof req.body?.projectId === 'string' ? req.body.projectId : undefined;
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
+
+    // Billing: limited free tokens then paywall (reuse Billing.spend; BYOK bypasses quota)
+    if (!byok) {
+      try {
+        const [{ getWorkflowDeps }, { anonymousIdentity }] = await Promise.all([import('./server/billing-runtime.ts'), import('./server/billing.ts')]);
+        const deps = await getWorkflowDeps().catch(()=>undefined);
+        if (deps?.billing) {
+          let identity: string | null = null;
+          const auth = req.headers.authorization;
+          if (typeof auth === 'string' && /^Bearer\s+\S+/i.test(auth)) {
+            try {
+              const token = auth.replace(/^Bearer\s+/i,'').trim();
+              const uid = await verifySession(token);
+              if (uid) identity = `fb:${uid}`;
+            } catch {}
+          }
+          if (!identity) {
+            const fwd = req.headers['x-forwarded-for'];
+            const ip = (typeof fwd === 'string' && fwd.trim() ? fwd.split(',')[0].trim() : '') || req.socket?.remoteAddress || (req as unknown as { ip?: string }).ip || 'unknown';
+            identity = await anonymousIdentity(ip, process.env.ANON_SALT || 'konkred-default-anon-salt');
+          }
+          const resSpend = await deps.billing.spend(identity, 1);
+          if (!resSpend.ok) {
+            res.setHeader('retry-after', '3600');
+            return res.status(resSpend.status).json({ error: 'Quota exhausted. Upgrade at /account → KRedKeys.', code: resSpend.code, balance: resSpend.balance });
+          }
+        }
+      } catch {}
+    }
 
     let attachedFiles: UploadedContextFile[];
     try { attachedFiles = validateContextFiles(req.body?.attachedFiles); }
@@ -632,7 +682,7 @@ export async function createApp(): Promise<express.Express> {
    * Basic redaction for demo payloads/errors: scrub common secret shapes.
    */
   function redactDemoText(value: string): string {
-    const secretKeyPattern = new RegExp(String.raw`(?i)((?:password|api[_-]?key|secret|token)\s*[=:]\s*)\S+`, 'g');
+    const secretKeyPattern = new RegExp(String.raw`((?:password|api[_-]?key|secret|token)\s*[=:]\s*)\S+`, 'gi');
     const awsPattern = /(AIza[0-9A-Za-z_-]{20,})/g;
     const skPattern = /(sk-[A-Za-z0-9]{20,})/g;
     const ghPattern = /(gh[pousr]_[A-Za-z0-9]{20,})/g;
@@ -715,42 +765,73 @@ export async function createApp(): Promise<express.Express> {
         });
       }
 
-      const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
       const enabled = process.env.ENABLE_PRODUCT_DEMOS !== 'false';
-      if (!enabled || !apiKey) {
+      if (!enabled) {
         return respond(res, 200, {
           status: 'NEEDS_EXTERNAL_VALIDATOR', productId: entry.id, runId: runIdStub,
           sourceRefs: entry.publicValidation.sources,
           validation: { schema: 'NOT_RUN', provenance: 'NOT_RUN', safety: 'NOT_RUN' },
-          limitations: ['Demo engine not configured in this environment (feature flag / server-side key absent).'],
-          message: 'Demo execution is gated by the ENABLE_PRODUCT_DEMOS feature flag and a server-side AI key. Neither is configured in this environment, so the demo runs as REQUEST_CONTROLLED_PILOT only.',
+          limitations: ['Demo engine disabled via feature flag.'],
+          message: 'Demo execution is gated by ENABLE_PRODUCT_DEMOS.',
         });
       }
 
       const rawInput = JSON.stringify(req.body.input);
       const safeInput = redactDemoText(rawInput);
-      const safeInputObj = JSON.parse(safeInput);
       const runId = `demo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const promptVersion = `v1.0.0-manifest`;
 
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-      });
-
-      const result = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [{ role: 'user', parts: [{ text: `Execute the workflow against the provided input.\n\nInput:\n${safeInput}` }] }],
-        config: {
-          systemInstruction: product.prompt,
-          temperature: 0.2,
-          maxOutputTokens: 4096,
-          responseMimeType: "application/json",
-          responseSchema: product.outputSchema as Record<string, unknown>,
-        },
-      });
-
-      const text = result.text || '';
+      let text: string;
+      try {
+        const { orchestrate } = await import('./services/fullkonk.orchestrator.ts');
+        const sys = product.prompt.slice(0, 6000);
+        const out = await orchestrate(
+          { task: 'general', messages: [{ role: 'system', content: sys }, { role: 'user', content: `Execute the workflow against the provided input.\n\nInput:\n${safeInput}` }], temperature: 0.2, maxTokens: 4096, requireThinking: false },
+          { onChunk: ()=>{}, onProviderSelect: ()=>{}, onFailover: ()=>{}, onMetrics: ()=>{}, onReset: ()=>{} }
+        );
+        text = out.content;
+      } catch (e1) {
+        const msg = String((e1 as Error)?.message || e1);
+        // NoProvidersConfiguredError → surface as NEEDS_EXTERNAL_VALIDATOR (controlled 200, not 500)
+        if (/NoProvidersConfigured|No provider/i.test(msg)) {
+          return respond(res, 200, {
+            status: 'NEEDS_EXTERNAL_VALIDATOR', productId: entry.id, runId,
+            sourceRefs: entry.publicValidation.sources,
+            validation: { schema: 'NOT_RUN', provenance: 'NOT_RUN', safety: 'NOT_RUN' },
+            limitations: ['Demo engine not configured — no provider keys detected. Add GEMINI_KEY_P1, GROQ_API_KEY, AGNES_API_KEY etc.'],
+            message: `Provider not configured: ${redactSecrets(msg)}`,
+          });
+        }
+        // Try direct Gemini fallback (legacy single-provider) if orchestrator failed transiently and GEMINI key exists
+        const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_KEY_P1 || process.env.API_KEY || process.env.GEMINI_KEY_P2;
+        if (geminiKey) {
+          try {
+            const ai = new GoogleGenAI({ apiKey: geminiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+            const result = await ai.models.generateContent({
+              model: "gemini-3.5-flash",
+              contents: [{ role: 'user', parts: [{ text: `Execute the workflow against the provided input.\n\nInput:\n${safeInput}` }] }],
+              config: { systemInstruction: product.prompt, temperature: 0.2, maxOutputTokens: 4096, responseMimeType: "application/json", responseSchema: product.outputSchema as Record<string, unknown> },
+            });
+            text = result.text || '';
+          } catch (e2) {
+            return respond(res, 200, {
+              status: 'NEEDS_EXTERNAL_VALIDATOR', productId: entry.id, runId,
+              sourceRefs: entry.publicValidation.sources,
+              validation: { schema: 'NOT_RUN', provenance: 'NOT_RUN', safety: 'NOT_RUN' },
+              limitations: ['Demo engine error — see message.'],
+              message: `Provider error: ${redactSecrets(String((e2 as Error)?.message || e2))}`,
+            });
+          }
+        } else {
+          return respond(res, 200, {
+            status: 'NEEDS_EXTERNAL_VALIDATOR', productId: entry.id, runId,
+            sourceRefs: entry.publicValidation.sources,
+            validation: { schema: 'NOT_RUN', provenance: 'NOT_RUN', safety: 'NOT_RUN' },
+            limitations: ['Demo engine not configured.'],
+            message: `Provider not configured: ${redactSecrets(msg)}`,
+          });
+        }
+      }
       let output: unknown = null;
       try {
         output = JSON.parse(text);
@@ -846,6 +927,17 @@ export async function createApp(): Promise<express.Express> {
         log: workflowLog,
       }),
     );
+  }
+
+  // ── KRedKey self-serve (same as api/index.ts — works both locally and on Vercel) ──
+  {
+    const { handleKredKeyRequest } = await import('./server/kredkey-routes.ts');
+    app.use(async (req, res, next) => {
+      const url = (req as { originalUrl?: string }).originalUrl || req.url || '';
+      if (!url.startsWith('/api/kredkeys')) return next();
+      const handled = await handleKredKeyRequest(req as unknown as import('node:http').IncomingMessage & { url: string; method: string; headers: Record<string,string> }, res as unknown as import('node:http').ServerResponse);
+      if (!handled) next();
+    });
   }
 
   // ── Unknown API routes must answer JSON, never the SPA shell ──────────────

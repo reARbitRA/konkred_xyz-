@@ -278,6 +278,16 @@ export const TIER_LIMITS = {
  * ------------------------------------------------------------------ */
 const providerDiscovery = discoverProviderConfigs();
 
+// Dynamic KRedKey overlay — allows runtime registration of kred_live_ keys without env restart.
+const dynamicUsers = [];
+export const registerDynamicUser = (user) => {
+  if (!user || typeof user.key !== 'string' || !user.key.startsWith('kred_live_')) return false;
+  if (dynamicUsers.find(u => u.key === user.key)) return false;
+  dynamicUsers.push({ key: String(user.key), userId: String(user.userId ?? user.id ?? 'unknown'), tier: String(user.tier ?? 'free') });
+  return true;
+};
+export const getAllUsers = () => [...config.users, ...dynamicUsers];
+
 export const config = Object.freeze({
   env: trimmed('NODE_ENV', 'production'),
   host: trimmed('HOST', '0.0.0.0'),
