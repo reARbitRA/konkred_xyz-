@@ -43,6 +43,64 @@ import { isGatewayOwnedPath } from '../server/gateway/router';
 import { isHttpFailure, sendFailure } from '../server/gateway/http';
 import { billingConfigured, getMeter, getPaymentRoutes } from '../server/billing-runtime';
 
+/* ── Embedded Konkred Gateway (central backend) ────────────────────────────
+ * The gateway lives in ./gateway/src/server.mjs (copied from
+ * reARbitRA/konkred-AI-ecosystem). It is loaded lazily so a deployment
+ * without a registry file or with an external KONKRED_GATEWAY_URL proxy
+ * still works. The Vercel function includes gateway/data/policies.registry.json
+ * via vercel.json includeFiles.
+ *
+ * Routes owned by the embedded gateway (see gateway/src/server.mjs):
+ *   GET  /api/health, /healthz, /api/ready, /readyz  → enriched health
+ *   GET  /api/models, /api/status, /api/admin/cache/flush
+ *   POST /api/ai, GET/POST /api/fullkonk/*, /v1/chat/completions, /v1/models
+ * Root "/" stays the SPA — the gateway dashboard is disabled via
+ * DASHBOARD_ENABLED=false (env) so the website is never replaced.
+ */
+type EmbeddedModule = typeof import('../gateway/src/server.mjs');
+let embeddedMod: EmbeddedModule | null | undefined;
+let embeddedLoadError: string | null = null;
+const embeddedPaths = new Set<string>([
+  '/api/health',
+  '/healthz',
+  '/api/ready',
+  '/readyz',
+  '/api/models',
+  '/api/status',
+  '/api/admin/cache/flush',
+  '/api/ai',
+  '/api/fullkonk/providers',
+  '/api/fullkonk/generate',
+  '/api/fullkonk/github/export',
+  '/v1/chat/completions',
+  '/v1/models',
+]);
+const tryLoadEmbedded = async (): Promise<EmbeddedModule | null> => {
+  if (embeddedMod !== undefined) return embeddedMod;
+  try {
+    // Dynamic ESM import — works in Vercel Node.js runtime (package.json type:module)
+    // @ts-ignore — TypeScript cannot resolve .mjs without explicit allowJs
+    const mod = (await import('../gateway/src/server.mjs')) as EmbeddedModule;
+    embeddedMod = mod;
+    return mod;
+  } catch (e) {
+    embeddedLoadError = (e as Error)?.message ?? String(e);
+    embeddedMod = null;
+    return null;
+  }
+};
+const isEmbeddedPath = (pathname: string): boolean => embeddedPaths.has(pathname) || pathname.startsWith('/v1/');
+const shouldUseEmbedded = (): boolean => {
+  // If an external gateway URL is explicitly configured, keep the BFF proxy
+  // path for backward compatibility (existing tests set KONKRED_GATEWAY_URL).
+  // The embedded gateway is the default when no external URL is set.
+  const extUrl = (process.env.KONKRED_GATEWAY_URL || process.env.BRAIN_URL || '').trim();
+  if (extUrl) return false;
+  // Otherwise always try embedded — it handles DEMO_MOCK/mock fallback even
+  // with no provider keys, which is needed for preview smoke without paid calls.
+  return true;
+};
+
 // Runtime: Node.js (Express + streaming require it; this is not an Edge function).
 export const config = {
   runtime: 'nodejs',
@@ -147,6 +205,49 @@ const fallback = async (request: IncomingMessage, response: ServerResponse): Pro
 
 export default async function handler(request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
+    // ── 0. Embedded Gateway fast-path (OpenAI-compatible API Gateway) ───────
+    // When no external KONKRED_GATEWAY_URL is set, the central gateway runs
+    // inside this deployment. This keeps the website (/* → index.html) intact
+    // while exposing the OpenAI-compatible API at /v1/* via the same Vercel
+    // function (see vercel.json rewrites). The external BFF proxy is kept for
+    // backward compatibility when KONKRED_GATEWAY_URL is present (existing tests).
+    const rawPath = (request.url || '/').split('?')[0];
+    // Normalise Vercel's /api/v1/* rewrite back to /v1/* so the gateway router
+    // can match it (same as api/[...path].mjs in the ecosystem repo).
+    if (typeof request.url === 'string' && request.url.startsWith('/api/v1')) {
+      request.url = request.url.replace(/^\/api\/v1(?=\/|$|\?)/, '/v1');
+    }
+    const pathname = (request.url || '/').split('?')[0];
+
+    if (shouldUseEmbedded() && isEmbeddedPath(pathname)) {
+      const mod = await tryLoadEmbedded();
+      if (mod) {
+        // For health/ready we keep the website contract but enrich it with
+        // gateway pool info when available — this preserves the existing
+        // monitors (tests expect {status:"ok"}) while enabling the gateway
+        // capacity checks needed for api.konkred.xyz readiness.
+        // The embedded handler already implements correct auth for /api/models,
+        // /api/status etc., including kred_ keys.
+        // We delegate directly; the embedded router returns 404 for unknown
+        // paths, which we then fall through to the proxy logic below.
+        const before = response.writableEnded;
+        await mod.handleRequest(request as unknown as Parameters<typeof mod.handleRequest>[0], response as unknown as Parameters<typeof mod.handleRequest>[1]);
+        if (response.writableEnded || response.headersSent) return;
+        // If embedded returned 404 (no route), fall through to BFF proxy.
+        // We detect this by checking if handleRequest wrote a 404 JSON with
+        // code NOT_FOUND and no other handler has sent headers. For now, if
+        // no headers sent, we continue.
+        if (!before && !response.headersSent) {
+          // fall through
+        } else {
+          return;
+        }
+      } else if (embeddedLoadError) {
+        defaultLogger('error.embedded_load', { error: embeddedLoadError });
+      }
+    }
+
+    // ── 1. BFF Proxy (legacy external gateway) ──────────────────────────────
     // Read env per invocation so Vercel environment changes (and tests of
     // missing configuration) never require a cold start.
     let gatewayHandler;
@@ -170,7 +271,7 @@ export default async function handler(request: IncomingMessage, response: Server
       });
       return;
     }
-    if (isGatewayOwnedPath((request.url || '/').split('?')[0])) {
+    if (isGatewayOwnedPath(rawPath)) {
       const caller = await authenticateRequest(request, readGatewayConfig());
       if (isHttpFailure(caller)) { sendFailure(response, caller); return; }
     }
