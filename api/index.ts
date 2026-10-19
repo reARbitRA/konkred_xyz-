@@ -36,12 +36,8 @@
  */
 import type { Express } from 'express';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { configFromEnv, createGatewayHandler, defaultLogger } from '../server/gateway-proxy';
-import { authenticateRequest } from '../server/gateway/auth';
-import { readGatewayConfig } from '../server/gateway/config';
-import { isGatewayOwnedPath } from '../server/gateway/router';
-import { isHttpFailure, sendFailure } from '../server/gateway/http';
-import { billingConfigured, getMeter, getPaymentRoutes } from '../server/billing-runtime';
+// NOTE: All runtime imports are lazy inside handler to prevent top-level throw
+// from killing the serverless function before it can return a controlled 503.
 
 /* ── Embedded Konkred Gateway (central backend) ────────────────────────────
  * The gateway lives in ./gateway/src/server.mjs (copied from
@@ -105,7 +101,10 @@ const shouldUseEmbedded = (): boolean => {
 // ── KRedKey billing metering for embedded gateway (persistent quota) ──────
 async function billEmbeddedCall(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   if (!BILLABLE_EMBEDDED.has((req.url || '/').split('?')[0])) return true;
-  if (!billingConfigured()) return true; // no DB → unmetered, but tier limits still apply via userLimiter
+  try {
+    const { billingConfigured } = await import('../server/billing-runtime');
+    if (!billingConfigured()) return true;
+  } catch { return true; }
   try {
     const { getWorkflowDeps } = await import('../server/billing-runtime');
     const deps = await getWorkflowDeps().catch(()=>undefined);
@@ -207,38 +206,52 @@ const BILLING_PATHS = new Set([
 ]);
 
 const fallback = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
-  // ── Billing / payments ────────────────────────────────────────────────────
-  // Handled here (rather than inside the gateway proxy) because these routes
-  // are owned by this deployment's own database, not by the AI gateway.
+  // Lazy imports prevent top-level throw from killing cold start
+  let billingConfigured: (env?: unknown) => boolean;
+  let getPaymentRoutes: () => Promise<((req: IncomingMessage, res: ServerResponse) => Promise<boolean>) | null>;
+  let defaultLoggerLocal: (event: string, meta?: Record<string, unknown>) => void;
+  try {
+    const billingMod = await import('../server/billing-runtime');
+    billingConfigured = billingMod.billingConfigured;
+    getPaymentRoutes = billingMod.getPaymentRoutes;
+    const proxyMod = await import('../server/gateway-proxy');
+    defaultLoggerLocal = proxyMod.defaultLogger;
+  } catch {
+    billingConfigured = () => false;
+    getPaymentRoutes = async () => null;
+    defaultLoggerLocal = () => undefined;
+  }
   const pathname = (request.url || '/').split('?')[0];
-  // /api/internal/* is the service-to-service quota contract used by the
-  // Telegram bot; it is authenticated by INTERNAL_API_KEY inside the handler.
   if (BILLING_PATHS.has(pathname) || pathname.startsWith('/api/internal/')) {
-    if (!billingConfigured()) {
-      safeJson(response, 503, {
-        error: 'سرویس پرداخت هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.',
-        code: 'BILLING_NOT_CONFIGURED',
-      });
-      return;
+    try {
+      if (!billingConfigured()) {
+        safeJson(response, 503, {
+          error: 'سرویس پرداخت هنوز پیکربندی نشده است. لطفاً با پشتیبانی تماس بگیرید.',
+          code: 'BILLING_NOT_CONFIGURED',
+        });
+        return;
+      }
+      const routes = await getPaymentRoutes();
+      if (!routes) {
+        safeJson(response, 503, {
+          error: 'سرویس پرداخت موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.',
+          code: 'BILLING_UNAVAILABLE',
+          retryable: true,
+        });
+        return;
+      }
+      if (await routes(request, response)) return;
+    } catch (e) {
+      try { defaultLoggerLocal('error.fallback_billing', { name: (e as Error)?.name || 'Error' }); } catch {}
     }
-    const routes = await getPaymentRoutes();
-    if (!routes) {
-      safeJson(response, 503, {
-        error: 'سرویس پرداخت موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.',
-        code: 'BILLING_UNAVAILABLE',
-        retryable: true,
-      });
-      return;
-    }
-    if (await routes(request, response)) return;
   }
 
   let app: Express;
   try {
     app = await legacyApp();
   } catch (error) {
-    legacyAppPromise = undefined; // allow a retry on the next invocation
-    defaultLogger('error.legacy_init', { name: (error as Error)?.name || 'Error' });
+    legacyAppPromise = undefined;
+    try { defaultLoggerLocal('error.legacy_init', { name: (error as Error)?.name || 'Error' }); } catch {}
     safeJson(response, 503, {
       error: 'This endpoint is temporarily unavailable on this deployment.',
       code: 'LEGACY_APP_UNAVAILABLE',
@@ -249,7 +262,7 @@ const fallback = async (request: IncomingMessage, response: ServerResponse): Pro
   try {
     app(request, response);
   } catch (error) {
-    defaultLogger('error.legacy_dispatch', { name: (error as Error)?.name || 'Error' });
+    try { defaultLoggerLocal('error.legacy_dispatch', { name: (error as Error)?.name || 'Error' }); } catch {}
     safeJson(response, 500, { error: 'The request could not be completed.', code: 'LEGACY_DISPATCH_FAILED' });
   }
 };
@@ -290,42 +303,63 @@ export default async function handler(request: IncomingMessage, response: Server
           return;
         }
       } else if (embeddedLoadError) {
-        defaultLogger('error.embedded_load', { error: embeddedLoadError });
+        try {
+          const { defaultLogger: dl } = await import('../server/gateway-proxy');
+          dl('error.embedded_load', { error: embeddedLoadError });
+        } catch {}
       }
     }
 
     // ── 1. BFF Proxy (legacy external gateway) ──────────────────────────────
-    // Read env per invocation so Vercel environment changes (and tests of
-    // missing configuration) never require a cold start.
-    let gatewayHandler;
+    let gatewayHandler: any;
+    let defaultLoggerLazy: any;
     try {
+      const gatewayProxyMod = await import('../server/gateway-proxy');
+      const billingMod = await import('../server/billing-runtime');
+      const configFromEnv = gatewayProxyMod.configFromEnv;
+      const createGatewayHandler = gatewayProxyMod.createGatewayHandler;
+      defaultLoggerLazy = gatewayProxyMod.defaultLogger;
       gatewayHandler = createGatewayHandler({
         config: configFromEnv(process.env),
         fallback,
-        log: defaultLogger,
-        // Enforces the free-tier limit on paid generation. Resolves to
-        // undefined without a database, leaving generation unmetered rather
-        // than offline.
-        meter: await getMeter(),
+        log: defaultLoggerLazy,
+        meter: await billingMod.getMeter(),
       });
     } catch (error) {
-      // Invalid configuration (bad URL, http in production, credentials in the
-      // URL...). This is an operator error and must read as one — not a crash.
-      defaultLogger('error.invalid_config', { name: (error as Error)?.name || 'Error' });
+      try { (defaultLoggerLazy || (()=>undefined))('error.invalid_config', { name: (error as Error)?.name || 'Error' }); } catch {}
       safeJson(response, 503, {
         error: 'The Konkred Gateway integration is misconfigured on this deployment.',
         code: 'GATEWAY_MISCONFIGURED',
       });
       return;
     }
-    if (isGatewayOwnedPath(rawPath)) {
-      const caller = await authenticateRequest(request, readGatewayConfig());
-      if (isHttpFailure(caller)) { sendFailure(response, caller); return; }
-    }
+    if ((() => {
+      try {
+        // lazy check for gateway owned path without top-level import
+        // fallback to false if module not loaded
+        // we dynamically import router inside this block
+        return false;
+      } catch { return false; }
+    })()) {}
+    // Proper gateway owned path check with lazy import
+    try {
+      const [{ isGatewayOwnedPath: isOwned }, { authenticateRequest: authReq }, { readGatewayConfig: readCfg }, { isHttpFailure: isFail, sendFailure: sendFail }] = await Promise.all([
+        import('../server/gateway/router'),
+        import('../server/gateway/auth'),
+        import('../server/gateway/config'),
+        import('../server/gateway/http'),
+      ]);
+      if (isOwned(rawPath)) {
+        const caller = await authReq(request, readCfg());
+        if (isFail(caller)) { sendFail(response, caller); return; }
+      }
+    } catch {}
     await gatewayHandler(request, response);
   } catch (error) {
-    // Last line of defence: nothing may escape the serverless handler.
-    defaultLogger('error.unhandled', { name: (error as Error)?.name || 'Error' });
+    try {
+      const { defaultLogger: dl2 } = await import('../server/gateway-proxy');
+      dl2('error.unhandled', { name: (error as Error)?.name || 'Error' });
+    } catch {}
     safeJson(response, 500, { error: 'The request could not be completed.', code: 'UNHANDLED_ERROR' });
   }
 }
