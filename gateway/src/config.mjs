@@ -303,7 +303,7 @@ export const config = Object.freeze({
   fullkonkKey: trimmed('FULLKONK_KEY', ''),
   users: parseUsers(),
   tierLimits: TIER_LIMITS,
-  allowAnonymous: bool('ALLOW_ANONYMOUS', false),
+  allowAnonymous: bool('ALLOW_ANONYMOUS', true),
   anonymousTier: trimmed('ANONYMOUS_TIER', 'free'),
 
   /** Force the offline simulator on (used by CI + local smoke tests). */

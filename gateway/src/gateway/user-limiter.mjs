@@ -3,7 +3,7 @@
  * Enforces tier budgets declared in TIER_LIMITS (config.mjs) and returns a
  * Retry-After hint so clients (the Telegram bot) can back off politely.
  */
-import { config } from '../config.mjs';
+import { config, getAllUsers } from '../config.mjs';
 import { dayBucket, log } from '../util.mjs';
 
 const MINUTE_MS = 60_000;
@@ -30,14 +30,17 @@ class UserLimiter {
         : null;
     }
     // Check dynamic KRedKeys first (runtime-registered via /api/kredkeys), then env-based users.
-    const dynamic = (config.getAllUsers ? config.getAllUsers() : config.users).find((u) => String(u?.key ?? '') === key);
-    if (dynamic) {
-      return {
-        userId: String(dynamic.userId ?? dynamic.id ?? 'unknown'),
-        tier: String(dynamic.tier ?? 'free'),
-        key,
-      };
-    }
+    try {
+      const all = typeof getAllUsers === 'function' ? getAllUsers() : config.users;
+      const dynamic = all.find((u) => String(u?.key ?? '') === key);
+      if (dynamic) {
+        return {
+          userId: String(dynamic.userId ?? dynamic.id ?? 'unknown'),
+          tier: String(dynamic.tier ?? 'free'),
+          key,
+        };
+      }
+    } catch {}
     const user = config.users.find((u) => String(u?.key ?? '') === key);
     if (!user) return null;
     return {

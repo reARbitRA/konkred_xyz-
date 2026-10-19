@@ -26,11 +26,21 @@ void createApp().then(async app => {
   // declines the request (outside production) and dev keeps the BYOK engine.
   const server = http.createServer((request, response) => {
     (async () => {
-      if (isGatewayOwnedPath((request.url || '/').split('?')[0])) {
+      // When no external gateway URL is configured, the embedded gateway
+      // inside server.ts (createApp) handles /api/ai, /v1/* etc with mock.
+      // Skipping the external proxy here lets the in-repo engine stay monetizable.
+      const extUrl = (process.env.KONKRED_GATEWAY_URL || process.env.BRAIN_URL || '').trim();
+      if (extUrl && isGatewayOwnedPath((request.url || '/').split('?')[0])) {
         const caller = await authenticateRequest(request, readGatewayConfig());
         if (isHttpFailure(caller)) { sendFailure(response, caller); return true; }
+        return handleGatewayRequest(request, response);
       }
-      return handleGatewayRequest(request, response);
+      if (!extUrl && isGatewayOwnedPath((request.url || '/').split('?')[0])) {
+        // Let createApp's embedded gateway handle it (mock fallback)
+        return false;
+      }
+      if (extUrl) return handleGatewayRequest(request, response);
+      return false;
     })()
       .then(handled => {
         if (!handled) app(request, response);
