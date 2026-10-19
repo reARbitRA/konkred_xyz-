@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { Analytics } from '@vercel/analytics/react';
 import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import { ToastProvider } from './contexts/ToastContext.tsx';
@@ -21,6 +22,7 @@ root.render(
                 <AuthProvider>
                     <ModalProvider>
                         <App />
+                        <Analytics />
                     </ModalProvider>
                 </AuthProvider>
             </ToastProvider>
